@@ -5,7 +5,6 @@ import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.oauth.dto.KakaoTokenResponse;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,24 +22,11 @@ import org.springframework.web.client.RestTemplate;
 public class KakaoAuthClient {
 
   private final RestTemplate restTemplate;
+  private final KakaoOAuthProperties properties;
 
-  @Value("${spring.oauth.kakao.client-id}")
-  private String restApiKey;
-
-  @Value("${spring.oauth.kakao.client-secret:}")
-  private String clientSecret;
-
-  @Value("${spring.oauth.kakao.redirect-url}")
-  private String redirectUrl;
-
-  @Value("${spring.oauth.kakao.token-url}")
-  private String tokenUrl;
-
-  @Value("${spring.oauth.kakao.user-info-url}")
-  private String userInfoUrl;
-
-  public KakaoAuthClient(RestTemplate restTemplate) {
+  public KakaoAuthClient(RestTemplate restTemplate, KakaoOAuthProperties properties) {
     this.restTemplate = restTemplate;
+    this.properties = properties;
   }
 
   public String getAccessToken(String code) {
@@ -49,16 +35,16 @@ public class KakaoAuthClient {
 
     MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
     params.add("grant_type", "authorization_code");
-    params.add("client_id", restApiKey);
-    params.add("redirect_uri", redirectUrl);
+    params.add("client_id", properties.clientId());
+    params.add("redirect_uri", properties.redirectUrl());
     params.add("code", code);
-    if (StringUtils.hasText(clientSecret)) {
-      params.add("client_secret", clientSecret);
+    if (StringUtils.hasText(properties.clientSecret())) {
+      params.add("client_secret", properties.clientSecret());
     }
 
     try {
       ResponseEntity<KakaoTokenResponse> response = restTemplate.postForEntity(
-          tokenUrl,
+          properties.tokenUrl(),
           new HttpEntity<>(params, headers),
           KakaoTokenResponse.class
       );
@@ -85,7 +71,7 @@ public class KakaoAuthClient {
 
     try {
       ResponseEntity<KakaoUserInfo> response = restTemplate.exchange(
-          userInfoUrl,
+          properties.userInfoUrl(),
           HttpMethod.GET,
           new HttpEntity<>(headers),
           KakaoUserInfo.class
