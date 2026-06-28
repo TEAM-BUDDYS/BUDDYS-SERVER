@@ -8,7 +8,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -19,14 +18,15 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.experimental.SuperBuilder;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.location.entity.Country;
+import org.sopt.buddys.global.common.entity.BaseEntity;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 
 @Getter
 @Entity
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
     name = "`user`",
@@ -35,7 +35,7 @@ import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
         @UniqueConstraint(name = "uk_user_provider", columnNames = {"provider", "provider_id"})
     }
 )
-public class User {
+public class User extends BaseEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,9 +67,11 @@ public class User {
   @Column(length = 10)
   private Gender gender;
 
+  @Builder.Default
   @Column(name = "notification_enabled", nullable = false)
   private Boolean notificationEnabled = true;
 
+  @Builder.Default
   @Enumerated(EnumType.STRING)
   @Column(name = "account_status", nullable = false, length = 20)
   private AccountStatus accountStatus = AccountStatus.ACTIVE;
@@ -87,38 +89,8 @@ public class User {
   @Column(name = "exchange_end_date")
   private LocalDate exchangeEndDate;
 
-  @CreationTimestamp
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private LocalDateTime createdAt;
-
-  @UpdateTimestamp
-  @Column(name = "updated_at", nullable = false)
-  private LocalDateTime updatedAt;
-
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
-
-  @Builder
-  private User(Long id, String email, AuthProvider provider, String providerId, String nickname, String profileImageUrl, String introduction,
-      LocalDate birthDate, Gender gender, Boolean notificationEnabled, AccountStatus accountStatus, Country exchangeCountry,
-      String exchangeUniversity, LocalDate exchangeStartDate, LocalDate exchangeEndDate, LocalDateTime deletedAt) {
-    this.id = id;
-    this.email = email;
-    this.provider = provider;
-    this.providerId = providerId;
-    this.nickname = nickname;
-    this.profileImageUrl = profileImageUrl;
-    this.introduction = introduction;
-    this.birthDate = birthDate;
-    this.gender = gender;
-    this.notificationEnabled = notificationEnabled != null ? notificationEnabled : true;
-    this.accountStatus = accountStatus != null ? accountStatus : AccountStatus.ACTIVE;
-    this.exchangeCountry = exchangeCountry;
-    this.exchangeUniversity = exchangeUniversity;
-    this.exchangeStartDate = exchangeStartDate;
-    this.exchangeEndDate = exchangeEndDate;
-    this.deletedAt = deletedAt;
-  }
 
   public static User ofKakao(String providerId, KakaoUserInfo info) {
     KakaoUserInfo.KakaoAccount account = info.kakaoAccount();
