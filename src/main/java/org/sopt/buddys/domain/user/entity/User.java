@@ -97,6 +97,28 @@ public class User {
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
 
+  @Builder
+  private User(Long id, String email, AuthProvider provider, String providerId, String nickname, String profileImageUrl, String introduction,
+      LocalDate birthDate, Gender gender, Boolean notificationEnabled, AccountStatus accountStatus, Country exchangeCountry,
+      String exchangeUniversity, LocalDate exchangeStartDate, LocalDate exchangeEndDate, LocalDateTime deletedAt) {
+    this.id = id;
+    this.email = email;
+    this.provider = provider;
+    this.providerId = providerId;
+    this.nickname = nickname;
+    this.profileImageUrl = profileImageUrl;
+    this.introduction = introduction;
+    this.birthDate = birthDate;
+    this.gender = gender;
+    this.notificationEnabled = notificationEnabled != null ? notificationEnabled : true;
+    this.accountStatus = accountStatus != null ? accountStatus : AccountStatus.ACTIVE;
+    this.exchangeCountry = exchangeCountry;
+    this.exchangeUniversity = exchangeUniversity;
+    this.exchangeStartDate = exchangeStartDate;
+    this.exchangeEndDate = exchangeEndDate;
+    this.deletedAt = deletedAt;
+  }
+
   public static User ofKakao(String providerId, KakaoUserInfo info) {
     User user = new User();
     user.provider = AuthProvider.KAKAO;

@@ -22,7 +22,6 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 import org.sopt.buddys.global.security.oauth.kakao.KakaoAuthClient;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
@@ -46,8 +45,7 @@ public class AuthServiceTest {
     String code = "kakao-auth-code";
     String kakaoAccessToken = "kakao-access-token";
     KakaoUserInfo kakaoUserInfo = createKakaoUserInfo("12345");
-    User savedUser = User.ofKakao("12345", kakaoUserInfo);
-    ReflectionTestUtils.setField(savedUser, "id", 1L);
+    User savedUser = createSavedKakaoUser(1L, "12345", kakaoUserInfo);
 
     given(kakaoAuthClient.getAccessToken(code)).willReturn(kakaoAccessToken);
     given(kakaoAuthClient.getUserInfo(kakaoAccessToken)).willReturn(kakaoUserInfo);
@@ -69,7 +67,7 @@ public class AuthServiceTest {
     // given
     String code = "kakao-auth-code";
     KakaoUserInfo kakaoUserInfo = createKakaoUserInfo("12345");
-    User existingUser = User.ofKakao("12345", kakaoUserInfo);
+    User existingUser = createSavedKakaoUser(1L, "12345", kakaoUserInfo);
 
     given(kakaoAuthClient.getAccessToken(code)).willReturn("kakao-access-token");
 
@@ -89,6 +87,17 @@ public class AuthServiceTest {
     KakaoUserInfo.KakaoProfile profile = new KakaoUserInfo.KakaoProfile("닉네임","http://img.url");
     KakaoUserInfo.KakaoAccount account = new KakaoUserInfo.KakaoAccount("test@kakao.com", profile);
     return new KakaoUserInfo(Long.parseLong(id), account);
+  }
+
+  private User createSavedKakaoUser(Long id, String providerId, KakaoUserInfo kakaoUserInfo) {
+    return User.builder()
+        .id(id)
+        .provider(AuthProvider.KAKAO)
+        .providerId(providerId)
+        .email(kakaoUserInfo.kakaoAccount().email())
+        .nickname(kakaoUserInfo.kakaoAccount().profile().nickname())
+        .profileImageUrl(kakaoUserInfo.kakaoAccount().profile().profileImageUrl())
+        .build();
   }
 
 
