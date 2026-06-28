@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
@@ -51,17 +52,16 @@ public class KakaoAuthClient {
 
       KakaoTokenResponse body = response.getBody();
       if (body == null || !StringUtils.hasText(body.accessToken())) {
-        throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED, "카카오 토큰 응답이 비어 있습니다.");
+        throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED);
       }
 
       return body.accessToken();
     } catch (RestClientResponseException e) {
-      log.warn(
-          "Kakao token request failed. status={}, body={}",
-          e.getStatusCode(),
-          e.getResponseBodyAsString()
-      );
-      throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED, "카카오 토큰 발급에 실패했습니다.");
+      log.warn("Kakao token request failed. status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+      throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED);
+    } catch (ResourceAccessException e) {
+      log.warn("Kakao token request timed out or network error", e);
+      throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED);
     }
   }
 
@@ -79,17 +79,16 @@ public class KakaoAuthClient {
 
       KakaoUserInfo body = response.getBody();
       if (body == null || body.id() == null) {
-        throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED, "카카오 사용자 응답이 비어 있습니다.");
+        throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED);
       }
 
       return body;
     } catch (RestClientResponseException e) {
-      log.warn(
-          "Kakao user info request failed. status={}, body={}",
-          e.getStatusCode(),
-          e.getResponseBodyAsString()
-      );
-      throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED, "카카오 사용자 조회에 실패했습니다.");
+      log.warn("Kakao user info request failed. status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+      throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED);
+    } catch (ResourceAccessException e) {
+      log.warn("Kakao user info request timed out or network error", e);
+      throw new BaseException(AuthErrorCode.KAKAO_AUTH_FAILED);
     }
   }
 }

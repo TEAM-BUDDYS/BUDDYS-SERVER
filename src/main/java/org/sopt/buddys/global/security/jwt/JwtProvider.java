@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Component;
 
@@ -21,8 +22,11 @@ public class JwtProvider {
   }
 
   public String generateToken(Long userId) {
+    if (userId == null) {
+      throw new IllegalArgumentException("userId must not be null");
+    }
     return Jwts.builder()
-        .subject(String.valueOf(userId))
+        .subject(userId.toString())
         .issuedAt(new Date())
         .expiration(new Date(System.currentTimeMillis() + jwtProperties.accessTokenExpiration()))
         .signWith(signingKey)
@@ -31,6 +35,14 @@ public class JwtProvider {
 
   public Long getUserId(String token) {
     return Long.parseLong(getClaims(token).getSubject());
+  }
+
+  public Optional<Long> extractUserId(String token) {
+    try {
+      return Optional.of(Long.parseLong(getClaims(token).getSubject()));
+    } catch (JwtException | IllegalArgumentException e) {
+      return Optional.empty();
+    }
   }
 
   public boolean validateToken(String token) {

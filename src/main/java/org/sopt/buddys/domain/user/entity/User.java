@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 
@@ -120,12 +121,23 @@ public class User {
   }
 
   public static User ofKakao(String providerId, KakaoUserInfo info) {
+    KakaoUserInfo.KakaoAccount account = info.kakaoAccount();
+    if (account == null || account.email() == null || account.email().isBlank()) {
+      throw new org.sopt.buddys.global.exception.BaseException(AuthErrorCode.KAKAO_EMAIL_REQUIRED);
+    }
+
+    String nickname = (account.profile() != null && account.profile().nickname() != null && !account.profile().nickname().isBlank())
+        ? account.profile().nickname()
+        : "kakao_" + providerId.substring(Math.max(0, providerId.length() - 8));
+
+    String profileImageUrl = (account.profile() != null) ? account.profile().profileImageUrl() : null;
+
     User user = new User();
     user.provider = AuthProvider.KAKAO;
     user.providerId = providerId;
-    user.email = info.kakaoAccount().email();
-    user.nickname = info.kakaoAccount().profile().nickname();
-    user.profileImageUrl = info.kakaoAccount().profile().profileImageUrl();
+    user.email = account.email();
+    user.nickname = nickname;
+    user.profileImageUrl = profileImageUrl;
     user.notificationEnabled = true;
     user.accountStatus = AccountStatus.ACTIVE;
     return user;
