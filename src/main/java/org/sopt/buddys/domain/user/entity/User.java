@@ -16,11 +16,13 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.sopt.buddys.domain.location.entity.Country;
+import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 
 @Getter
 @Entity
@@ -28,7 +30,8 @@ import org.sopt.buddys.domain.location.entity.Country;
 @Table(
     name = "`user`",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_nickname", columnNames = "nickname")
+        @UniqueConstraint(name = "uk_user_nickname", columnNames = "nickname"),
+        @UniqueConstraint(name = "uk_user_provider", columnNames = {"provider", "provider_id"})
     }
 )
 public class User {
@@ -93,4 +96,16 @@ public class User {
 
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
+
+  public static User ofKakao(String providerId, KakaoUserInfo info) {
+    User user = new User();
+    user.provider = AuthProvider.KAKAO;
+    user.providerId = providerId;
+    user.email = info.kakaoAccount().email();
+    user.nickname = info.kakaoAccount().profile().nickname();
+    user.profileImageUrl = info.kakaoAccount().profile().profileImageUrl();
+    user.notificationEnabled = true;
+    user.accountStatus = AccountStatus.ACTIVE;
+    return user;
+  }
 }

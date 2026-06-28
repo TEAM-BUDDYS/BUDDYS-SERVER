@@ -8,10 +8,24 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-    jpa:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
       hibernate:
-        ddl-auto: update
-      properties:
-        hibernate:
-          format_sql: true
-      show-sql: true
+        format_sql: true
+    show-sql: true
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      access-token-expiration: 3600000 # 1 hour
+      refresh-token-expiration: 604800000 # 7 days
+
+  oauth:
+    kakao:
+      client-id: ${KAKAO_REST_API_KEY}
+      client-secret: ${KAKAO_CLIENT_SECRET}
+      redirect-url: http://localhost:8080/api/v1/auth/kakao/callback
+      token-url: https://kauth.kakao.com/oauth/token
+      user-info-url: https://kapi.kakao.com/v2/user/me
