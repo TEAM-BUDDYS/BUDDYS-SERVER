@@ -7,21 +7,25 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class JwtProvider {
 
   private final JwtProperties jwtProperties;
+  private final SecretKey signingKey;
+
+  public JwtProvider(JwtProperties jwtProperties) {
+    this.jwtProperties = jwtProperties;
+    this.signingKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
+  }
 
   public String generateToken(Long userId) {
     return Jwts.builder()
         .subject(String.valueOf(userId))
         .issuedAt(new Date())
         .expiration(new Date(System.currentTimeMillis() + jwtProperties.accessTokenExpiration()))
-        .signWith(getSigningKey())
+        .signWith(signingKey)
         .compact();
   }
 
@@ -40,14 +44,10 @@ public class JwtProvider {
 
   private Claims getClaims(String token) {
     return Jwts.parser()
-        .verifyWith(getSigningKey())
+        .verifyWith(signingKey)
         .build()
         .parseSignedClaims(token)
         .getPayload();
-  }
-
-  private SecretKey getSigningKey() {
-    return Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
   }
 
 }
