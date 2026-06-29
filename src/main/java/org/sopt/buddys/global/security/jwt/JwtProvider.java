@@ -15,6 +15,9 @@ public class JwtProvider {
 
   private final JwtProperties jwtProperties;
   private final SecretKey signingKey;
+  private static final String TOKEN_TYPE_CLAIM = "type";
+  private static final String ACCESS_TOKEN_TYPE = "access";
+  private static final String REFRESH_TOKEN_TYPE = "refresh";
 
   public JwtProvider(JwtProperties jwtProperties) {
     this.jwtProperties = jwtProperties;
@@ -22,25 +25,20 @@ public class JwtProvider {
   }
 
   public String generateToken(Long userId) {
-    if (userId == null) {
-      throw new IllegalArgumentException("userId must not be null");
-    }
-    return Jwts.builder()
-        .subject(userId.toString())
-        .issuedAt(new Date())
-        .expiration(new Date(System.currentTimeMillis() + jwtProperties.accessTokenExpiration()))
-        .signWith(signingKey)
-        .compact();
+    return buildToken(userId, ACCESS_TOKEN_TYPE, jwtProperties.accessTokenExpiration());
   }
 
   public String generateRefreshToken(Long userId) {
-    if (userId == null) {
-      throw new IllegalArgumentException("userId must not be null");
-    }
+    return buildToken(userId, REFRESH_TOKEN_TYPE, jwtProperties.refreshTokenExpiration());
+  }
+
+  private String buildToken(Long userId, String type, long expiration) {
+    if (userId == null) throw new IllegalArgumentException("userId must not be null");
     return Jwts.builder()
         .subject(userId.toString())
+        .claim(TOKEN_TYPE_CLAIM, type)
         .issuedAt(new Date())
-        .expiration(new Date(System.currentTimeMillis() + jwtProperties.refreshTokenExpiration()))
+        .expiration(new Date(System.currentTimeMillis() + expiration))
         .signWith(signingKey)
         .compact();
   }
@@ -51,9 +49,22 @@ public class JwtProvider {
 
   public Optional<Long> extractUserId(String token) {
     try {
-      return Optional.of(Long.parseLong(getClaims(token).getSubject()));
+      Claims claims = getClaims(token);
+      if (!ACCESS_TOKEN_TYPE.equals(claims.get(TOKEN_TYPE_CLAIM, String.class))) {
+        return Optional.empty();
+      }
+      return Optional.of(Long.parseLong(claims.getSubject()));
     } catch (JwtException | IllegalArgumentException e) {
       return Optional.empty();
+    }
+  }
+
+  public boolean validateRefreshToken(String token) {
+    try {
+      Claims claims = getClaims(token);
+      return REFRESH_TOKEN_TYPE.equals(claims.get(TOKEN_TYPE_CLAIM, String.class));
+    } catch (JwtException | IllegalArgumentException e) {
+      return false;
     }
   }
 
