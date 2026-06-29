@@ -16,10 +16,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
-import org.sopt.buddys.domain.auth.dto.response.LoginResponse;
+import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 import org.sopt.buddys.global.security.oauth.kakao.KakaoAuthClient;
@@ -39,6 +40,12 @@ public class AuthServiceTest {
   @Mock
   private JwtProvider jwtProvider;
 
+  @Mock
+  private RefreshTokenRepository refreshTokenRepository;
+
+  @Mock
+  private JwtProperties jwtProperties;
+
   @DisplayName("신규 카카오 회원이 로그인하면 자동으로 회원가입되고 JWT가 발급된다")
   @Test
   void kakaoLogin_newUser() {
@@ -53,13 +60,16 @@ public class AuthServiceTest {
     given(userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, "12345")).willReturn(Optional.empty());
     given(userRepository.save(any(User.class))).willReturn(savedUser);
     given(jwtProvider.generateToken(anyLong())).willReturn("jwt-token");
+    given(jwtProvider.generateRefreshToken(anyLong())).willReturn("refresh-token");
+    given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
 
     // when
     AuthTokens response = authService.kakaoLogin(code);
 
     // then
     assertThat(response.accessToken()).isEqualTo("jwt-token");
-    then(userRepository).should(times(1)).save(any(User.class)); // 신규 저장 발생
+    assertThat(response.refreshToken()).isEqualTo("refresh-token");
+    then(userRepository).should(times(1)).save(any(User.class));
   }
 
   @DisplayName("기존 카카오 회원이 로그인하면 회원가입 없이 JWT가 발급된다")
@@ -71,21 +81,23 @@ public class AuthServiceTest {
     User existingUser = createSavedKakaoUser(1L, "12345", kakaoUserInfo);
 
     given(kakaoAuthClient.getAccessToken(code)).willReturn("kakao-access-token");
-
     given(kakaoAuthClient.getUserInfo("kakao-access-token")).willReturn(kakaoUserInfo);
     given(userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, "12345")).willReturn(Optional.of(existingUser));
     given(jwtProvider.generateToken(any())).willReturn("jwt-token");
+    given(jwtProvider.generateRefreshToken(anyLong())).willReturn("refresh-token");
+    given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
 
     // when
     AuthTokens response = authService.kakaoLogin(code);
 
     // then
     assertThat(response.accessToken()).isEqualTo("jwt-token");
-    then(userRepository).should(never()).save(any(User.class)); // 저장 없음
+    assertThat(response.refreshToken()).isEqualTo("refresh-token");
+    then(userRepository).should(never()).save(any(User.class));
   }
 
   private KakaoUserInfo createKakaoUserInfo(String id) {
-    KakaoUserInfo.KakaoProfile profile = new KakaoUserInfo.KakaoProfile("닉네임","http://img.url");
+    KakaoUserInfo.KakaoProfile profile = new KakaoUserInfo.KakaoProfile("닉네임", "http://img.url");
     KakaoUserInfo.KakaoAccount account = new KakaoUserInfo.KakaoAccount("test@kakao.com", profile);
     return new KakaoUserInfo(Long.parseLong(id), account);
   }
@@ -100,6 +112,4 @@ public class AuthServiceTest {
         .profileImageUrl(kakaoUserInfo.kakaoAccount().profile().profileImageUrl())
         .build();
   }
-
-
 }
