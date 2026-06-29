@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.auth.service;
 
+import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
 import org.sopt.buddys.domain.auth.entity.RefreshToken;
@@ -17,44 +18,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
   private final KakaoAuthClient kakaoAuthClient;
-  private final UserRepository userRepository;
+  private final AuthTransactionService authTransactionService;
   private final JwtProvider jwtProvider;
   private final RefreshTokenRepository refreshTokenRepository;
   private final JwtProperties jwtProperties;
 
-  public AuthService(KakaoAuthClient kakaoAuthClient, UserRepository userRepository,
-      JwtProvider jwtProvider, RefreshTokenRepository refreshTokenRepository, JwtProperties jwtProperties) {
-    this.kakaoAuthClient = kakaoAuthClient;
-    this.userRepository = userRepository;
-    this.jwtProvider = jwtProvider;
-    this.refreshTokenRepository = refreshTokenRepository;
-    this.jwtProperties = jwtProperties;
-  }
-
-  @Transactional
   public AuthTokens kakaoLogin(String code) {
     String accessToken = kakaoAuthClient.getAccessToken(code);
     KakaoUserInfo kakaoUser = kakaoAuthClient.getUserInfo(accessToken);
 
     String providerId = String.valueOf(kakaoUser.id());
-    return processKakaoLogin(providerId, kakaoUser);
-  }
-
-  @Transactional
-  public AuthTokens processKakaoLogin(String providerId, KakaoUserInfo kakaoUser) {
-    User user = userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId)
-        .orElseGet(() -> saveNewKakaoUser(providerId, kakaoUser));
-
-    String jwt = jwtProvider.generateToken(user.getId());
-    String refreshToken = jwtProvider.generateRefreshToken(user.getId());
-
-    refreshTokenRepository.deleteByUserId(user.getId());
-    refreshTokenRepository.save(RefreshToken.of(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration()));
-
-    return new AuthTokens(jwt, refreshToken);
+    return authTransactionService.processKakaoLogin(providerId, kakaoUser);
   }
 
   @Transactional
@@ -80,13 +58,5 @@ public class AuthService {
     refreshTokenRepository.save(RefreshToken.of(userId, newRefreshToken, jwtProperties.refreshTokenExpiration()));
 
     return new AuthTokens(newAccessToken, newRefreshToken);
-  }
-
-  private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {
-    try {
-      return userRepository.save(User.ofKakao(providerId, kakaoUser));
-    } catch (DataIntegrityViolationException e) {
-      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, "이미 사용 중인 닉네임입니다.");
-    }
   }
 }
