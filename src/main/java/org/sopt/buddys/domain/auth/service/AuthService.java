@@ -59,6 +59,10 @@ public class AuthService {
 
   @Transactional
   public AuthTokens reissue(String refreshToken) {
+    if (!jwtProvider.validateToken(refreshToken)) {
+      throw new BaseException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
+    }
+
     RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
         .orElseThrow(() -> new BaseException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND));
 
