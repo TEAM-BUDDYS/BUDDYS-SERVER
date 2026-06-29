@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
 import org.sopt.buddys.domain.auth.dto.response.LoginResponse;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -54,7 +55,7 @@ public class AuthServiceTest {
     given(jwtProvider.generateToken(anyLong())).willReturn("jwt-token");
 
     // when
-    LoginResponse response = authService.kakaoLogin(code);
+    AuthTokens response = authService.kakaoLogin(code);
 
     // then
     assertThat(response.accessToken()).isEqualTo("jwt-token");
@@ -76,7 +77,7 @@ public class AuthServiceTest {
     given(jwtProvider.generateToken(any())).willReturn("jwt-token");
 
     // when
-    LoginResponse response = authService.kakaoLogin(code);
+    AuthTokens response = authService.kakaoLogin(code);
 
     // then
     assertThat(response.accessToken()).isEqualTo("jwt-token");

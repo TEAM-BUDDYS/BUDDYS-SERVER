@@ -33,6 +33,18 @@ public class JwtProvider {
         .compact();
   }
 
+  public String generateRefreshToken(Long userId) {
+    if (userId == null) {
+      throw new IllegalArgumentException("userId must not be null");
+    }
+    return Jwts.builder()
+        .subject(userId.toString())
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis() + jwtProperties.refreshTokenExpiration()))
+        .signWith(signingKey)
+        .compact();
+  }
+
   public Long getUserId(String token) {
     return Long.parseLong(getClaims(token).getSubject());
   }
