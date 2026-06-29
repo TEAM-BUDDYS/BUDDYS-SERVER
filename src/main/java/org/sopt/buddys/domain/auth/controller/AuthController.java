@@ -7,10 +7,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
+import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
 import org.sopt.buddys.domain.auth.dto.response.LoginResponse;
 import org.sopt.buddys.domain.auth.service.AuthService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
+import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -55,10 +57,13 @@ public class AuthController {
   })
   @PostMapping("/reissue")
   public ResponseEntity<BaseResponse<LoginResponse>> reissue(
-      @Parameter(in = ParameterIn.COOKIE, name = "refreshToken", description = "리프레쉬 토큰")
-      @CookieValue(name = REFRESH_TOKEN_COOKIE) String refreshToken,
+      @Parameter(in = ParameterIn.COOKIE, name = "refreshToken", description = "리프레시 토큰")
+      @CookieValue(name = REFRESH_TOKEN_COOKIE, required = false) String refreshToken,
       HttpServletResponse response
   ) {
+    if (refreshToken == null) {
+      throw new BaseException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND);
+    }
     AuthTokens tokens = authService.reissue(refreshToken);
     addRefreshTokenCookie(response, tokens.refreshToken());
     return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.accessToken())));
