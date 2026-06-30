@@ -41,7 +41,7 @@ public class AuthService {
       throw new BaseException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
     }
 
-    RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
+    RefreshToken stored = refreshTokenRepository.findByTokenForUpdate(refreshToken)
         .orElseThrow(() -> new BaseException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND));
 
     Long userId = stored.getUserId();
