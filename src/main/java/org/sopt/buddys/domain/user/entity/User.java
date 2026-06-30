@@ -14,6 +14,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -51,7 +52,7 @@ public class User extends BaseEntity {
   @Column(name = "provider_id", nullable = false)
   private String providerId;
 
-  @Column(nullable = false, length = 30)
+  @Column(nullable = false, length = 50)
   private String nickname;
 
   @Column(name = "profile_image_url", length = 512)
@@ -98,7 +99,7 @@ public class User extends BaseEntity {
       throw new org.sopt.buddys.global.exception.BaseException(AuthErrorCode.KAKAO_EMAIL_REQUIRED);
     }
 
-    String nickname = "kakao_" + providerId.substring(Math.max(0, providerId.length() - 8));
+    String nickname = UUID.randomUUID().toString().replace("-", "");
 
     String profileImageUrl = (account.profile() != null) ? account.profile().profileImageUrl() : null;
 

@@ -20,7 +20,7 @@ CREATE TABLE `user`
     email                VARCHAR(255) NOT NULL,
     provider             VARCHAR(10)  NOT NULL,
     provider_id          VARCHAR(255) NOT NULL,
-    nickname             VARCHAR(30)  NOT NULL,
+    nickname             VARCHAR(50)  NOT NULL,
     profile_image_url    VARCHAR(512),
     introduction         VARCHAR(150),
     birth_date           DATE,
