@@ -16,7 +16,8 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    base_branch: "develop"
+    base_branches:
+      - "develop"
 
   path_filters:
     - "!build/**"
