@@ -16,7 +16,8 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    base_branch: "develop"
+    base_branches:
+      - "develop"
 
   path_filters:
     - "!build/**"
@@ -41,13 +42,13 @@ reviews:
         - N+1 문제가 발생할 수 있는 쿼리가 있는지 확인해주세요.
         - 복잡한 쿼리는 JPQL 또는 QueryDSL 사용을 고려해주세요.
 
-    - path: "src/main/java/**/*Entity.java"
+    - path: "src/main/java/**/entity/*.java"
       instructions: |
         - 연관관계 편의 메서드가 올바르게 작성되었는지 확인해주세요.
         - 양방향 관계에서 무한 순환 참조 위험이 없는지 확인해주세요.
         - Lombok의 @Data 대신 @Getter 사용을 권장해주세요.
 
-    - path: "src/test/**"
+    - path: "src/test/java/**/*.java"
       instructions: |
         - 테스트 메서드명이 한국어 또는 영어로 의도를 명확히 설명하는지 확인해주세요.
         - given/when/then 구조가 명확한지 확인해주세요.
