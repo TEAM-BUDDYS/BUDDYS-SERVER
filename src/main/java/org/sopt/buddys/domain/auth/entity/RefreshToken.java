@@ -5,10 +5,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Persistable;
 
 @Getter
 @Entity
@@ -16,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "refresh_token", indexes = {
     @Index(name = "idx_refresh_token_token", columnList = "token")
 })
-public class RefreshToken {
+public class RefreshToken implements Persistable<Long> {
 
   @Id
   private Long userId;
@@ -27,11 +29,25 @@ public class RefreshToken {
   @Column(name = "expires_at", nullable = false)
   private LocalDateTime expiresAt;
 
+  @Transient
+  private boolean isNew;
+
+  @Override
+  public Long getId() {
+    return userId;
+  }
+
+  @Override
+  public boolean isNew() {
+    return isNew;
+  }
+
   public static RefreshToken of(Long userId, String token, long refreshTokenExpiration) {
     RefreshToken rt = new RefreshToken();
     rt.userId = userId;
     rt.token = token;
     rt.expiresAt = LocalDateTime.now().plusSeconds(refreshTokenExpiration / 1000);
+    rt.isNew = true;
     return rt;
   }
 
