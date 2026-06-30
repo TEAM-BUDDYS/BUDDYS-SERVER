@@ -98,9 +98,7 @@ public class User extends BaseEntity {
       throw new org.sopt.buddys.global.exception.BaseException(AuthErrorCode.KAKAO_EMAIL_REQUIRED);
     }
 
-    String nickname = (account.profile() != null && account.profile().nickname() != null && !account.profile().nickname().isBlank())
-        ? account.profile().nickname()
-        : "kakao_" + providerId.substring(Math.max(0, providerId.length() - 8));
+    String nickname = "kakao_" + providerId.substring(Math.max(0, providerId.length() - 8));
 
     String profileImageUrl = (account.profile() != null) ? account.profile().profileImageUrl() : null;
 
