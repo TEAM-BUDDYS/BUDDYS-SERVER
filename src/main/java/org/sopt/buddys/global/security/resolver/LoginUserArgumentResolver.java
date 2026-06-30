@@ -28,7 +28,7 @@ public class LoginUserArgumentResolver implements HandlerMethodArgumentResolver 
 
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    if (authentication == null && !authentication.isAuthenticated()) {
+    if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof Long)) {
       throw new BaseException(GlobalErrorCode.UNAUTHORIZED);
     }
 
