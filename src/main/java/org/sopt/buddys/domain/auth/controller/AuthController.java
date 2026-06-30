@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotBlank;
 import java.time.Duration;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
@@ -18,12 +19,14 @@ import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Validated
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -45,7 +48,7 @@ public class AuthController {
   @PostMapping("/kakao")
   public ResponseEntity<BaseResponse<LoginResponse>> kakaoLogin(
       @Parameter(description = "카카오 OAuth 인가 코드", example = "kaO7zQSSJXT...")
-      @RequestParam String code,
+      @RequestParam @NotBlank String code,
       HttpServletResponse response
   ) {
     AuthTokens tokens = authService.kakaoLogin(code);
