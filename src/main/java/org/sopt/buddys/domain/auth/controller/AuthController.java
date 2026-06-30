@@ -14,6 +14,7 @@ import org.sopt.buddys.domain.auth.service.AuthService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.response.BaseResponse;
+import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -29,9 +30,11 @@ public class AuthController {
 
   private final AuthService authService;
   private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
+  private final JwtProperties jwtProperties;
 
-  public AuthController(AuthService authService) {
+  public AuthController(AuthService authService, JwtProperties jwtProperties) {
     this.authService = authService;
+    this.jwtProperties = jwtProperties;
   }
 
   @Operation(summary = "카카오 로그인", description = "카카오 인가 코드를 이용해 로그인하고 JWT를 발급합니다.")
@@ -74,7 +77,7 @@ public class AuthController {
         .httpOnly(true)
         .secure(true)
         .path("/api/v1/auth/reissue")
-        .maxAge(Duration.ofDays(7))
+        .maxAge(Duration.ofMillis(jwtProperties.refreshTokenExpiration()))
         .sameSite("None")
         .build();
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
