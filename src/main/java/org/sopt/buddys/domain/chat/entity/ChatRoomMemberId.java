@@ -1,4 +1,4 @@
-package org.sopt.buddys.domain.user.entity;
+package org.sopt.buddys.domain.chat.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -12,16 +12,16 @@ import lombok.NoArgsConstructor;
 @Embeddable
 @EqualsAndHashCode
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserTagId implements Serializable {
+public class ChatRoomMemberId implements Serializable {
+
+  @Column(name = "chat_room_id")
+  private Long chatRoomId;
 
   @Column(name = "user_id")
   private Long userId;
 
-  @Column(name = "tag_id")
-  private Long tagId;
-
-  public UserTagId(Long userId, Long tagId) {
+  public ChatRoomMemberId(Long chatRoomId, Long userId) {
+    this.chatRoomId = chatRoomId;
     this.userId = userId;
-    this.tagId = tagId;
   }
 }

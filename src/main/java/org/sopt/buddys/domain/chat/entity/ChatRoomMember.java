@@ -1,4 +1,4 @@
-package org.sopt.buddys.domain.user.entity;
+package org.sopt.buddys.domain.chat.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -13,34 +13,37 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.sopt.buddys.domain.tag.entity.Tag;
+import org.sopt.buddys.domain.user.entity.User;
 
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "user_tag")
-public class UserTag {
+@Table(name = "chat_room_member")
+public class ChatRoomMember {
 
   @EmbeddedId
-  private UserTagId id;
+  private ChatRoomMemberId id;
+
+  @MapsId("chatRoomId")
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "chat_room_id", nullable = false)
+  private ChatRoom chatRoom;
 
   @MapsId("userId")
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @MapsId("tagId")
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "tag_id", nullable = false)
-  private Tag tag;
-
   @CreationTimestamp
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private LocalDateTime createdAt;
+  @Column(name = "joined_at", nullable = false, updatable = false)
+  private LocalDateTime joinedAt;
 
-  public UserTag(User user, Tag tag) {
+  @Column(name = "last_read_at")
+  private LocalDateTime lastReadAt;
+
+  public ChatRoomMember(ChatRoom chatRoom, User user) {
+    this.chatRoom = chatRoom;
     this.user = user;
-    this.tag = tag;
-    this.id = new UserTagId(user.getId(), tag.getId());
+    this.id = new ChatRoomMemberId(chatRoom.getId(), user.getId());
   }
 }

@@ -1,4 +1,4 @@
-package org.sopt.buddys.domain.user.entity;
+package org.sopt.buddys.domain.post.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -12,16 +12,16 @@ import lombok.NoArgsConstructor;
 @Embeddable
 @EqualsAndHashCode
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserTagId implements Serializable {
+public class PostTagId implements Serializable {
 
-  @Column(name = "user_id")
-  private Long userId;
+  @Column(name = "post_id")
+  private Long postId;
 
   @Column(name = "tag_id")
   private Long tagId;
 
-  public UserTagId(Long userId, Long tagId) {
-    this.userId = userId;
+  public PostTagId(Long postId, Long tagId) {
+    this.postId = postId;
     this.tagId = tagId;
   }
 }

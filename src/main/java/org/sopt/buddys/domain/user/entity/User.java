@@ -31,8 +31,8 @@ import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 @Table(
     name = "`user`",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_user_nickname", columnNames = "nickname"),
-        @UniqueConstraint(name = "uk_user_provider", columnNames = {"provider", "provider_id"})
+        @UniqueConstraint(name = "uk_user_provider", columnNames = {"provider", "provider_id"}),
+        @UniqueConstraint(name = "uk_user_nickname", columnNames = "nickname")
     }
 )
 public class User extends BaseEntity {

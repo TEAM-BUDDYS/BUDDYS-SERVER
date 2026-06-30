@@ -7,7 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -17,7 +16,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "tag")
+@Table(
+    name = "tag",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_tag_type_name", columnNames = {"tag_type", "name"})
+    }
+)
 public class Tag {
 
   @Id

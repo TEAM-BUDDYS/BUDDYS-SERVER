@@ -1,6 +1,5 @@
-package org.sopt.buddys.domain.user.entity;
+package org.sopt.buddys.domain.post.entity;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -8,39 +7,33 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 import org.sopt.buddys.domain.tag.entity.Tag;
 
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "user_tag")
-public class UserTag {
+@Table(name = "post_tag")
+public class PostTag {
 
   @EmbeddedId
-  private UserTagId id;
+  private PostTagId id;
 
-  @MapsId("userId")
+  @MapsId("postId")
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "user_id", nullable = false)
-  private User user;
+  @JoinColumn(name = "post_id", nullable = false)
+  private Post post;
 
   @MapsId("tagId")
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "tag_id", nullable = false)
   private Tag tag;
 
-  @CreationTimestamp
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private LocalDateTime createdAt;
-
-  public UserTag(User user, Tag tag) {
-    this.user = user;
+  public PostTag(Post post, Tag tag) {
+    this.post = post;
     this.tag = tag;
-    this.id = new UserTagId(user.getId(), tag.getId());
+    this.id = new PostTagId(post.getId(), tag.getId());
   }
 }
