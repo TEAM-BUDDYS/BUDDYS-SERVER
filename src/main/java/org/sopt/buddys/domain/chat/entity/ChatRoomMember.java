@@ -40,4 +40,10 @@ public class ChatRoomMember {
 
   @Column(name = "last_read_at")
   private LocalDateTime lastReadAt;
+
+  public ChatRoomMember(ChatRoom chatRoom, User user) {
+    this.chatRoom = chatRoom;
+    this.user = user;
+    this.id = new ChatRoomMemberId(chatRoom.getId(), user.getId());
+  }
 }

@@ -37,4 +37,10 @@ public class UserTag {
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
+
+  public UserTag(User user, Tag tag) {
+    this.user = user;
+    this.tag = tag;
+    this.id = new UserTagId(user.getId(), tag.getId());
+  }
 }

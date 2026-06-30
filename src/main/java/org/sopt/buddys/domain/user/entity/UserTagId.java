@@ -19,4 +19,9 @@ public class UserTagId implements Serializable {
 
   @Column(name = "tag_id")
   private Long tagId;
+
+  public UserTagId(Long userId, Long tagId) {
+    this.userId = userId;
+    this.tagId = tagId;
+  }
 }

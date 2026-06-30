@@ -19,4 +19,9 @@ public class ChatRoomMemberId implements Serializable {
 
   @Column(name = "user_id")
   private Long userId;
+
+  public ChatRoomMemberId(Long chatRoomId, Long userId) {
+    this.chatRoomId = chatRoomId;
+    this.userId = userId;
+  }
 }

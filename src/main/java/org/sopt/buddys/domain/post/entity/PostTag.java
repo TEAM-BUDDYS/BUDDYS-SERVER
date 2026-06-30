@@ -30,4 +30,10 @@ public class PostTag {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "tag_id", nullable = false)
   private Tag tag;
+
+  public PostTag(Post post, Tag tag) {
+    this.post = post;
+    this.tag = tag;
+    this.id = new PostTagId(post.getId(), tag.getId());
+  }
 }
