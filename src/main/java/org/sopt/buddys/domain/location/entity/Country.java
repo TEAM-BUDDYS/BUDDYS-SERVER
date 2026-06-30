@@ -30,8 +30,4 @@ public class Country {
 
   @Column(nullable = false, length = 80)
   private String name;
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 20)
-  private Continent continent;
 }

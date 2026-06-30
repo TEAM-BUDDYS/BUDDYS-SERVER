@@ -16,7 +16,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sopt.buddys.domain.location.entity.City;
-import org.sopt.buddys.domain.location.entity.Continent;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.common.entity.BaseEntity;
@@ -34,10 +33,6 @@ public class Post extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "author_id", nullable = false)
   private User author;
-
-  @Enumerated(EnumType.STRING)
-  @Column(length = 20)
-  private Continent continent;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "country_id", nullable = false)
