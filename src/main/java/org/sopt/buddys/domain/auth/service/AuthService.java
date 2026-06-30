@@ -47,7 +47,7 @@ public class AuthService {
     Long userId = stored.getUserId();
 
     if (stored.isExpired()) {
-      refreshTokenRepository.deleteByUserId(userId);
+      authTransactionService.deleteRefreshToken(userId);
       throw new BaseException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
     }
 
