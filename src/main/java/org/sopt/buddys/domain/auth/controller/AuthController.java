@@ -75,7 +75,7 @@ public class AuthController {
         .secure(true)
         .path("/api/v1/auth/reissue")
         .maxAge(Duration.ofDays(7))
-        .sameSite("Strict")
+        .sameSite("None")
         .build();
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }

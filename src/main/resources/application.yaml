@@ -29,3 +29,6 @@ spring:
       redirect-url: http://localhost:8080/api/v1/auth/kakao/callback
       token-url: https://kauth.kakao.com/oauth/token
       user-info-url: https://kapi.kakao.com/v2/user/me
+
+cors:
+  allowed-origins: "http://localhost:3000"
