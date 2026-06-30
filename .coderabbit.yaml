@@ -1,0 +1,54 @@
+language: "ko-KR"
+
+tone_instructions: |
+  한국어를 사용하여 아래 네 가지 관점에서 분석하고 피드백을 제공해주세요:
+  1. 버그 및 예외 처리: NullPointerException, 리소스 누수, 동시성 문제 등 잠재적 버그 지점
+  2. 코드 품질 및 가독성: 클린 코드 원칙, 네이밍 적절성, 메서드 분리 필요성
+  3. 성능 및 효율성: 불필요한 연산, 비효율적인 루프, N+1 문제 등 쿼리 최적화
+  4. 보안: 하드코딩된 시크릿, 인젝션 취약점 등 보안 위험 요소
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "develop"
+
+  path_filters:
+    - "!build/**"
+    - "!.gradle/**"
+    - "!.idea/**"
+    - "!**/*.class"
+
+  path_instructions:
+    - path: "src/main/java/**/*Controller.java"
+      instructions: |
+        - HTTP 메서드와 URL 설계가 RESTful 컨벤션에 맞는지 확인해주세요.
+        - 요청/응답 DTO가 Controller 레이어에서만 사용되는지 확인해주세요.
+        - @Valid 또는 @Validated 를 통한 입력값 검증이 적절히 적용되었는지 확인해주세요.
+
+    - path: "src/main/java/**/*Service.java"
+      instructions: |
+        - 비즈니스 로직이 Service 레이어에 집중되어 있는지 확인해주세요.
+        - @Transactional 범위가 적절한지 확인해주세요. 읽기 전용 메서드에는 readOnly = true 를 권장해주세요.
+
+    - path: "src/main/java/**/*Repository.java"
+      instructions: |
+        - N+1 문제가 발생할 수 있는 쿼리가 있는지 확인해주세요.
+        - 복잡한 쿼리는 JPQL 또는 QueryDSL 사용을 고려해주세요.
+
+    - path: "src/main/java/**/entity/*.java"
+      instructions: |
+        - 연관관계 편의 메서드가 올바르게 작성되었는지 확인해주세요.
+        - 양방향 관계에서 무한 순환 참조 위험이 없는지 확인해주세요.
+        - Lombok의 @Data 대신 @Getter 사용을 권장해주세요.
+
+    - path: "src/test/java/**/*.java"
+      instructions: |
+        - 테스트 메서드명이 한국어 또는 영어로 의도를 명확히 설명하는지 확인해주세요.
+        - given/when/then 구조가 명확한지 확인해주세요.
