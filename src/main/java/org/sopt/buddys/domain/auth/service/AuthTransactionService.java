@@ -14,7 +14,6 @@ import org.sopt.buddys.global.security.jwt.JwtProvider;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -40,11 +39,6 @@ public class AuthTransactionService {
     );
 
     return new AuthTokens(jwt, refreshToken);
-  }
-
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public void deleteRefreshToken(Long userId) {
-    refreshTokenRepository.deleteByUserId(userId);
   }
 
   private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {

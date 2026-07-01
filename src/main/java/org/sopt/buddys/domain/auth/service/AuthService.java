@@ -35,7 +35,7 @@ public class AuthService {
     return authTransactionService.processKakaoLogin(providerId, kakaoUser);
   }
 
-  @Transactional
+  @Transactional(noRollbackFor = BaseException.class)
   public AuthTokens reissue(String refreshToken) {
     if (!jwtProvider.validateRefreshToken(refreshToken)) {
       throw new BaseException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
@@ -47,7 +47,7 @@ public class AuthService {
     Long userId = stored.getUserId();
 
     if (stored.isExpired()) {
-      authTransactionService.deleteRefreshToken(userId);
+      refreshTokenRepository.deleteByUserId(userId);
       throw new BaseException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
     }
 
