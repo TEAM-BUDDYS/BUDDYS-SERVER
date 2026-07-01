@@ -65,6 +65,12 @@ public class User extends BaseEntity {
   @Column(name = "notification_enabled", nullable = false)
   private Boolean notificationEnabled = true;
 
+  @Column(name = "university_verified", nullable = false)
+  private Boolean universityVerified = false;
+
+  @Column(name = "exchange_verified", nullable = false)
+  private Boolean exchangeVerified = false;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "account_status", nullable = false, length = 20)
   private AccountStatus accountStatus = AccountStatus.ACTIVE;
