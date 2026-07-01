@@ -44,7 +44,7 @@ CREATE TABLE refresh_token
     user_id    BIGINT       PRIMARY KEY,
     token      VARCHAR(512) NOT NULL,
     expires_at DATETIME(6)  NOT NULL,
-    INDEX idx_refresh_token_token (token),
+    CONSTRAINT uk_refresh_token_token UNIQUE (token),
     CONSTRAINT fk_refresh_token_user FOREIGN KEY (user_id) REFERENCES `user` (id) ON DELETE CASCADE
 );
 

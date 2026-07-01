@@ -3,9 +3,9 @@ package org.sopt.buddys.domain.auth.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -15,8 +15,8 @@ import org.springframework.data.domain.Persistable;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "refresh_token", indexes = {
-    @Index(name = "idx_refresh_token_token", columnList = "token")
+@Table(name = "refresh_token", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_refresh_token_token", columnNames = "token")
 })
 public class RefreshToken implements Persistable<Long> {
 
