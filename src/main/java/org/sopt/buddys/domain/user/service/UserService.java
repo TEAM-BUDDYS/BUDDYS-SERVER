@@ -5,11 +5,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.post.entity.Post;
+import org.sopt.buddys.domain.post.repository.PostImageRepository;
+import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse.PostResponse;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
   private final UserRepository userRepository;
+  private final UserTagRepository userTagRepository;
+  private final PostRepository postRepository;
+  private final PostImageRepository postImageRepository;
 
   public UserProfileResponse getProfile(Long userId) {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
-    List<String> tags = userRepository.findTagNamesByUserId(userId);
-    List<Post> posts = userRepository.findPostsByUserId(userId);
+    List<String> tags = userTagRepository.findTagNamesByUserId(userId);
+    List<Post> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(userId);
     Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts);
 
     List<PostResponse> postResponses = posts.stream()
@@ -45,11 +51,11 @@ public class UserService {
       return Map.of();
     }
 
-    return userRepository.findThumbnailImageUrlsByPostIds(postIds)
+    return postImageRepository.findThumbnailImageUrlsByPostIds(postIds)
         .stream()
         .collect(Collectors.toMap(
-            UserRepository.PostThumbnailProjection::getPostId,
-            UserRepository.PostThumbnailProjection::getThumbnailImageUrl,
+            PostImageRepository.PostThumbnailProjection::getPostId,
+            PostImageRepository.PostThumbnailProjection::getThumbnailImageUrl,
             (first, second) -> first
         ));
   }
