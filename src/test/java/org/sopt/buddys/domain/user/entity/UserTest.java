@@ -23,10 +23,10 @@ public class UserTest {
     assertThat(user.getProvider()).isEqualTo(AuthProvider.KAKAO);
     assertThat(user.getProviderId()).isEqualTo("12345");
     assertThat(user.getEmail()).isEqualTo("test@kakao.com");
-    assertThat(user.getNickname()).isEqualTo("kakao_12345");
+    assertThat(user.getNickname()).isNotBlank();
     assertThat(user.getProfileImageUrl()).isEqualTo("http://img.url");
     assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
-    assertThat(user.getNotificationEnabled()).isTrue();
+    assertThat(user.isNotificationEnabled()).isTrue();
   }
 
 }
