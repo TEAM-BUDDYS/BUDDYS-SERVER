@@ -27,6 +27,8 @@ public class UserTest {
     assertThat(user.getProfileImageUrl()).isEqualTo("http://img.url");
     assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
     assertThat(user.isNotificationEnabled()).isTrue();
+    assertThat(user.isUniversityVerified()).isFalse();
+    assertThat(user.isExchangeVerified()).isFalse();
   }
 
 }
