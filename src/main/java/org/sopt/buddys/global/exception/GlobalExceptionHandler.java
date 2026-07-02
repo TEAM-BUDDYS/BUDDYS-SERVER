@@ -43,6 +43,11 @@ public class GlobalExceptionHandler {
       MethodArgumentNotValidException e
   ) {
 
+    log.warn(
+        "[MethodArgumentNotValidException] fieldErrorCount={}",
+        e.getBindingResult().getFieldErrorCount()
+    );
+
     Map<String, String> errors = new LinkedHashMap<>();
 
     e.getBindingResult().getFieldErrors()
@@ -65,7 +70,11 @@ public class GlobalExceptionHandler {
       BindException e
   ) {
 
-    log.warn("[BindException] {}", e.getMessage());
+    log.warn(
+        "[BindException] objectName={}, fieldErrorCount={}",
+        e.getObjectName(),
+        e.getBindingResult().getFieldErrorCount()
+    );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
   }
 
@@ -74,7 +83,11 @@ public class GlobalExceptionHandler {
       MissingServletRequestParameterException e
   ) {
 
-    log.warn("[MissingServletRequestParameterException] {}", e.getMessage());
+    log.warn(
+        "[MissingServletRequestParameterException] parameterName={}, parameterType={}",
+        e.getParameterName(),
+        e.getParameterType()
+    );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
   }
 
@@ -83,7 +96,11 @@ public class GlobalExceptionHandler {
       MethodArgumentTypeMismatchException e
   ) {
 
-    log.warn("[MethodArgumentTypeMismatchException] {}", e.getMessage());
+    log.warn(
+        "[MethodArgumentTypeMismatchException] parameterName={}, requiredType={}",
+        e.getName(),
+        getSimpleName(e.getRequiredType())
+    );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
   }
 
@@ -92,7 +109,10 @@ public class GlobalExceptionHandler {
       HttpMessageNotReadableException e
   ) {
 
-    log.warn("[HttpMessageNotReadableException] {}", e.getMessage());
+    log.warn(
+        "[HttpMessageNotReadableException] causeType={}",
+        getSimpleName(e.getMostSpecificCause().getClass())
+    );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
   }
 
@@ -101,7 +121,7 @@ public class GlobalExceptionHandler {
       NoHandlerFoundException e
   ) {
 
-    log.warn("[NoHandlerFoundException] {}", e.getMessage());
+    log.warn("[NoHandlerFoundException] httpMethod={}", e.getHttpMethod());
     return errorResponse(GlobalErrorCode.RESOURCE_NOT_FOUND);
   }
 
@@ -110,7 +130,7 @@ public class GlobalExceptionHandler {
       NoResourceFoundException e
   ) {
 
-    log.warn("[NoResourceFoundException] {}", e.getResourcePath());
+    log.warn("[NoResourceFoundException] resourceRequest");
     return errorResponse(GlobalErrorCode.RESOURCE_NOT_FOUND);
   }
 
@@ -119,7 +139,11 @@ public class GlobalExceptionHandler {
       HttpRequestMethodNotSupportedException e
   ) {
 
-    log.warn("[HttpRequestMethodNotSupportedException] {}", e.getMessage());
+    log.warn(
+        "[HttpRequestMethodNotSupportedException] method={}, supportedMethods={}",
+        e.getMethod(),
+        e.getSupportedHttpMethods()
+    );
     return errorResponse(GlobalErrorCode.METHOD_NOT_ALLOWED);
   }
 
@@ -140,5 +164,15 @@ public class GlobalExceptionHandler {
     return ResponseEntity
         .status(errorCode.getHttpStatus())
         .body(BaseResponse.failure(errorCode));
+  }
+
+  private String getSimpleName(
+      Class<?> type
+  ) {
+
+    if (type == null) {
+      return null;
+    }
+    return type.getSimpleName();
   }
 }
