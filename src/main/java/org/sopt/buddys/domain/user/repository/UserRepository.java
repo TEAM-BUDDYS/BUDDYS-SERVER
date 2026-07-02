@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.user.repository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+  Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
 
