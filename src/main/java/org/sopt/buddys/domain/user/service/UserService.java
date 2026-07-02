@@ -78,7 +78,7 @@ public class UserService {
   }
 
   private void validateUserExists(Long userId) {
-    if (userRepository.findByIdAndDeletedAtIsNull(userId).isEmpty()) {
+    if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
       throw new BaseException(UserErrorCode.USER_NOT_FOUND);
     }
   }
