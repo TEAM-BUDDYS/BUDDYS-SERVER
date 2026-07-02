@@ -19,7 +19,12 @@ import org.sopt.buddys.domain.user.dto.response.UserProfileResponse.TagGroupResp
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,17 +50,31 @@ public class UserService {
     return UserProfileResponse.of(user, representativeTags, allTags);
   }
 
-  public UserPostsResponse getPosts(Long userId) {
+  public UserPostsResponse getPosts(Long userId, int page, int size) {
     validateUserExists(userId);
+    validatePageRequest(page, size);
 
-    List<Post> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(userId);
+    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    Slice<Post> posts = postRepository.findByAuthorId(userId, pageable);
     Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts);
 
-    List<PostResponse> postResponses = posts.stream()
+    List<PostResponse> postResponses = posts.getContent()
+        .stream()
         .map(post -> PostResponse.from(post, thumbnailImageUrls.get(post.getId())))
         .toList();
 
-    return UserPostsResponse.from(postResponses);
+    return UserPostsResponse.of(
+        postResponses,
+        posts.getNumber(),
+        posts.getSize(),
+        posts.hasNext()
+    );
+  }
+
+  private void validatePageRequest(int page, int size) {
+    if (page < 0 || size < 1) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
   }
 
   private void validateUserExists(Long userId) {
@@ -99,8 +118,9 @@ public class UserService {
         .toList();
   }
 
-  private Map<Long, String> getThumbnailImageUrls(List<Post> posts) {
-    List<Long> postIds = posts.stream()
+  private Map<Long, String> getThumbnailImageUrls(Slice<Post> posts) {
+    List<Long> postIds = posts.getContent()
+        .stream()
         .map(Post::getId)
         .toList();
 

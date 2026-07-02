@@ -13,6 +13,7 @@ import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -39,11 +40,15 @@ public class UserController {
   @GetMapping("/me/posts")
   public BaseResponse<UserPostsResponse> getMyPosts(
       @Parameter(hidden = true)
-      @LoginUser Long userId
+      @LoginUser Long userId,
+      @Parameter(description = "페이지 번호. 0부터 시작합니다.", example = "0")
+      @RequestParam(defaultValue = "0") int page,
+      @Parameter(description = "페이지 크기", example = "10")
+      @RequestParam(defaultValue = "10") int size
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        userService.getPosts(userId)
+        userService.getPosts(userId, page, size)
     );
   }
 }
