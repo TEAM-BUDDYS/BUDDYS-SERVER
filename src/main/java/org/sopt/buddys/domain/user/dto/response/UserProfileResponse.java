@@ -35,10 +35,10 @@ public record UserProfileResponse(
   }
 
   private static VerificationBadge getVerificationBadge(User user) {
-    if (Boolean.TRUE.equals(user.getExchangeVerified())) {
+    if (user.isExchangeVerified()) {
       return VerificationBadge.EXCHANGE_VERIFIED;
     }
-    if (Boolean.TRUE.equals(user.getUniversityVerified())) {
+    if (user.isUniversityVerified()) {
       return VerificationBadge.UNIVERSITY_VERIFIED;
     }
     return VerificationBadge.SOCIAL_LOGIN;

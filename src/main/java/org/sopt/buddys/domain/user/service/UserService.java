@@ -21,7 +21,7 @@ public class UserService {
 
   private final UserRepository userRepository;
 
-  public UserProfileResponse getMyProfile(Long userId) {
+  public UserProfileResponse getProfile(Long userId) {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 

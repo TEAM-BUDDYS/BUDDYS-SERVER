@@ -70,13 +70,15 @@ public class User extends BaseEntity {
 
   @Builder.Default
   @Column(name = "notification_enabled", nullable = false)
-  private Boolean notificationEnabled = true;
+  private boolean notificationEnabled = true;
 
+  @Builder.Default
   @Column(name = "university_verified", nullable = false)
-  private Boolean universityVerified = false;
+  private boolean universityVerified = false;
 
+  @Builder.Default
   @Column(name = "exchange_verified", nullable = false)
-  private Boolean exchangeVerified = false;
+  private boolean exchangeVerified = false;
 
   @Builder.Default
   @Enumerated(EnumType.STRING)

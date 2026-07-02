@@ -1,12 +1,13 @@
 package org.sopt.buddys.domain.user.controller;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
+import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,11 +20,12 @@ public class UserController {
 
   @GetMapping("/me")
   public BaseResponse<UserProfileResponse> getMyProfile(
-      @RequestHeader(value = "X-USER-ID", defaultValue = "1") Long userId
+      @Parameter(hidden = true)
+      @LoginUser Long userId
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        userService.getMyProfile(userId)
+        userService.getProfile(userId)
     );
   }
 }
