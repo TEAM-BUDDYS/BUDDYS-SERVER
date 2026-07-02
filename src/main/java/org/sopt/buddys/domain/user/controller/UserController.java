@@ -32,7 +32,7 @@ public class UserController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        userService.getProfile(userId)
+        UserProfileResponse.from(userService.getProfile(userId))
     );
   }
 
@@ -48,7 +48,7 @@ public class UserController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        userService.getPosts(userId, page, size)
+        UserPostsResponse.from(userService.getPosts(userId, page, size))
     );
   }
 }

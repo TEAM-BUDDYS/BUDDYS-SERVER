@@ -5,6 +5,7 @@ import java.util.List;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.entity.VerificationBadge;
+import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 
 public record UserProfileResponse(
     @Schema(description = "사용자 ID", example = "1")
@@ -29,19 +30,19 @@ public record UserProfileResponse(
     List<TagGroupResponse> allTags
 ) {
 
-  public static UserProfileResponse of(
-      User user,
-      List<String> representativeTags,
-      List<TagGroupResponse> allTags
-  ) {
+  public static UserProfileResponse from(UserProfileResult result) {
+    User user = result.user();
     return new UserProfileResponse(
         user.getId(),
         user.getNickname(),
         user.getProfileImageUrl(),
         user.getIntroduction(),
         getVerificationBadge(user),
-        List.copyOf(representativeTags),
-        List.copyOf(allTags)
+        result.representativeTags(),
+        result.allTags()
+            .stream()
+            .map(TagGroupResponse::from)
+            .toList()
     );
   }
 
@@ -65,6 +66,10 @@ public record UserProfileResponse(
 
     public TagGroupResponse {
       tags = List.copyOf(tags);
+    }
+
+    private static TagGroupResponse from(UserProfileResult.TagGroupResult result) {
+      return new TagGroupResponse(result.tagType(), result.tags());
     }
   }
 }

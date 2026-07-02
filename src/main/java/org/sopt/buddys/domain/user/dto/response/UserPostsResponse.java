@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.sopt.buddys.domain.post.entity.Post;
+import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 
 public record UserPostsResponse(
     @Schema(description = "사용자가 작성한 게시글 목록")
@@ -25,13 +26,16 @@ public record UserPostsResponse(
     posts = List.copyOf(posts);
   }
 
-  public static UserPostsResponse of(
-      List<PostResponse> posts,
-      int page,
-      int size,
-      boolean hasNext
-  ) {
-    return new UserPostsResponse(posts, page, size, hasNext);
+  public static UserPostsResponse from(UserPostsResult result) {
+    return new UserPostsResponse(
+        result.posts()
+            .stream()
+            .map(PostResponse::from)
+            .toList(),
+        result.page(),
+        result.size(),
+        result.hasNext()
+    );
   }
 
   public record PostResponse(
@@ -53,12 +57,13 @@ public record UserPostsResponse(
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yy.MM.dd");
 
-    public static PostResponse from(Post post, String thumbnailImageUrl) {
+    private static PostResponse from(UserPostsResult.PostResult result) {
+      Post post = result.post();
       return new PostResponse(
           post.getId(),
           post.getTitle(),
           post.getContent(),
-          thumbnailImageUrl,
+          result.thumbnailImageUrl(),
           toDateText(post.getStartDate(), post.getEndDate())
       );
     }

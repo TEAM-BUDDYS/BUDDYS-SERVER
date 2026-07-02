@@ -14,13 +14,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
-import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
-import org.sopt.buddys.domain.user.dto.response.UserProfileResponse.TagGroupResponse;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
-import org.sopt.buddys.domain.user.entity.VerificationBadge;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.result.UserProfileResult;
+import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -39,57 +38,6 @@ class UserServiceTest {
 
   @Mock
   private PostImageRepository postImageRepository;
-
-  @DisplayName("파견교 인증이 되어 있으면 학교 인증 여부와 관계없이 파견교 인증 뱃지를 반환한다")
-  @Test
-  void getProfile_exchangeVerified_returnsExchangeVerifiedBadge() {
-    // given
-    Long userId = 1L;
-    User user = createUser(userId, true, true);
-
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
-    given(userTagRepository.findTagsByUserId(userId)).willReturn(List.of());
-
-    // when
-    UserProfileResponse result = userService.getProfile(userId);
-
-    // then
-    assertThat(result.verificationBadge()).isEqualTo(VerificationBadge.EXCHANGE_VERIFIED);
-  }
-
-  @DisplayName("학교 인증만 되어 있으면 학교 인증 뱃지를 반환한다")
-  @Test
-  void getProfile_universityVerified_returnsUniversityVerifiedBadge() {
-    // given
-    Long userId = 1L;
-    User user = createUser(userId, true, false);
-
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
-    given(userTagRepository.findTagsByUserId(userId)).willReturn(List.of());
-
-    // when
-    UserProfileResponse result = userService.getProfile(userId);
-
-    // then
-    assertThat(result.verificationBadge()).isEqualTo(VerificationBadge.UNIVERSITY_VERIFIED);
-  }
-
-  @DisplayName("추가 인증이 없으면 소셜 로그인 뱃지를 반환한다")
-  @Test
-  void getProfile_notVerified_returnsSocialLoginBadge() {
-    // given
-    Long userId = 1L;
-    User user = createUser(userId, false, false);
-
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
-    given(userTagRepository.findTagsByUserId(userId)).willReturn(List.of());
-
-    // when
-    UserProfileResponse result = userService.getProfile(userId);
-
-    // then
-    assertThat(result.verificationBadge()).isEqualTo(VerificationBadge.SOCIAL_LOGIN);
-  }
 
   @DisplayName("타입별 태그 리스트를 만들고 대표 태그는 각 타입 리스트의 첫 번째 요소로 반환한다")
   @Test
@@ -110,12 +58,12 @@ class UserServiceTest {
     given(userTagRepository.findTagsByUserId(userId)).willReturn(userTags);
 
     // when
-    UserProfileResponse result = userService.getProfile(userId);
+    UserProfileResult result = userService.getProfile(userId);
 
     // then
     assertThat(result.allTags()).hasSize(3);
     assertThat(result.allTags())
-        .extracting(TagGroupResponse::tagType)
+        .extracting(TagGroupResult::tagType)
         .containsExactly(TagType.ACTIVITY, TagType.INTEREST, TagType.TRAVEL_STYLE);
 
     assertThat(getTags(result, TagType.ACTIVITY)).containsExactlyInAnyOrder("액티비티", "맛집탐방");
@@ -129,7 +77,7 @@ class UserServiceTest {
     );
   }
 
-  private List<String> getTags(UserProfileResponse response, TagType tagType) {
+  private List<String> getTags(UserProfileResult response, TagType tagType) {
     return response.allTags()
         .stream()
         .filter(tagGroup -> tagGroup.tagType() == tagType)
