@@ -72,7 +72,7 @@ public record UserProfileResponse(
       if (startDate == null || endDate == null) {
         return null;
       }
-      long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+      long days = ChronoUnit.DAYS.between(startDate, endDate);
       return "%s ~ %s (%d일)".formatted(
           startDate.format(DATE_FORMATTER),
           endDate.format(DATE_FORMATTER),
