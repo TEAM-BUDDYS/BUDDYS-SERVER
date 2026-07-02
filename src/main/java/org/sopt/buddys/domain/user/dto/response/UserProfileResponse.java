@@ -1,10 +1,11 @@
 package org.sopt.buddys.domain.user.dto.response;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.sopt.buddys.domain.post.entity.Post;
+import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.entity.VerificationBadge;
 
@@ -14,13 +15,15 @@ public record UserProfileResponse(
     String profileImageUrl,
     String bio,
     VerificationBadge verificationBadge,
-    List<String> tags,
+    List<String> representativeTags,
+    List<TagGroupResponse> allTags,
     List<PostResponse> posts
 ) {
 
   public static UserProfileResponse of(
       User user,
-      List<String> tags,
+      List<String> representativeTags,
+      List<TagGroupResponse> allTags,
       List<PostResponse> posts
   ) {
     return new UserProfileResponse(
@@ -29,7 +32,8 @@ public record UserProfileResponse(
         user.getProfileImageUrl(),
         user.getIntroduction(),
         getVerificationBadge(user),
-        List.copyOf(tags),
+        List.copyOf(representativeTags),
+        List.copyOf(allTags),
         List.copyOf(posts)
     );
   }
@@ -42,6 +46,16 @@ public record UserProfileResponse(
       return VerificationBadge.UNIVERSITY_VERIFIED;
     }
     return VerificationBadge.SOCIAL_LOGIN;
+  }
+
+  public record TagGroupResponse(
+      TagType tagType,
+      List<String> tags
+  ) {
+
+    public TagGroupResponse {
+      tags = List.copyOf(tags);
+    }
   }
 
   public record PostResponse(
