@@ -34,6 +34,22 @@ import org.sopt.buddys.global.response.BaseResponse;
         )
     ),
     @ApiResponse(
+        responseCode = "404",
+        description = "사용자 없음",
+        content = @Content(
+            mediaType = "application/json",
+            schema = @Schema(implementation = BaseResponse.class),
+            examples = @ExampleObject(value = """
+                {
+                  "success": false,
+                  "code": "USER-E001",
+                  "message": "사용자를 찾을 수 없습니다.",
+                  "data": null
+                }
+                """)
+        )
+    ),
+    @ApiResponse(
         responseCode = "500",
         description = "서버 내부 오류",
         content = @Content(
