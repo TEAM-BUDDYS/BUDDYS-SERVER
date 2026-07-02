@@ -14,9 +14,9 @@ import org.sopt.buddys.global.response.BaseResponse;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Operation(summary = "내 프로필 조회", description = "로그인한 사용자의 프로필과 태그를 조회합니다.")
+@Operation(summary = "내가 작성한 게시글 목록 조회", description = "로그인한 사용자가 작성한 게시글 목록을 조회합니다.")
 @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "내 프로필 조회 성공"),
+    @ApiResponse(responseCode = "200", description = "내가 작성한 게시글 목록 조회 성공"),
     @ApiResponse(
         responseCode = "401",
         description = "인증 필요",
@@ -28,22 +28,6 @@ import org.sopt.buddys.global.response.BaseResponse;
                   "success": false,
                   "code": "GLB-E002",
                   "message": "인증이 필요합니다.",
-                  "data": null
-                }
-                """)
-        )
-    ),
-    @ApiResponse(
-        responseCode = "404",
-        description = "사용자 없음",
-        content = @Content(
-            mediaType = "application/json",
-            schema = @Schema(implementation = BaseResponse.class),
-            examples = @ExampleObject(value = """
-                {
-                  "success": false,
-                  "code": "USER-E001",
-                  "message": "사용자를 찾을 수 없습니다.",
                   "data": null
                 }
                 """)
@@ -66,5 +50,5 @@ import org.sopt.buddys.global.response.BaseResponse;
         )
     )
 })
-public @interface GetMyProfileSwagger {
+public @interface GetMyPostsSwagger {
 }

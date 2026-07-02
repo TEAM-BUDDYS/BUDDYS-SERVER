@@ -3,7 +3,9 @@ package org.sopt.buddys.domain.user.controller;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
+import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
@@ -30,6 +32,18 @@ public class UserController {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
         userService.getProfile(userId)
+    );
+  }
+
+  @GetMyPostsSwagger
+  @GetMapping("/me/posts")
+  public BaseResponse<UserPostsResponse> getMyPosts(
+      @Parameter(hidden = true)
+      @LoginUser Long userId
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        userService.getPosts(userId)
     );
   }
 }

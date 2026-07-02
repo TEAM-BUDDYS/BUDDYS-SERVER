@@ -12,8 +12,9 @@ import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
+import org.sopt.buddys.domain.user.dto.response.UserPostsResponse.PostResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
-import org.sopt.buddys.domain.user.dto.response.UserProfileResponse.PostResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse.TagGroupResponse;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -40,6 +41,13 @@ public class UserService {
     Map<TagType, List<String>> tagsByType = shuffleTagsByType(groupTagsByType(userTags));
     List<String> representativeTags = getFirstTagsByType(tagsByType);
     List<TagGroupResponse> allTags = toTagGroupResponses(tagsByType);
+
+    return UserProfileResponse.of(user, representativeTags, allTags);
+  }
+
+  public UserPostsResponse getPosts(Long userId) {
+    validateUserExists(userId);
+
     List<Post> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(userId);
     Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts);
 
@@ -47,7 +55,13 @@ public class UserService {
         .map(post -> PostResponse.from(post, thumbnailImageUrls.get(post.getId())))
         .toList();
 
-    return UserProfileResponse.of(user, representativeTags, allTags, postResponses);
+    return UserPostsResponse.from(postResponses);
+  }
+
+  private void validateUserExists(Long userId) {
+    if (userRepository.findByIdAndDeletedAtIsNull(userId).isEmpty()) {
+      throw new BaseException(UserErrorCode.USER_NOT_FOUND);
+    }
   }
 
   private Map<TagType, List<String>> groupTagsByType(
