@@ -25,9 +25,7 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
   );
 
   interface PostThumbnailProjection {
-
     Long getPostId();
-
     String getThumbnailImageUrl();
   }
 }
