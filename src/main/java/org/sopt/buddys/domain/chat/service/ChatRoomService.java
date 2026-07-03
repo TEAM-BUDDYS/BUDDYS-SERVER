@@ -3,14 +3,13 @@ package org.sopt.buddys.domain.chat.service;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
-import org.sopt.buddys.domain.chat.entity.ChatRoomMember;
-import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomResult;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChatRoomService {
 
   private final ChatRoomRepository chatRoomRepository;
-  private final ChatRoomMemberRepository chatRoomMemberRepository;
+  private final ChatRoomCommandService chatRoomCommandService;
   private final UserRepository userRepository;
 
-  @Transactional
   public ChatRoomResult createOrGetChatRoom(
       Long userId,
       Long participantUserId
@@ -35,9 +33,10 @@ public class ChatRoomService {
 
     User user = findActiveUser(userId);
     User participant = findActiveUser(participantUserId);
+    String directChatKey = createDirectChatKey(userId, participantUserId);
 
-    ChatRoom chatRoom = chatRoomMemberRepository.findDirectChatRoom(userId, participantUserId)
-        .orElseGet(() -> createChatRoom(user, participant));
+    ChatRoom chatRoom = chatRoomRepository.findByDirectChatKey(directChatKey)
+        .orElseGet(() -> createChatRoom(userId, participantUserId, directChatKey));
 
     return new ChatRoomResult(chatRoom, participant);
   }
@@ -48,15 +47,26 @@ public class ChatRoomService {
   }
 
   private ChatRoom createChatRoom(
-      User user,
-      User participant
+      Long userId,
+      Long participantUserId,
+      String directChatKey
   ) {
 
-    ChatRoom chatRoom = chatRoomRepository.save(ChatRoom.create());
+    try {
+      return chatRoomCommandService.createDirectChatRoom(userId, participantUserId, directChatKey);
+    } catch (DataIntegrityViolationException e) {
+      return chatRoomRepository.findByDirectChatKey(directChatKey)
+          .orElseThrow(() -> e);
+    }
+  }
 
-    chatRoomMemberRepository.save(new ChatRoomMember(chatRoom, user));
-    chatRoomMemberRepository.save(new ChatRoomMember(chatRoom, participant));
+  private String createDirectChatKey(
+      Long userId,
+      Long participantUserId
+  ) {
 
-    return chatRoom;
+    long firstUserId = Math.min(userId, participantUserId);
+    long secondUserId = Math.max(userId, participantUserId);
+    return "%d:%d".formatted(firstUserId, secondUserId);
   }
 }
