@@ -17,19 +17,19 @@ public class SwaggerConfig {
   @Bean
   public OpenAPI openAPI() {
     Info info = new Info()
-        .title("BUDDYs API")
-        .version("1.0")
-        .description("38th Let's SOPT Buddys 서버 API 문서입니다.");
+            .title("BUDDYs API")
+            .version("1.0")
+            .description("38th Let's SOPT Buddys 서버 API 문서입니다.");
 
     SecurityScheme bearerScheme = new SecurityScheme()
-        .type(SecurityScheme.Type.HTTP)
-        .scheme("bearer")
-        .bearerFormat("JWT");
+            .type(SecurityScheme.Type.HTTP)
+            .scheme("bearer")
+            .bearerFormat("JWT");
 
     return new OpenAPI()
-        .addServersItem(new Server().url("/"))
-        .info(info)
-        .components(new Components().addSecuritySchemes(BEARER_AUTH, bearerScheme))
-        .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
+            .addServersItem(new Server().url("/"))
+            .info(info)
+            .components(new Components().addSecuritySchemes(BEARER_AUTH, bearerScheme))
+            .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
   }
 }

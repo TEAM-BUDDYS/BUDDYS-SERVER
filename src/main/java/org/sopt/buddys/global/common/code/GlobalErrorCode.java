@@ -36,6 +36,12 @@ public enum GlobalErrorCode implements ErrorCode {
       "GLB-E005",
       HttpStatus.INTERNAL_SERVER_ERROR,
       "서버 내부 오류가 발생했습니다."
+  ),
+
+  METHOD_NOT_ALLOWED(
+      "GLB-E006",
+      HttpStatus.METHOD_NOT_ALLOWED,
+      "지원하지 않는 HTTP 메서드입니다."
   );
 
   private final String code;

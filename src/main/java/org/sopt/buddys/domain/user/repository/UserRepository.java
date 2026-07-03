@@ -7,4 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
+
+  Optional<User> findByIdAndDeletedAtIsNull(Long id);
+
+  boolean existsByIdAndDeletedAtIsNull(Long id);
 }
