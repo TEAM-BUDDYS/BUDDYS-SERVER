@@ -11,6 +11,7 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -18,10 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ChatRoomService {
 
+  private static final int DIRECT_CHAT_ROOM_RETRY_COUNT = 3;
+  private static final long DIRECT_CHAT_ROOM_RETRY_INTERVAL_MILLIS = 50L;
+
   private final ChatRoomRepository chatRoomRepository;
   private final ChatRoomCommandService chatRoomCommandService;
   private final UserRepository userRepository;
 
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public ChatRoomResult createOrGetChatRoom(
       Long userId,
       Long participantUserId
@@ -55,8 +60,34 @@ public class ChatRoomService {
     try {
       return chatRoomCommandService.createDirectChatRoom(userId, participantUserId, directChatKey);
     } catch (DataIntegrityViolationException e) {
-      return chatRoomRepository.findByDirectChatKey(directChatKey)
-          .orElseThrow(() -> e);
+      return findDirectChatRoomAfterDuplicateKey(directChatKey, e);
+    }
+  }
+
+  private ChatRoom findDirectChatRoomAfterDuplicateKey(
+      String directChatKey,
+      DataIntegrityViolationException exception
+  ) {
+
+    for (int i = 0; i < DIRECT_CHAT_ROOM_RETRY_COUNT; i++) {
+      ChatRoom chatRoom = chatRoomRepository.findByDirectChatKey(directChatKey)
+          .orElse(null);
+
+      if (chatRoom != null) {
+        return chatRoom;
+      }
+
+      sleepBeforeRetry();
+    }
+
+    throw exception;
+  }
+
+  private void sleepBeforeRetry() {
+    try {
+      Thread.sleep(DIRECT_CHAT_ROOM_RETRY_INTERVAL_MILLIS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
   }
 
