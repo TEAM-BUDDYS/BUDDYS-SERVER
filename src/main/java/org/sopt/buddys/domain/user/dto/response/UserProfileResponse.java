@@ -37,23 +37,13 @@ public record UserProfileResponse(
         user.getNickname(),
         user.getProfileImageUrl(),
         user.getIntroduction(),
-        getVerificationBadge(user),
+        VerificationBadge.from(user),
         result.representativeTags(),
         result.allTags()
             .stream()
             .map(TagGroupResponse::from)
             .toList()
     );
-  }
-
-  static VerificationBadge getVerificationBadge(User user) {
-    if (user.isExchangeVerified()) {
-      return VerificationBadge.EXCHANGE_VERIFIED;
-    }
-    if (user.isUniversityVerified()) {
-      return VerificationBadge.UNIVERSITY_VERIFIED;
-    }
-    return VerificationBadge.SOCIAL_LOGIN;
   }
 
   public record TagGroupResponse(

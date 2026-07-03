@@ -37,7 +37,7 @@ public record UserPublicProfileResponse(
         user.getNickname(),
         user.getProfileImageUrl(),
         user.getIntroduction(),
-        UserProfileResponse.getVerificationBadge(user),
+        VerificationBadge.from(user),
         result.representativeTags()
     );
   }
