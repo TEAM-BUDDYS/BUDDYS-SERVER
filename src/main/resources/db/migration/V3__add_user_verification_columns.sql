@@ -1,0 +1,3 @@
+ALTER TABLE `user`
+    ADD COLUMN university_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN exchange_verified BOOLEAN NOT NULL DEFAULT FALSE;
