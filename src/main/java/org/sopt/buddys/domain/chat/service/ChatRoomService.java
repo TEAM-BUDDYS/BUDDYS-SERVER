@@ -36,7 +36,6 @@ public class ChatRoomService {
       throw new BaseException(ChatErrorCode.CANNOT_CREATE_CHAT_ROOM_WITH_SELF);
     }
 
-    User user = findActiveUser(userId);
     User participant = findActiveUser(participantUserId);
     String directChatKey = createDirectChatKey(userId, participantUserId);
 
