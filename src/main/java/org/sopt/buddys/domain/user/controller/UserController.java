@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
@@ -64,6 +65,22 @@ public class UserController {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
         UserPublicProfileResponse.from(userService.getProfile(userId))
+    );
+  }
+
+  @GetUserPostsSwagger
+  @GetMapping("/{userId}/posts")
+  public BaseResponse<UserPostsResponse> getUserPosts(
+      @Parameter(description = "조회할 사용자 ID", example = "1")
+      @PathVariable Long userId,
+      @Parameter(description = "페이지 번호. 0부터 시작합니다.", example = "0")
+      @RequestParam(defaultValue = "0") int page,
+      @Parameter(description = "페이지 크기", example = "10")
+      @RequestParam(defaultValue = "10") int size
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        UserPostsResponse.from(userService.getPosts(userId, page, size))
     );
   }
 }
