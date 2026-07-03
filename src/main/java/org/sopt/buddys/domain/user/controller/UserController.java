@@ -49,9 +49,9 @@ public class UserController {
   public BaseResponse<UserPostsResponse> getMyPosts(
       @Parameter(hidden = true)
       @LoginUser Long userId,
-      @Parameter(description = "페이지 번호. 0부터 시작합니다.", example = "0")
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
       @RequestParam(defaultValue = "0") @Min(0) int page,
-      @Parameter(description = "페이지 크기", example = "10")
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "10")
       @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
   ) {
     return BaseResponse.success(
@@ -77,9 +77,9 @@ public class UserController {
   public BaseResponse<UserPostsResponse> getUserPosts(
       @Parameter(description = "조회할 사용자 ID", example = "1")
       @PathVariable Long userId,
-      @Parameter(description = "페이지 번호. 0부터 시작합니다.", example = "0")
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
       @RequestParam(defaultValue = "0") @Min(0) int page,
-      @Parameter(description = "페이지 크기", example = "10")
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "10")
       @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size
   ) {
     return BaseResponse.success(

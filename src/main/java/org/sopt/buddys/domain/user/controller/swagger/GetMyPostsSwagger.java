@@ -8,6 +8,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import org.sopt.buddys.global.swagger.CommonErrorResponses;
+import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -15,6 +16,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
 @ApiResponses({
     @ApiResponse(responseCode = "200", description = "내가 작성한 게시글 목록 조회 성공")
 })
+@InvalidRequestResponse
 @UserNotFoundResponse
 @CommonErrorResponses
 public @interface GetMyPostsSwagger {
