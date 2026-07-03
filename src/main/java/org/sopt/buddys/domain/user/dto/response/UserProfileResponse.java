@@ -46,7 +46,7 @@ public record UserProfileResponse(
     );
   }
 
-  private static VerificationBadge getVerificationBadge(User user) {
+  static VerificationBadge getVerificationBadge(User user) {
     if (user.isExchangeVerified()) {
       return VerificationBadge.EXCHANGE_VERIFIED;
     }
