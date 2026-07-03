@@ -10,6 +10,7 @@ import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.exception.BaseException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -72,14 +73,27 @@ public class ChatRoomService {
     Throwable cause = exception;
 
     while (cause != null) {
-      String message = cause.getMessage();
-      if (message != null && message.contains(DIRECT_CHAT_KEY_UNIQUE_CONSTRAINT)) {
+      if (isDirectChatKeyConstraint(cause) || hasDirectChatKeyConstraintMessage(cause)) {
         return true;
       }
       cause = cause.getCause();
     }
 
     return false;
+  }
+
+  private boolean isDirectChatKeyConstraint(Throwable cause) {
+    if (cause instanceof ConstraintViolationException constraintViolationException) {
+      return DIRECT_CHAT_KEY_UNIQUE_CONSTRAINT.equals(
+          constraintViolationException.getConstraintName()
+      );
+    }
+    return false;
+  }
+
+  private boolean hasDirectChatKeyConstraintMessage(Throwable cause) {
+    String message = cause.getMessage();
+    return message != null && message.contains(DIRECT_CHAT_KEY_UNIQUE_CONSTRAINT);
   }
 
   private ChatRoom findDirectChatRoomAfterDuplicateKey(
