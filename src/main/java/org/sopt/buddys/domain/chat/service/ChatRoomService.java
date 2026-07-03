@@ -39,7 +39,8 @@ public class ChatRoomService {
       throw new BaseException(ChatErrorCode.CANNOT_CREATE_CHAT_ROOM_WITH_SELF);
     }
 
-    User participant = findActiveUser(participantUserId);
+    validateUserExists(userId);
+    User participant = getActiveUser(participantUserId);
     String directChatKey = DirectChatKey.from(userId, participantUserId);
 
     ChatRoom chatRoom = chatRoomRepository.findByDirectChatKey(directChatKey)
@@ -48,7 +49,13 @@ public class ChatRoomService {
     return new ChatRoomResult(chatRoom, participant);
   }
 
-  private User findActiveUser(Long userId) {
+  private void validateUserExists(Long userId) {
+    if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+      throw new BaseException(UserErrorCode.USER_NOT_FOUND);
+    }
+  }
+
+  private User getActiveUser(Long userId) {
     return userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
   }
