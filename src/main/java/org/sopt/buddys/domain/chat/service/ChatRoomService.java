@@ -5,6 +5,7 @@ import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomResult;
+import org.sopt.buddys.domain.chat.util.DirectChatKey;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -38,7 +39,7 @@ public class ChatRoomService {
     }
 
     User participant = findActiveUser(participantUserId);
-    String directChatKey = createDirectChatKey(userId, participantUserId);
+    String directChatKey = DirectChatKey.from(userId, participantUserId);
 
     ChatRoom chatRoom = chatRoomRepository.findByDirectChatKey(directChatKey)
         .orElseGet(() -> createChatRoom(userId, participantUserId, directChatKey));
@@ -108,13 +109,4 @@ public class ChatRoomService {
     }
   }
 
-  private String createDirectChatKey(
-      Long userId,
-      Long participantUserId
-  ) {
-
-    long firstUserId = Math.min(userId, participantUserId);
-    long secondUserId = Math.max(userId, participantUserId);
-    return "%d:%d".formatted(firstUserId, secondUserId);
-  }
 }

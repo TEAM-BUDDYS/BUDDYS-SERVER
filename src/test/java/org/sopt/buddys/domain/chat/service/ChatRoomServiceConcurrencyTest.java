@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.util.DirectChatKey;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -61,7 +62,7 @@ class ChatRoomServiceConcurrencyTest {
     // given
     User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
     User participant = userRepository.save(createUser("participant@test.com", "provider-participant", "상대방"));
-    String directChatKey = createDirectChatKey(user.getId(), participant.getId());
+    String directChatKey = DirectChatKey.from(user.getId(), participant.getId());
 
     ExecutorService executorService = Executors.newFixedThreadPool(2);
     CountDownLatch readyLatch = new CountDownLatch(2);
@@ -122,16 +123,6 @@ class ChatRoomServiceConcurrencyTest {
         .providerId(providerId)
         .nickname(nickname)
         .build();
-  }
-
-  private String createDirectChatKey(
-      Long userId,
-      Long participantUserId
-  ) {
-
-    long firstUserId = Math.min(userId, participantUserId);
-    long secondUserId = Math.max(userId, participantUserId);
-    return "%d:%d".formatted(firstUserId, secondUserId);
   }
 
   private void cleanUp() {
