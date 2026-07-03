@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ChatRoomService {
 
+  private static final String DIRECT_CHAT_KEY_UNIQUE_CONSTRAINT = "uk_chat_room_direct_chat_key";
   private static final int DIRECT_CHAT_ROOM_RETRY_COUNT = 3;
   private static final long DIRECT_CHAT_ROOM_RETRY_INTERVAL_MILLIS = 50L;
 
@@ -59,8 +60,25 @@ public class ChatRoomService {
     try {
       return chatRoomCommandService.createDirectChatRoom(userId, participantUserId, directChatKey);
     } catch (DataIntegrityViolationException e) {
+      if (!isDirectChatKeyDuplicate(e)) {
+        throw e;
+      }
       return findDirectChatRoomAfterDuplicateKey(directChatKey, e);
     }
+  }
+
+  private boolean isDirectChatKeyDuplicate(DataIntegrityViolationException exception) {
+    Throwable cause = exception;
+
+    while (cause != null) {
+      String message = cause.getMessage();
+      if (message != null && message.contains(DIRECT_CHAT_KEY_UNIQUE_CONSTRAINT)) {
+        return true;
+      }
+      cause = cause.getCause();
+    }
+
+    return false;
   }
 
   private ChatRoom findDirectChatRoomAfterDuplicateKey(
