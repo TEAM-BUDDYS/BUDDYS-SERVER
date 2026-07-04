@@ -39,7 +39,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private static final List<String> PUBLIC_PREFIX_PATHS = List.of(
       "/v3/api-docs/",
-      "/swagger-ui/"
+      "/swagger-ui/",
+      "/api/v1/tags/"
   );
 
   @Override
