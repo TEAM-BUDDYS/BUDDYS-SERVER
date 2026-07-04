@@ -166,13 +166,6 @@ public class GlobalExceptionHandler {
         .body(BaseResponse.failure(errorCode));
   }
 
-  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-  public ResponseEntity<BaseResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
-    return ResponseEntity
-        .badRequest()
-        .body(BaseResponse.failure(GlobalErrorCode.INVALID_REQUEST));
-  }
-
   private String getSimpleName(
       Class<?> type
   ) {

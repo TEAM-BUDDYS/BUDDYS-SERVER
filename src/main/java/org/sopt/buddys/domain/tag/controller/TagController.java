@@ -36,6 +36,10 @@ public class TagController {
       @Parameter(description = "태그 타입", example = "ACTIVITY")
       @PathVariable TagType type
   ) {
-    return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK, tagService.getTagsByType(type)));
+    return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK,
+        tagService.getTagsByType(type).stream()
+            .map(TagResponse::from)
+            .toList())
+    );
   }
 }
