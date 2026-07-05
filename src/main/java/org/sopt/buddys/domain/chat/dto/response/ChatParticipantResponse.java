@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.sopt.buddys.domain.user.entity.User;
 
 public record ChatParticipantResponse(
-    @Schema(description = "상대방 사용자 ID", example = "20")
+    @Schema(description = "상대방 사용자 ID", example = "2")
     Long userId,
 
     @Schema(description = "상대방 닉네임", example = "민지")
