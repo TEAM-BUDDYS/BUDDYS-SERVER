@@ -5,12 +5,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.controller.swagger.CreateChatRoomSwagger;
+import org.sopt.buddys.domain.chat.controller.swagger.GetChatRoomSwagger;
 import org.sopt.buddys.domain.chat.dto.request.CreateChatRoomRequest;
 import org.sopt.buddys.domain.chat.dto.response.ChatRoomResponse;
 import org.sopt.buddys.domain.chat.service.ChatRoomService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +40,21 @@ public class ChatRoomController {
         ChatRoomResponse.from(
             chatRoomService.createOrGetChatRoom(userId, request.participantUserId())
         )
+    );
+  }
+
+  @GetChatRoomSwagger
+  @GetMapping("/{chatRoomId}")
+  public BaseResponse<ChatRoomResponse> getChatRoom(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "조회할 채팅방 ID", example = "1")
+      @PathVariable Long chatRoomId
+  ) {
+
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        ChatRoomResponse.from(chatRoomService.getChatRoom(userId, chatRoomId))
     );
   }
 }

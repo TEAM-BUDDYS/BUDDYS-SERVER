@@ -3,12 +3,14 @@ package org.sopt.buddys.domain.chat.service;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
+import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomResult;
 import org.sopt.buddys.domain.chat.util.DirectChatKey;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,6 +28,7 @@ public class ChatRoomService {
   private static final long DIRECT_CHAT_ROOM_RETRY_INTERVAL_MILLIS = 50L;
 
   private final ChatRoomRepository chatRoomRepository;
+  private final ChatRoomMemberRepository chatRoomMemberRepository;
   private final ChatRoomCommandService chatRoomCommandService;
   private final UserRepository userRepository;
 
@@ -47,6 +50,27 @@ public class ChatRoomService {
         .orElseGet(() -> createChatRoom(userId, participantUserId, directChatKey));
 
     return new ChatRoomResult(chatRoom, participant);
+  }
+
+  public ChatRoomResult getChatRoom(
+      Long userId,
+      Long chatRoomId
+  ) {
+
+    validateUserExists(userId);
+
+    if (!chatRoomRepository.existsById(chatRoomId)) {
+      throw new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
+    }
+
+    ChatRoomMemberRepository.ChatRoomDetailProjection chatRoomDetail =
+        chatRoomMemberRepository.findChatRoomDetailByIdAndUserId(chatRoomId, userId)
+            .orElseThrow(() -> new BaseException(GlobalErrorCode.FORBIDDEN));
+
+    return new ChatRoomResult(
+        chatRoomDetail.getChatRoom(),
+        chatRoomDetail.getParticipant()
+    );
   }
 
   private void validateUserExists(Long userId) {
