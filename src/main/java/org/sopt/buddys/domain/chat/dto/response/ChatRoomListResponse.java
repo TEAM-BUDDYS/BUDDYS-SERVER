@@ -13,7 +13,7 @@ public record ChatRoomListResponse(
     @Schema(description = "현재 페이지 번호. 0부터 시작합니다.", example = "0")
     int page,
 
-    @Schema(description = "페이지 크기", example = "10")
+    @Schema(description = "페이지 크기", example = "20")
     int size,
 
     @Schema(description = "다음 페이지 존재 여부", example = "true")
