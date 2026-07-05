@@ -73,6 +73,9 @@ class ChatRoomServiceTest {
     User latestParticipant = userRepository.save(
         createUser("latest@test.com", "provider-latest", "최신상대")
     );
+    User noMessageParticipant = userRepository.save(
+        createUser("no-message@test.com", "provider-no-message", "메시지없는상대")
+    );
 
     ChatRoom oldChatRoom = chatRoomService.createOrGetChatRoom(
         user.getId(),
@@ -82,6 +85,14 @@ class ChatRoomServiceTest {
         user.getId(),
         latestParticipant.getId()
     ).chatRoom();
+    ChatRoom noMessageChatRoom = chatRoomService.createOrGetChatRoom(
+        user.getId(),
+        noMessageParticipant.getId()
+    ).chatRoom();
+    updateChatRoomCreatedAt(
+        noMessageChatRoom.getId(),
+        LocalDateTime.of(2026, 7, 5, 12, 0)
+    );
 
     insertMessage(
         oldChatRoom.getId(),
@@ -108,8 +119,9 @@ class ChatRoomServiceTest {
     // then
     assertThat(result.chatRooms())
         .extracting(ChatRoomListItemResult::chatRoomId)
-        .containsExactly(latestChatRoom.getId(), oldChatRoom.getId());
-    assertThat(result.chatRooms().get(0).lastMessage()).isEqualTo("가장 최근 메시지");
+        .containsExactly(noMessageChatRoom.getId(), latestChatRoom.getId(), oldChatRoom.getId());
+    assertThat(result.chatRooms().get(0).lastMessage()).isNull();
+    assertThat(result.chatRooms().get(1).lastMessage()).isEqualTo("가장 최근 메시지");
   }
 
   @DisplayName("읽지 않은 메시지 수는 마지막으로 읽은 메시지 이후 상대방이 보낸 메시지만 계산한다")
@@ -242,6 +254,22 @@ class ChatRoomServiceTest {
         lastReadMessageId,
         chatRoomId,
         userId
+    );
+  }
+
+  private void updateChatRoomCreatedAt(
+      Long chatRoomId,
+      LocalDateTime createdAt
+  ) {
+
+    jdbcTemplate.update(
+        """
+            UPDATE chat_room
+            SET created_at = ?
+            WHERE id = ?
+            """,
+        createdAt,
+        chatRoomId
     );
   }
 
