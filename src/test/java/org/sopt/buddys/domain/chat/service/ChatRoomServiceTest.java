@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.AfterEach;
@@ -18,6 +19,7 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -148,6 +150,38 @@ class ChatRoomServiceTest {
     // then
     assertThat(result.chatRooms()).hasSize(1);
     assertThat(result.chatRooms().get(0).unreadMessageCount()).isEqualTo(1);
+  }
+
+  @DisplayName("마지막 읽음 메시지는 같은 채팅방의 메시지만 저장할 수 있다")
+  @Test
+  void updateLastReadMessageId_withMessageInOtherChatRoom_fails() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    User firstParticipant = userRepository.save(
+        createUser("first@test.com", "provider-first", "첫번째상대")
+    );
+    User secondParticipant = userRepository.save(
+        createUser("second@test.com", "provider-second", "두번째상대")
+    );
+    ChatRoom firstChatRoom = chatRoomService.createOrGetChatRoom(
+        user.getId(),
+        firstParticipant.getId()
+    ).chatRoom();
+    ChatRoom secondChatRoom = chatRoomService.createOrGetChatRoom(
+        user.getId(),
+        secondParticipant.getId()
+    ).chatRoom();
+    Long otherChatRoomMessageId = insertMessage(
+        secondChatRoom.getId(),
+        secondParticipant.getId(),
+        "다른 채팅방 메시지",
+        LocalDateTime.of(2026, 7, 5, 12, 0)
+    );
+
+    // when, then
+    assertThatThrownBy(() ->
+        updateLastReadMessageId(firstChatRoom.getId(), user.getId(), otherChatRoomMessageId)
+    ).isInstanceOf(DataIntegrityViolationException.class);
   }
 
   private User createUser(
