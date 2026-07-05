@@ -235,7 +235,12 @@ class ChatRoomServiceTest {
         keyHolder
     );
 
-    return keyHolder.getKey().longValue();
+    Number key = keyHolder.getKey();
+    assertThat(key)
+        .as("chat_message insert generated key")
+        .isNotNull();
+
+    return key.longValue();
   }
 
   private void updateLastReadMessageId(
