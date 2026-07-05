@@ -1,0 +1,204 @@
+package org.sopt.buddys.domain.chat.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.LocalDateTime;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.chat.entity.ChatRoom;
+import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
+import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
+import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult.ChatRoomListItemResult;
+import org.sopt.buddys.domain.user.entity.AuthProvider;
+import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Testcontainers
+class ChatRoomServiceTest {
+
+  @Container
+  @ServiceConnection
+  static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
+
+  @Autowired
+  private ChatRoomService chatRoomService;
+
+  @Autowired
+  private ChatRoomRepository chatRoomRepository;
+
+  @Autowired
+  private ChatRoomMemberRepository chatRoomMemberRepository;
+
+  @Autowired
+  private UserRepository userRepository;
+
+  @Autowired
+  private JdbcTemplate jdbcTemplate;
+
+  @BeforeEach
+  void setUp() {
+    cleanUp();
+  }
+
+  @AfterEach
+  void tearDown() {
+    cleanUp();
+  }
+
+  @DisplayName("채팅방 목록은 마지막 메시지가 최신인 순서로 정렬된다")
+  @Test
+  void getChatRooms_ordersByLatestMessageSentAtDesc() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    User oldParticipant = userRepository.save(
+        createUser("old@test.com", "provider-old", "오래된상대")
+    );
+    User latestParticipant = userRepository.save(
+        createUser("latest@test.com", "provider-latest", "최신상대")
+    );
+
+    ChatRoom oldChatRoom = chatRoomService.createOrGetChatRoom(
+        user.getId(),
+        oldParticipant.getId()
+    ).chatRoom();
+    ChatRoom latestChatRoom = chatRoomService.createOrGetChatRoom(
+        user.getId(),
+        latestParticipant.getId()
+    ).chatRoom();
+
+    insertMessage(
+        oldChatRoom.getId(),
+        oldParticipant.getId(),
+        "먼저 온 메시지",
+        LocalDateTime.of(2026, 7, 5, 10, 0)
+    );
+    insertMessage(
+        latestChatRoom.getId(),
+        latestParticipant.getId(),
+        "가장 최근 메시지",
+        LocalDateTime.of(2026, 7, 5, 11, 0)
+    );
+
+    // when
+    ChatRoomListResult result = chatRoomService.getChatRooms(user.getId(), 0, 20);
+
+    // then
+    assertThat(result.chatRooms())
+        .extracting(ChatRoomListItemResult::chatRoomId)
+        .containsExactly(latestChatRoom.getId(), oldChatRoom.getId());
+  }
+
+  @DisplayName("읽지 않은 메시지 수는 마지막 읽음 시각 이후 상대방이 보낸 메시지만 계산한다")
+  @Test
+  void getChatRooms_countsUnreadMessagesSentByParticipantAfterLastReadAt() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    User participant = userRepository.save(
+        createUser("participant@test.com", "provider-participant", "상대방")
+    );
+    ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+        user.getId(),
+        participant.getId()
+    ).chatRoom();
+    LocalDateTime lastReadAt = LocalDateTime.of(2026, 7, 5, 10, 30);
+
+    updateLastReadAt(chatRoom.getId(), user.getId(), lastReadAt);
+    insertMessage(
+        chatRoom.getId(),
+        participant.getId(),
+        "이미 읽은 상대방 메시지",
+        LocalDateTime.of(2026, 7, 5, 10, 0)
+    );
+    insertMessage(
+        chatRoom.getId(),
+        participant.getId(),
+        "읽지 않은 상대방 메시지",
+        LocalDateTime.of(2026, 7, 5, 11, 0)
+    );
+    insertMessage(
+        chatRoom.getId(),
+        user.getId(),
+        "내가 보낸 메시지",
+        LocalDateTime.of(2026, 7, 5, 11, 30)
+    );
+
+    // when
+    ChatRoomListResult result = chatRoomService.getChatRooms(user.getId(), 0, 20);
+
+    // then
+    assertThat(result.chatRooms()).hasSize(1);
+    assertThat(result.chatRooms().get(0).unreadMessageCount()).isEqualTo(1);
+  }
+
+  private User createUser(
+      String email,
+      String providerId,
+      String nickname
+  ) {
+
+    return User.builder()
+        .email(email)
+        .provider(AuthProvider.KAKAO)
+        .providerId(providerId)
+        .nickname(nickname)
+        .build();
+  }
+
+  private void insertMessage(
+      Long chatRoomId,
+      Long senderId,
+      String message,
+      LocalDateTime createdAt
+  ) {
+
+    jdbcTemplate.update(
+        """
+            INSERT INTO chat_message (chat_room_id, sender_id, message, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+        chatRoomId,
+        senderId,
+        message,
+        createdAt
+    );
+  }
+
+  private void updateLastReadAt(
+      Long chatRoomId,
+      Long userId,
+      LocalDateTime lastReadAt
+  ) {
+
+    jdbcTemplate.update(
+        """
+            UPDATE chat_room_member
+            SET last_read_at = ?
+            WHERE chat_room_id = ?
+              AND user_id = ?
+            """,
+        lastReadAt,
+        chatRoomId,
+        userId
+    );
+  }
+
+  private void cleanUp() {
+    jdbcTemplate.update("DELETE FROM chat_message");
+    chatRoomMemberRepository.deleteAllInBatch();
+    chatRoomRepository.deleteAllInBatch();
+    userRepository.deleteAllInBatch();
+  }
+}
