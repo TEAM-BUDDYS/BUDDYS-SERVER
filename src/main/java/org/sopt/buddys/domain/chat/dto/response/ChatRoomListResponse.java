@@ -3,6 +3,8 @@ package org.sopt.buddys.domain.chat.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
+import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult.ChatRoomListItemResult;
 
 public record ChatRoomListResponse(
     @Schema(description = "채팅방 목록")
@@ -31,6 +33,20 @@ public record ChatRoomListResponse(
     return new ChatRoomListResponse(chatRooms, page, size, hasNext);
   }
 
+  public static ChatRoomListResponse from(ChatRoomListResult result) {
+    List<ChatRoomListItemResponse> chatRooms = result.chatRooms()
+        .stream()
+        .map(ChatRoomListItemResponse::from)
+        .toList();
+
+    return new ChatRoomListResponse(
+        chatRooms,
+        result.page(),
+        result.size(),
+        result.hasNext()
+    );
+  }
+
   public record ChatRoomListItemResponse(
       @Schema(description = "채팅방 ID", example = "1")
       Long chatRoomId,
@@ -42,7 +58,24 @@ public record ChatRoomListResponse(
       String lastMessage,
 
       @Schema(description = "마지막 메시지 시각", example = "2026-07-05T14:30:00")
-      LocalDateTime lastMessageSentAt
+      LocalDateTime lastMessageSentAt,
+
+      @Schema(description = "읽지 않은 메시지 수", example = "3")
+      long unreadMessageCount
   ) {
+
+    private static ChatRoomListItemResponse from(ChatRoomListItemResult result) {
+      return new ChatRoomListItemResponse(
+          result.chatRoomId(),
+          ChatParticipantResponse.of(
+              result.participantUserId(),
+              result.participantNickname(),
+              result.participantProfileImageUrl()
+          ),
+          result.lastMessage(),
+          result.lastMessageSentAt(),
+          result.unreadMessageCount()
+      );
+    }
   }
 }

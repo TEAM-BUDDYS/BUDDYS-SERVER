@@ -14,6 +14,14 @@ public record ChatParticipantResponse(
     String profileImageUrl
 ) {
 
+  public static ChatParticipantResponse of(
+      Long userId,
+      String nickname,
+      String profileImageUrl
+  ) {
+    return new ChatParticipantResponse(userId, nickname, profileImageUrl);
+  }
+
   public static ChatParticipantResponse from(User participant) {
     return new ChatParticipantResponse(
         participant.getId(),
