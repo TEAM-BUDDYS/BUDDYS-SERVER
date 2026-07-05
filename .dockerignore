@@ -1,0 +1,16 @@
+.git
+.gradle
+build
+.idea
+*.iml
+.DS_Store
+
+.env
+.env.*
+!.env.docker.example
+
+*.pem
+app.jar
+app.log
+logs
+out
