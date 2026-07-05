@@ -24,8 +24,8 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
                where unreadMessage.chatRoom = cr
                  and unreadMessage.sender.id <> :userId
                  and (
-                   myMember.lastReadAt is null
-                   or unreadMessage.createdAt > myMember.lastReadAt
+                   myMember.lastReadMessageId is null
+                   or unreadMessage.id > myMember.lastReadMessageId
                  )
              ) as unreadMessageCount
       from ChatRoomMember myMember

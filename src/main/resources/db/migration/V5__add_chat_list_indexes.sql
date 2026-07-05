@@ -3,3 +3,16 @@ CREATE INDEX idx_chat_room_member_user_room
 
 CREATE INDEX idx_chat_message_room_created_at
     ON chat_message (chat_room_id, created_at);
+
+ALTER TABLE chat_room_member
+    ADD COLUMN last_read_message_id BIGINT;
+
+ALTER TABLE chat_room_member
+    ADD CONSTRAINT fk_chat_room_member_last_read_message
+        FOREIGN KEY (last_read_message_id) REFERENCES chat_message (id);
+
+CREATE INDEX idx_chat_message_room_id
+    ON chat_message (chat_room_id, id);
+
+ALTER TABLE chat_room_member
+    DROP COLUMN last_read_at;

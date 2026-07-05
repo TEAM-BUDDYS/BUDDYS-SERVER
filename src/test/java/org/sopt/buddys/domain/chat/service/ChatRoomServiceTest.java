@@ -19,6 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -101,9 +103,9 @@ class ChatRoomServiceTest {
         .containsExactly(latestChatRoom.getId(), oldChatRoom.getId());
   }
 
-  @DisplayName("읽지 않은 메시지 수는 마지막 읽음 시각 이후 상대방이 보낸 메시지만 계산한다")
+  @DisplayName("읽지 않은 메시지 수는 마지막으로 읽은 메시지 이후 상대방이 보낸 메시지만 계산한다")
   @Test
-  void getChatRooms_countsUnreadMessagesSentByParticipantAfterLastReadAt() {
+  void getChatRooms_countsUnreadMessagesSentByParticipantAfterLastReadMessageId() {
     // given
     User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
     User participant = userRepository.save(
@@ -113,15 +115,13 @@ class ChatRoomServiceTest {
         user.getId(),
         participant.getId()
     ).chatRoom();
-    LocalDateTime lastReadAt = LocalDateTime.of(2026, 7, 5, 10, 30);
-
-    updateLastReadAt(chatRoom.getId(), user.getId(), lastReadAt);
-    insertMessage(
+    Long lastReadMessageId = insertMessage(
         chatRoom.getId(),
         participant.getId(),
         "이미 읽은 상대방 메시지",
         LocalDateTime.of(2026, 7, 5, 10, 0)
     );
+    updateLastReadMessageId(chatRoom.getId(), user.getId(), lastReadMessageId);
     insertMessage(
         chatRoom.getId(),
         participant.getId(),
@@ -157,45 +157,55 @@ class ChatRoomServiceTest {
         .build();
   }
 
-  private void insertMessage(
+  private Long insertMessage(
       Long chatRoomId,
       Long senderId,
       String message,
       LocalDateTime createdAt
   ) {
 
-    jdbcTemplate.update(
-        """
-            INSERT INTO chat_message (chat_room_id, sender_id, message, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-        chatRoomId,
-        senderId,
-        message,
-        createdAt
+    KeyHolder keyHolder = new GeneratedKeyHolder();
+    jdbcTemplate.update(connection -> {
+          var preparedStatement = connection.prepareStatement(
+              """
+                  INSERT INTO chat_message (chat_room_id, sender_id, message, created_at)
+                  VALUES (?, ?, ?, ?)
+                  """,
+              java.sql.Statement.RETURN_GENERATED_KEYS
+          );
+          preparedStatement.setLong(1, chatRoomId);
+          preparedStatement.setLong(2, senderId);
+          preparedStatement.setString(3, message);
+          preparedStatement.setObject(4, createdAt);
+          return preparedStatement;
+        },
+        keyHolder
     );
+
+    return keyHolder.getKey().longValue();
   }
 
-  private void updateLastReadAt(
+  private void updateLastReadMessageId(
       Long chatRoomId,
       Long userId,
-      LocalDateTime lastReadAt
+      Long lastReadMessageId
   ) {
 
     jdbcTemplate.update(
         """
             UPDATE chat_room_member
-            SET last_read_at = ?
+            SET last_read_message_id = ?
             WHERE chat_room_id = ?
               AND user_id = ?
             """,
-        lastReadAt,
+        lastReadMessageId,
         chatRoomId,
         userId
     );
   }
 
   private void cleanUp() {
+    jdbcTemplate.update("UPDATE chat_room_member SET last_read_message_id = NULL");
     jdbcTemplate.update("DELETE FROM chat_message");
     chatRoomMemberRepository.deleteAllInBatch();
     chatRoomRepository.deleteAllInBatch();
