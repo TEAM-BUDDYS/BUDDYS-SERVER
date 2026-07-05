@@ -36,13 +36,22 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
       join participantMember.user participant
       left join ChatMessage lastMessage
         on lastMessage.chatRoom = cr
-       and lastMessage.id = (
-         select max(message.id)
-         from ChatMessage message
-         where message.chatRoom = cr
+       and not exists (
+         select 1
+         from ChatMessage newerMessage
+         where newerMessage.chatRoom = cr
+           and (
+             newerMessage.createdAt > lastMessage.createdAt
+             or (
+               newerMessage.createdAt = lastMessage.createdAt
+               and newerMessage.id > lastMessage.id
+             )
+           )
        )
       where myMember.user.id = :userId
-      order by coalesce(lastMessage.createdAt, cr.createdAt) desc
+      order by coalesce(lastMessage.createdAt, cr.createdAt) desc,
+               case when lastMessage.id is null then 0 else lastMessage.id end desc,
+               cr.id desc
       """)
   Slice<ChatRoomListProjection> findChatRoomListByUserId(
       @Param("userId") Long userId,

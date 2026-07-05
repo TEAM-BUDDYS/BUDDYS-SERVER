@@ -93,6 +93,12 @@ class ChatRoomServiceTest {
         "가장 최근 메시지",
         LocalDateTime.of(2026, 7, 5, 11, 0)
     );
+    insertMessage(
+        latestChatRoom.getId(),
+        latestParticipant.getId(),
+        "나중에 저장됐지만 더 과거인 메시지",
+        LocalDateTime.of(2026, 7, 5, 9, 0)
+    );
 
     // when
     ChatRoomListResult result = chatRoomService.getChatRooms(user.getId(), 0, 20);
@@ -101,6 +107,7 @@ class ChatRoomServiceTest {
     assertThat(result.chatRooms())
         .extracting(ChatRoomListItemResult::chatRoomId)
         .containsExactly(latestChatRoom.getId(), oldChatRoom.getId());
+    assertThat(result.chatRooms().get(0).lastMessage()).isEqualTo("가장 최근 메시지");
   }
 
   @DisplayName("읽지 않은 메시지 수는 마지막으로 읽은 메시지 이후 상대방이 보낸 메시지만 계산한다")
