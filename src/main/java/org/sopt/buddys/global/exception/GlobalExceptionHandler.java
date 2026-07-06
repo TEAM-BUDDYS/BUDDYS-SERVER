@@ -1,5 +1,6 @@
 package org.sopt.buddys.global.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -74,6 +76,30 @@ public class GlobalExceptionHandler {
         "[BindException] objectName={}, fieldErrorCount={}",
         e.getObjectName(),
         e.getBindingResult().getFieldErrorCount()
+    );
+    return errorResponse(GlobalErrorCode.INVALID_REQUEST);
+  }
+
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<BaseResponse<Void>> handleConstraintViolation(
+      ConstraintViolationException e
+  ) {
+
+    log.warn(
+        "[ConstraintViolationException] violationCount={}",
+        e.getConstraintViolations().size()
+    );
+    return errorResponse(GlobalErrorCode.INVALID_REQUEST);
+  }
+
+  @ExceptionHandler(HandlerMethodValidationException.class)
+  public ResponseEntity<BaseResponse<Void>> handleHandlerMethodValidation(
+      HandlerMethodValidationException e
+  ) {
+
+    log.warn(
+        "[HandlerMethodValidationException] parameterValidationCount={}",
+        e.getParameterValidationResults().size()
     );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
   }
