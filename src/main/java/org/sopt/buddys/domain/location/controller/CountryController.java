@@ -5,10 +5,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.sopt.buddys.domain.location.dto.response.CountryResponse;
+import org.sopt.buddys.domain.location.dto.response.CountryListResponse;
 import org.sopt.buddys.domain.location.service.CountryService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -34,12 +35,16 @@ public class CountryController {
   })
   @CommonErrorResponses
   @GetMapping("/search")
-  public BaseResponse<List<CountryResponse>> searchCountries(
+  public BaseResponse<CountryListResponse> searchCountries(
       @Parameter(description = "검색 키워드", example = "대한민국")
-      @RequestParam @NotBlank String keyword
+      @RequestParam @NotBlank String keyword,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
   ) {
-    return BaseResponse.success(GlobalSuccessCode.OK, countryService.searchCountries(keyword).stream()
-        .map(CountryResponse::from).toList()
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        CountryListResponse.from(countryService.searchCountries(keyword, page, size))
     );
   }
 
