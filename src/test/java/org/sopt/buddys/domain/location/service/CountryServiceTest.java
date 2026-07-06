@@ -53,9 +53,9 @@ class CountryServiceTest {
   @Test
   void searchCountries_partialMatchIgnoreCase() {
     // given
-    insertCountry("대한민국");
-    insertCountry("미국");
-    insertCountry("Korea Test");
+    insertCountry("대한민국", "KR");
+    insertCountry("미국", "US");
+    insertCountry("Korea Test", "KT");
 
     // when
     Slice<Country> result = countryService.searchCountries("한", 0, 20);
@@ -74,7 +74,7 @@ class CountryServiceTest {
   @Test
   void searchCountries_noMatch_returnsEmptySlice() {
     // given
-    insertCountry("대한민국");
+    insertCountry("대한민국", "KR");
 
     // when
     Slice<Country> result = countryService.searchCountries("존재하지않는국가", 0, 20);
@@ -88,7 +88,7 @@ class CountryServiceTest {
   @Test
   void searchCountries_trimsWhitespaceInKeyword() {
     // given
-    insertCountry("대한민국");
+    insertCountry("대한민국", "KR");
 
     // when
     Slice<Country> result = countryService.searchCountries("  대한민국  ", 0, 20);
@@ -123,7 +123,7 @@ class CountryServiceTest {
   @Test
   void searchCountries_sizeExceedsMax_throwsException() {
     // when, then
-    assertThatThrownBy(() -> countryService.searchCountries("대한민국", 0, 21))
+    assertThatThrownBy(() -> countryService.searchCountries("대한민국", 0, 101))
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
@@ -133,9 +133,9 @@ class CountryServiceTest {
   @Test
   void searchCountries_hasNextReflectsRemainingPages() {
     // given
-    insertCountry("가나");
-    insertCountry("가봉");
-    insertCountry("가이아나");
+    insertCountry("가나", "GH");
+    insertCountry("가봉", "GA");
+    insertCountry("가이아나", "GY");
 
     // when
     Slice<Country> firstPage = countryService.searchCountries("가", 0, 2);
@@ -148,8 +148,8 @@ class CountryServiceTest {
     assertThat(secondPage.hasNext()).isFalse();
   }
 
-  private void insertCountry(String name) {
-    jdbcTemplate.update("INSERT INTO country (name) VALUES (?)", name);
+  private void insertCountry(String name, String isoCode) {
+    jdbcTemplate.update("INSERT INTO country (name, iso_code) VALUES (?, ?)", name, isoCode);
   }
 
   private void cleanUp() {
