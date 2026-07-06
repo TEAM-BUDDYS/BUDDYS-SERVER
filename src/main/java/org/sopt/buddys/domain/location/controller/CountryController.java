@@ -14,6 +14,7 @@ import org.sopt.buddys.domain.location.service.CountryService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.swagger.CommonErrorResponses;
+import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,8 +32,8 @@ public class CountryController {
   @Operation(summary = "국가 검색", description = "검색 키워드에 해당하는 국가를 검색합니다.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "검색 성공"),
-      @ApiResponse(responseCode = "400", description = "검색 키워드가 비어있음")
   })
+  @InvalidRequestResponse
   @CommonErrorResponses
   @GetMapping("/search")
   public BaseResponse<CountryListResponse> searchCountries(
