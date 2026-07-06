@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CountryService {
   private final CountryRepository countryRepository;
-  private static final int MAX_SEARCH_RESULT_SIZE = 20;
+  private static final int MAX_SEARCH_RESULT_SIZE = 100;
 
   public Slice<Country> searchCountries(String keyword, int page, int size) {
     validatePageRequest(page, size);
