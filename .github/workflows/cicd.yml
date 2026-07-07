@@ -122,15 +122,28 @@ jobs:
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          IMAGE_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DISCORD_WEBHOOK_URL,IMAGE_TAG
           script: |
             cd /home/ubuntu/BUDDYS-SERVER/docker
 
+            notify_discord() {
+              if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+                curl -sS -H "Content-Type: application/json" \
+                  -d "{\"content\":\"$1\"}" \
+                  "$DISCORD_WEBHOOK_URL" >/dev/null || true
+              fi
+            }
+
             if [ ! -f ".env" ]; then
               echo "❌ .env 파일이 없습니다."
+              notify_discord "❌ BUDDYS-SERVER 배포 실패: EC2에 .env 파일이 없습니다. commit=$IMAGE_TAG"
               exit 1
             fi
 
@@ -171,6 +184,7 @@ jobs:
               sudo docker logs buddys-server-app || true
               if [ -n "$ROLLBACK_IMAGE" ]; then
                 echo "직전 Docker 이미지로 롤백합니다: $ROLLBACK_IMAGE"
+                notify_discord "❌ BUDDYS-SERVER 배포 헬스체크 실패. 직전 이미지로 롤백을 시작합니다. status=$STATUS commit=$IMAGE_TAG"
                 sudo docker compose --env-file .env down --remove-orphans
                 sed -i.bak '/^DOCKER_IMAGE=/d' .env
                 printf 'DOCKER_IMAGE=%s\n' "$ROLLBACK_IMAGE" >> .env
@@ -181,6 +195,7 @@ jobs:
                   ROLLBACK_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL") || ROLLBACK_STATUS="000"
                   if [ "$ROLLBACK_STATUS" = "200" ]; then
                     echo "✅ 롤백 완료. HTTP status: $ROLLBACK_STATUS"
+                    notify_discord "✅ BUDDYS-SERVER 롤백 완료. rollback_status=$ROLLBACK_STATUS failed_commit=$IMAGE_TAG"
                     exit 1
                   fi
                   echo "롤백 애플리케이션 준비 대기 중... attempt=$attempt status=$ROLLBACK_STATUS"
@@ -189,13 +204,16 @@ jobs:
 
                 echo "❌ 롤백 후에도 애플리케이션 응답 확인 실패. HTTP status: $ROLLBACK_STATUS"
                 sudo docker logs buddys-server-app || true
+                notify_discord "🚨 BUDDYS-SERVER 롤백 실패. rollback_status=$ROLLBACK_STATUS failed_commit=$IMAGE_TAG"
               else
                 echo "롤백할 직전 Docker 이미지가 없습니다."
+                notify_discord "🚨 BUDDYS-SERVER 배포 실패. 롤백할 직전 Docker 이미지가 없습니다. status=$STATUS commit=$IMAGE_TAG"
               fi
               exit 1
             fi
 
             echo "✅ 배포 완료. HTTP status: $STATUS"
+            notify_discord "✅ BUDDYS-SERVER 배포 완료. status=$STATUS commit=$IMAGE_TAG"
 
             echo "불필요한 dangling image 정리"
             sudo docker image prune -f
