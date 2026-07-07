@@ -32,6 +32,6 @@ public class Country {
   @Column(nullable = false, length = 80)
   private String name;
 
-  @Column(name = "iso_code", nullable = false, length = 2)
+  @Column(name = "iso_code", nullable = false, columnDefinition = "CHAR(2)")
   private String isoCode;
 }
