@@ -24,6 +24,7 @@ public class CityService {
 
   public Slice<City> searchCities(Long countryId, String keyword, int page, int size) {
     validateCountryExists(countryId);
+    validateKeyword(keyword);
     validatePageRequest(page, size);
     return cityRepository.search(countryId, keyword.trim(), PageRequest.of(page, size));
   }
@@ -31,6 +32,12 @@ public class CityService {
   private void validateCountryExists(Long countryId) {
     if (!countryRepository.existsById(countryId)) {
       throw new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND);
+    }
+  }
+
+  private void validateKeyword(String keyword) {
+    if (keyword == null || keyword.isBlank()) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
   }
 
