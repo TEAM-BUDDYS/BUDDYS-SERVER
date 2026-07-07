@@ -1777,7 +1777,6 @@ FROM (VALUES
     ROW('BR', 'Senador José Porfírio', NULL, 22576),
     ROW('BR', 'Satuba', NULL, 25000),
     ROW('BR', 'Sapé', NULL, 51306),
-    ROW('BR', 'São Vicente Férrer', NULL, 16677),
     ROW('BR', 'São Vicente Ferrer', NULL, 19498),
     ROW('BR', 'São Sebastião da Boa Vista', NULL, 25643),
     ROW('BR', 'São Sebastião', NULL, 98612),
@@ -2004,14 +2003,14 @@ FROM (VALUES
     ROW('BR', 'Macaíba', NULL, 82249),
     ROW('BR', 'Luzilândia', NULL, 25375),
     ROW('BR', 'Luís Correia', NULL, 30641),
-    ROW('BR', 'Limoeiro do Norte', NULL, 59560)
+    ROW('BR', 'Limoeiro do Norte', NULL, 59560),
+    ROW('BR', 'Limoeiro do Ajuru', NULL, 29569)
 ) AS v(iso_code, name, korean_name, population)
 JOIN country c ON c.iso_code = v.iso_code;
 
 INSERT INTO city (country_id, name, korean_name, population)
 SELECT c.id, v.name, v.korean_name, v.population
 FROM (VALUES
-    ROW('BR', 'Limoeiro do Ajuru', NULL, 29569),
     ROW('BR', 'Limoeiro de Anadia', NULL, 25197),
     ROW('BR', 'Limoeiro', NULL, 56510),
     ROW('BR', 'Lavras da Mangabeira', NULL, 30802),
@@ -2279,7 +2278,6 @@ FROM (VALUES
     ROW('BR', 'Araioses', NULL, 39052),
     ROW('BR', 'Araguatins', NULL, 33205),
     ROW('BR', 'Araguaína', NULL, 105019),
-    ROW('BR', 'Araçoiaba', NULL, 19936),
     ROW('BR', 'Aracoiaba', NULL, 25553),
     ROW('BR', 'Aracati', NULL, 44293),
     ROW('BR', 'Araçagi', NULL, 16646),
@@ -2576,7 +2574,7 @@ FROM (VALUES
     ROW('BR', 'Santa Cruz do Rio Pardo', NULL, 46442),
     ROW('BR', 'Santa Cruz das Palmeiras', NULL, 28864),
     ROW('BR', 'Santa Cruz Cabrália', NULL, 29185),
-    ROW('BR', 'Santa Cecília', NULL, 15546),
+    ROW('BR', 'Santa Cecilia', NULL, 80972),
     ROW('BR', 'Santa Bárbara d''Oeste', NULL, 188000),
     ROW('BR', 'Santa Bárbara', NULL, 30466),
     ROW('BR', 'Sananduva', NULL, 16399),
@@ -2914,7 +2912,6 @@ FROM (VALUES
     ROW('BR', 'Marechal Cândido Rondon', NULL, 55836),
     ROW('BR', 'Maravilha', NULL, 28251),
     ROW('BR', 'Marau', NULL, 45124),
-    ROW('BR', 'Maraú', NULL, 24527),
     ROW('BR', 'Marataizes', NULL, 41929),
     ROW('BR', 'Maragogipe', NULL, 35859),
     ROW('BR', 'Maracás', NULL, 27620),
@@ -2985,7 +2982,7 @@ FROM (VALUES
     ROW('BR', 'Juiz de Fora', '주이스지포라', 573285),
     ROW('BR', 'Jussara', NULL, 19620),
     ROW('BR', 'Juatuba', NULL, 30716),
-    ROW('BR', 'José Bonifácio', NULL, 36633),
+    ROW('BR', 'Jose Bonifacio', NULL, 128243),
     ROW('BR', 'Joinville', '조인빌리', 461304),
     ROW('BR', 'João Pinheiro', NULL, 46801),
     ROW('BR', 'João Monlevade', NULL, 80187),
@@ -3020,7 +3017,7 @@ FROM (VALUES
     ROW('BR', 'Jaciara', NULL, 29560),
     ROW('BR', 'Jacarezinho', NULL, 40375),
     ROW('BR', 'Jacareí', NULL, 213110),
-    ROW('BR', 'Jaguaré', NULL, 28931),
+    ROW('BR', 'Jaguare', NULL, 55382),
     ROW('BR', 'Jaboticabal', NULL, 71821),
     ROW('BR', 'Jaboticatubas', NULL, 20406),
     ROW('BR', 'Ivoti', NULL, 22983),
@@ -3064,7 +3061,7 @@ FROM (VALUES
     ROW('BR', 'Itaperuçu', NULL, 31217),
     ROW('BR', 'Itapemirim', NULL, 39832),
     ROW('BR', 'Itapema', NULL, 75940),
-    ROW('BR', 'Itapoá', NULL, 30750),
+    ROW('BR', 'Itapoã', NULL, 65408),
     ROW('BR', 'Itapecerica da Serra', NULL, 158522),
     ROW('BR', 'Itapecerica', NULL, 21046),
     ROW('BR', 'Itaparica', NULL, 19789),
@@ -3099,7 +3096,6 @@ FROM (VALUES
     ROW('BR', 'Irará', NULL, 28043),
     ROW('BR', 'Iraquara', NULL, 23879),
     ROW('BR', 'Iracemápolis', NULL, 21967),
-    ROW('BR', 'Iporã', NULL, 15746),
     ROW('BR', 'Iporá', NULL, 35684),
     ROW('BR', 'Ipiranga', NULL, 116271),
     ROW('BR', 'Ipirá', NULL, 56876),
@@ -3617,7 +3613,7 @@ FROM (VALUES
     ROW('BR', 'Agudo', NULL, 16041),
     ROW('BR', 'Águas Formosas', NULL, 18448),
     ROW('BR', 'Águas de Lindóia', NULL, 18245),
-    ROW('BR', 'Água Rasa', NULL, 80484),
+    ROW('BR', 'Agua Rasa', NULL, 85788),
     ROW('BR', 'Aguaí', NULL, 32888),
     ROW('BR', 'Água Clara', NULL, 16741),
     ROW('BR', 'Afonso Cláudio', NULL, 30684),
@@ -3896,17 +3892,14 @@ FROM (VALUES
     ROW('BR', 'Sao Lucas', NULL, 138038),
     ROW('BR', 'Rio Pequeno', NULL, 131631),
     ROW('BR', 'Carrao', NULL, 84397),
-    ROW('BR', 'Agua Rasa', NULL, 85788),
     ROW('BR', 'Alto De Pinheiros', NULL, 37359),
     ROW('BR', 'Cidade Lider', NULL, 136660),
     ROW('BR', 'Aricanduva', NULL, 89574),
     ROW('BR', 'Jaçanã', NULL, 94609),
     ROW('BR', 'Jaguara', NULL, 24730),
     ROW('BR', 'Jabaquara', NULL, 214958),
-    ROW('BR', 'Jose Bonifacio', NULL, 128243),
     ROW('BR', 'Cidade Ademar', NULL, 249218),
     ROW('BR', 'Barra Funda', NULL, 33436),
-    ROW('BR', 'Belem', NULL, 55785),
     ROW('BR', 'Brasilandia', NULL, 243273),
     ROW('BR', 'Butanta', NULL, 123748),
     ROW('BR', 'Cangaiba', NULL, 141172),
@@ -3922,14 +3915,12 @@ FROM (VALUES
     ROW('BR', 'Vila Jacui', NULL, 134189),
     ROW('BR', 'Vila Matilde', NULL, 103558),
     ROW('BR', 'Vila Medeiros', NULL, 114839),
-    ROW('BR', 'Santa Cecilia', NULL, 80972),
     ROW('BR', 'Parque Do Carmo', NULL, 74677),
     ROW('BR', 'Ponte Rasa', NULL, 89881),
     ROW('BR', 'Raposo Tavares', NULL, 117738),
     ROW('BR', 'Sao Domingos', NULL, 88884),
     ROW('BR', 'Se', NULL, 23832),
     ROW('BR', 'Vila Leopoldina', NULL, 46875),
-    ROW('BR', 'Jaguare', NULL, 55382),
     ROW('BR', 'Cidade Tiradentes', NULL, 192177),
     ROW('BR', 'Jardim Helena', NULL, 129409),
     ROW('BR', 'Jardim Sao Luis', NULL, 259377),
@@ -3943,7 +3934,6 @@ FROM (VALUES
     ROW('BR', 'Bairro Parque Nossa Senhora do Carmo', NULL, 69630),
     ROW('BR', 'Sudoeste/Octagonal', NULL, 44354),
     ROW('BR', 'Lago Sul', NULL, 26244),
-    ROW('BR', 'Itapoã', NULL, 65408),
     ROW('BR', 'Lago Norte', NULL, 41778),
     ROW('BR', 'Jardim Botânico', NULL, 77767),
     ROW('BR', 'Sobradinho II', NULL, 82785),
@@ -4010,13 +4000,7 @@ FROM (VALUES
     ROW('BY', 'Svetlogorsk', NULL, 62602),
     ROW('BY', 'Stowbtsy', NULL, 17737),
     ROW('BY', 'Smarhoń', NULL, 35422),
-    ROW('BY', 'Smaliavičy', NULL, 22679)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('BY', 'Smaliavičy', NULL, 22679),
     ROW('BY', 'Slutsk', '슬루츠크', 60056),
     ROW('BY', 'Slonim', '슬로님', 48907),
     ROW('BY', 'Shchuchyn', NULL, 15371),
@@ -4026,7 +4010,13 @@ FROM (VALUES
     ROW('BY', 'Pruzhany', NULL, 18994),
     ROW('BY', 'Polotsk', '폴라츠크', 79579),
     ROW('BY', 'Pinsk', '핀스크', 124295),
-    ROW('BY', 'Pastavy', NULL, 18618),
+    ROW('BY', 'Pastavy', NULL, 18618)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('BY', 'Astraviec', NULL, 15116),
     ROW('BY', 'Osipovichi', NULL, 29103),
     ROW('BY', 'Orsha', '보르샤', 102759),
@@ -6016,13 +6006,7 @@ FROM (VALUES
     ROW('CN', 'Lixin', NULL, 16753),
     ROW('CN', 'Lixian', NULL, 58300),
     ROW('CN', 'Liuyin', NULL, 17505),
-    ROW('CN', 'Guankou', NULL, 1380000)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('CN', 'Guankou', NULL, 1380000),
     ROW('CN', 'Liuxin', NULL, 65258),
     ROW('CN', 'Liutuan', NULL, 48469),
     ROW('CN', 'Puning', '푸닝 시', 874954),
@@ -6032,7 +6016,13 @@ FROM (VALUES
     ROW('CN', 'Lintong', NULL, 75882),
     ROW('CN', 'Liuzhou', '류저우시', 1436599),
     ROW('CN', 'Linyi', '린이 시', 2743843),
-    ROW('CN', 'Linxia Chengguanzhen', NULL, 274466),
+    ROW('CN', 'Linxia Chengguanzhen', NULL, 274466)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('CN', 'Linxi', NULL, 100316),
     ROW('CN', 'Linshui', NULL, 109955),
     ROW('CN', 'Linshi', NULL, 41730),
@@ -6957,7 +6947,6 @@ FROM (VALUES
     ROW('CN', 'Bole', NULL, 235585),
     ROW('CN', 'Liupanshui', '류판수이 시', 1320825),
     ROW('CN', 'Nanchuan', NULL, 204775),
-    ROW('CN', 'Anwen', NULL, 30553),
     ROW('CN', 'Guanba', NULL, 23898),
     ROW('CN', 'Maliuzui', NULL, 18847),
     ROW('CN', 'Guōlèmùdé', NULL, 31941),
@@ -8022,13 +8011,7 @@ FROM (VALUES
     ROW('DE', 'Schwerte', NULL, 50399),
     ROW('DE', 'Schwerin', '슈베린', 96641),
     ROW('DE', 'Schwelm', NULL, 30235),
-    ROW('DE', 'Schweinfurt', NULL, 54012)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('DE', 'Schweinfurt', NULL, 54012),
     ROW('DE', 'Schwedt (Oder)', NULL, 33730),
     ROW('DE', 'Schwarzenberg', NULL, 15475),
     ROW('DE', 'Schwanewede', NULL, 20015),
@@ -8039,7 +8022,13 @@ FROM (VALUES
     ROW('DE', 'Schwäbisch Hall', NULL, 36543),
     ROW('DE', 'Schwäbisch Gmünd', NULL, 61216),
     ROW('DE', 'Schwabach', NULL, 38554),
-    ROW('DE', 'Schrobenhausen', NULL, 16143),
+    ROW('DE', 'Schrobenhausen', NULL, 16143)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('DE', 'Schramberg', NULL, 18565),
     ROW('DE', 'Schortens', NULL, 21357),
     ROW('DE', 'Schorndorf', NULL, 41647),
@@ -8235,7 +8224,6 @@ FROM (VALUES
     ROW('DE', 'Naumburg', '나움부르크', 29722),
     ROW('DE', 'Nauen', NULL, 16600),
     ROW('DE', 'Nagold', NULL, 22912),
-    ROW('DE', 'Munster', NULL, 17746),
     ROW('DE', 'Münster', '뮌스터', 308258),
     ROW('DE', 'Hannoversch Münden', NULL, 25073),
     ROW('DE', 'Munich', '뮌헨', 1505005),
@@ -8313,7 +8301,6 @@ FROM (VALUES
     ROW('DE', 'Loschwitz', NULL, 20696),
     ROW('DE', 'Lörrach', NULL, 47002),
     ROW('DE', 'Lohr am Main', NULL, 16127),
-    ROW('DE', 'Lohne', NULL, 28089),
     ROW('DE', 'Löhne', NULL, 39521),
     ROW('DE', 'Lohmar', NULL, 31339),
     ROW('DE', 'Löbtau', NULL, 21205),
@@ -10028,13 +10015,7 @@ FROM (VALUES
     ROW('ES', 'Teo', NULL, 17807),
     ROW('ES', 'Tàrrega', NULL, 16539),
     ROW('ES', 'Terrassa', '테라사', 218535),
-    ROW('ES', 'Tarragona', NULL, 141542)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('ES', 'Tarragona', NULL, 141542),
     ROW('ES', 'Tarancón', NULL, 15651),
     ROW('ES', 'Soria', '소리아', 39112),
     ROW('ES', 'Sitges', NULL, 27668),
@@ -10047,7 +10028,13 @@ FROM (VALUES
     ROW('ES', 'Santurtzi', NULL, 46978),
     ROW('ES', 'Sants', NULL, 40831),
     ROW('ES', 'Sant Just Desvern', NULL, 15811),
-    ROW('ES', 'Santiago de Compostela', '산티아고데콤포스텔라', 99536),
+    ROW('ES', 'Santiago de Compostela', '산티아고데콤포스텔라', 99536)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('ES', 'Santa Perpètua de Mogoda', NULL, 25048),
     ROW('ES', 'Santander', '산탄데르', 173635),
     ROW('ES', 'Barberà del Vallès', NULL, 31144),
@@ -10472,7 +10459,6 @@ FROM (VALUES
     ROW('ET', 'Sek’ot’a', NULL, 50300),
     ROW('ET', 'Sebeta', NULL, 102300),
     ROW('ET', 'Sagurē', NULL, 24900),
-    ROW('ET', 'Robīt', NULL, 20679),
     ROW('ET', 'Robit', NULL, 39600),
     ROW('ET', 'Bale Robe', NULL, 31400),
     ROW('ET', 'Nek’emtē', NULL, 156000),
@@ -12034,13 +12020,7 @@ FROM (VALUES
     ROW('GB', 'Dronfield', NULL, 21124),
     ROW('GB', 'Droitwich', NULL, 23834),
     ROW('GB', 'Dover', '도버', 41709),
-    ROW('GB', 'Dorking', '도킹', 17747)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('GB', 'Dorking', '도킹', 17747),
     ROW('GB', 'Dorchester', '도체스터', 16879),
     ROW('GB', 'Doncaster', '동커스터', 113566),
     ROW('GB', 'Dinnington', NULL, 19860),
@@ -12054,7 +12034,13 @@ FROM (VALUES
     ROW('GB', 'Darwen', NULL, 32566),
     ROW('GB', 'Darton', NULL, 21345),
     ROW('GB', 'Dartford', '다트퍼드', 51240),
-    ROW('GB', 'Darlington', '달링턴', 92363),
+    ROW('GB', 'Darlington', '달링턴', 92363)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('GB', 'Dalserf', NULL, 17985),
     ROW('GB', 'Dagenham', '대거넘', 108368),
     ROW('GB', 'Cwmbran', '쿰브란', 48535),
@@ -13933,7 +13919,6 @@ FROM (VALUES
     ROW('IN', 'Unchahra', NULL, 18442),
     ROW('IN', 'Unchagao', NULL, 31238),
     ROW('IN', 'Una', NULL, 58528),
-    ROW('IN', 'Ūn', NULL, 15007),
     ROW('IN', 'Un', NULL, 30671),
     ROW('IN', 'Umreth', NULL, 33762),
     ROW('IN', 'Umred', '움레이드', 53971),
@@ -14040,13 +14025,7 @@ FROM (VALUES
     ROW('IN', 'Tevāram', NULL, 16079),
     ROW('IN', 'Terdāl', NULL, 26411),
     ROW('IN', 'Teonthar', '테온싸르', 17039),
-    ROW('IN', 'Thenkasi', NULL, 70545)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('IN', 'Thenkasi', NULL, 70545),
     ROW('IN', 'Teni', NULL, 1034724),
     ROW('IN', 'Thenali', NULL, 164937),
     ROW('IN', 'Tellicherry', NULL, 97201),
@@ -14061,13 +14040,18 @@ FROM (VALUES
     ROW('IN', 'Tarikere', NULL, 37848),
     ROW('IN', 'Tharangambadi', NULL, 23191),
     ROW('IN', 'Tārānagar', NULL, 32640),
-    ROW('IN', 'Tarāna', NULL, 24908),
+    ROW('IN', 'Tarāna', NULL, 24908)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('IN', 'Tāramangalam', NULL, 30222),
     ROW('IN', 'Tarakeswar', NULL, 30475),
     ROW('IN', 'Tāoru', NULL, 22599),
     ROW('IN', 'Tanuku', NULL, 77962),
     ROW('IN', 'Tandur', NULL, 65115),
-    ROW('IN', 'Tānda', NULL, 44822),
     ROW('IN', 'Tāndā', NULL, 88073),
     ROW('IN', 'Tanakpur', NULL, 16905),
     ROW('IN', 'Tammampatti', NULL, 21503),
@@ -14111,7 +14095,6 @@ FROM (VALUES
     ROW('IN', 'Sullya', '술리아', 19958),
     ROW('IN', 'Sūlūru', NULL, 38065),
     ROW('IN', 'Sulur', NULL, 27909),
-    ROW('IN', 'Sultanpur', NULL, 16877),
     ROW('IN', 'Sultānpur', NULL, 110368),
     ROW('IN', 'Suket', NULL, 22319),
     ROW('IN', 'Sūjāngarh', NULL, 183808),
@@ -14124,7 +14107,6 @@ FROM (VALUES
     ROW('IN', 'Srīperumbūdūr', NULL, 24864),
     ROW('IN', 'Srīnivāspur', NULL, 26793),
     ROW('IN', 'Srinagar', '스리나가르', 1206419),
-    ROW('IN', 'Srīnagar', NULL, 20216),
     ROW('IN', 'Sri Mādhopur', NULL, 31366),
     ROW('IN', 'Karanpur', NULL, 21604),
     ROW('IN', 'Srikakulam', '스리카쿨람', 137944),
@@ -14403,7 +14385,7 @@ FROM (VALUES
     ROW('IN', 'Rānīpur', NULL, 18820),
     ROW('IN', 'Rānipet', NULL, 264330),
     ROW('IN', 'Rānikhet', NULL, 19873),
-    ROW('IN', 'Rānīganj', NULL, 131261),
+    ROW('IN', 'Rāniganj', NULL, 217910),
     ROW('IN', 'Ranebennur', NULL, 106406),
     ROW('IN', 'Rānia', NULL, 25123),
     ROW('IN', 'Rangia', NULL, 27889),
@@ -14422,7 +14404,7 @@ FROM (VALUES
     ROW('IN', 'Rāmganj Mandi', NULL, 41328),
     ROW('IN', 'Rameswaram', NULL, 44856),
     ROW('IN', 'Rāmdurg', NULL, 34800),
-    ROW('IN', 'Rāmāpuram', NULL, 31169),
+    ROW('IN', 'Ramapuram', NULL, 52295),
     ROW('IN', 'Ramanathapuram', NULL, 65314),
     ROW('IN', 'Closepet', NULL, 95167),
     ROW('IN', 'Rāmachandrapuram', NULL, 43657),
@@ -14448,7 +14430,6 @@ FROM (VALUES
     ROW('IN', 'Rajamahendravaram', NULL, 376333),
     ROW('IN', 'Rāisinghnagar', NULL, 29626),
     ROW('IN', 'Raisen', NULL, 44162),
-    ROW('IN', 'Rāipur', NULL, 27702),
     ROW('IN', 'Raipur', '라이푸르', 1027264),
     ROW('IN', 'Rāikot', NULL, 28734),
     ROW('IN', 'Raigarh', '라이가르', 150019),
@@ -14520,7 +14501,7 @@ FROM (VALUES
     ROW('IN', 'Piro', NULL, 33785),
     ROW('IN', 'Piriyāpatna', NULL, 16685),
     ROW('IN', 'Piravam', NULL, 28254),
-    ROW('IN', 'Pīpri', NULL, 23047),
+    ROW('IN', 'Pipri', NULL, 23661),
     ROW('IN', 'Pipraich', NULL, 15856),
     ROW('IN', 'Pipili', NULL, 17623),
     ROW('IN', 'Pipariā', NULL, 48826),
@@ -14883,7 +14864,7 @@ FROM (VALUES
     ROW('IN', 'Misrikh', NULL, 15007),
     ROW('IN', 'Mirzāpur', NULL, 220029),
     ROW('IN', 'Miryalaguda', NULL, 104918),
-    ROW('IN', 'Mīrganj', NULL, 15335),
+    ROW('IN', 'Mirganj', NULL, 26240),
     ROW('IN', 'Mīrānpur Katra', NULL, 29626),
     ROW('IN', 'Mīrānpur', NULL, 27390),
     ROW('IN', 'Mīnjūr', NULL, 28337),
@@ -15140,7 +15121,6 @@ FROM (VALUES
     ROW('IN', 'Kovūr', NULL, 35600),
     ROW('IN', 'Kovilpatti', NULL, 95057),
     ROW('IN', 'Kottūru', NULL, 26289),
-    ROW('IN', 'Kōttayam', NULL, 19176),
     ROW('IN', 'Kottayam', '코타얌', 55374),
     ROW('IN', 'Kottārakara', NULL, 29788),
     ROW('IN', 'Kōttakkal', NULL, 44382),
@@ -15155,7 +15135,6 @@ FROM (VALUES
     ROW('IN', 'Kotamangalam', NULL, 38837),
     ROW('IN', 'Kotagiri', NULL, 28848),
     ROW('IN', 'Kota', '코타', 1001694),
-    ROW('IN', 'Kotā', '코타', 18405),
     ROW('IN', 'Kosigi', NULL, 15455),
     ROW('IN', 'Kosi', NULL, 52492),
     ROW('IN', 'Kosamba', NULL, 33221),
@@ -15362,7 +15341,6 @@ FROM (VALUES
     ROW('IN', 'Kālpi', NULL, 44339),
     ROW('IN', 'Kalpatta', NULL, 31580),
     ROW('IN', 'Kalol', NULL, 134426),
-    ROW('IN', 'Kālol', NULL, 25929),
     ROW('IN', 'Kālna', NULL, 53964),
     ROW('IN', 'Kalmeshwar', NULL, 19578),
     ROW('IN', 'Kallidaikurichi', NULL, 26398),
@@ -15490,7 +15468,6 @@ FROM (VALUES
     ROW('IN', 'Jalalpore', NULL, 17325),
     ROW('IN', 'Jalālī', NULL, 18177),
     ROW('IN', 'Jalālābād', NULL, 39525),
-    ROW('IN', 'Jalālābad', NULL, 25302),
     ROW('IN', 'Jalakandapuram', NULL, 16184),
     ROW('IN', 'Jājpur', NULL, 42157),
     ROW('IN', 'Jaito', NULL, 37377),
@@ -15756,7 +15733,6 @@ FROM (VALUES
     ROW('IN', 'Edappāl', NULL, 32550),
     ROW('IN', 'Dwārka', NULL, 38873),
     ROW('IN', 'Durgapur', '두르가푸르', 518872),
-    ROW('IN', 'Durgāpur', NULL, 18561),
     ROW('IN', 'Durg', '더그르', 268806),
     ROW('IN', 'Dūngarpur', NULL, 47706),
     ROW('IN', 'Ganj Dundwāra', NULL, 46314),
@@ -15855,7 +15831,6 @@ FROM (VALUES
     ROW('IN', 'Deoria', NULL, 129570),
     ROW('IN', 'Deoraniān', NULL, 19788),
     ROW('IN', 'Deolāli', NULL, 54027),
-    ROW('IN', 'Deolali', NULL, 30997),
     ROW('IN', 'Deoghar', NULL, 203123),
     ROW('IN', 'Deogarh', NULL, 22390),
     ROW('IN', 'Deoband', '디오반드', 88171),
@@ -15985,7 +15960,6 @@ FROM (VALUES
     ROW('IN', 'Changanācheri', NULL, 51430),
     ROW('IN', 'Chāndor', NULL, 25341),
     ROW('IN', 'Chāndūr Bāzār', NULL, 18780),
-    ROW('IN', 'Chāndūr', NULL, 19776),
     ROW('IN', 'Chāndur', NULL, 26755),
     ROW('IN', 'Chānda', '찬다푸르', 328351),
     ROW('IN', 'Chandrakona', NULL, 21855),
@@ -16046,13 +16020,7 @@ FROM (VALUES
     ROW('IN', 'Bobbili', NULL, 56819),
     ROW('IN', 'Biswān', NULL, 52516),
     ROW('IN', 'Bissāu', NULL, 23227),
-    ROW('IN', 'Bishrāmpur', NULL, 42925)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('IN', 'Bishrāmpur', NULL, 42925),
     ROW('IN', 'Bishnupur', NULL, 64041),
     ROW('IN', 'Bisauli', NULL, 32154),
     ROW('IN', 'Bīsalpur', '비사푸르', 68355),
@@ -16071,7 +16039,6 @@ FROM (VALUES
     ROW('IN', 'Bilhaur', NULL, 19333),
     ROW('IN', 'Bilgrām', NULL, 27173),
     ROW('IN', 'Bilgi', NULL, 17792),
-    ROW('IN', 'Bīlāspur', NULL, 39873),
     ROW('IN', 'Bilāspur', NULL, 365579),
     ROW('IN', 'Bilāsipāra', NULL, 37739),
     ROW('IN', 'Bilāri', NULL, 29666),
@@ -16079,7 +16046,13 @@ FROM (VALUES
     ROW('IN', 'Bikramganj', NULL, 48465),
     ROW('IN', 'Bikram', NULL, 22486),
     ROW('IN', 'Bikaner', NULL, 644406),
-    ROW('IN', 'Bijnor', NULL, 84593),
+    ROW('IN', 'Bijnor', NULL, 84593)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('IN', 'Bijbehara', NULL, 24590),
     ROW('IN', 'Bijāwar', NULL, 20513),
     ROW('IN', 'Bījāpur', NULL, 16129),
@@ -16271,7 +16244,6 @@ FROM (VALUES
     ROW('IN', 'Bandipura', NULL, 37081),
     ROW('IN', 'Bāndīkūi', NULL, 44664),
     ROW('IN', 'Bānda', NULL, 152218),
-    ROW('IN', 'Banda', NULL, 30923),
     ROW('IN', 'Banat', NULL, 21580),
     ROW('IN', 'Bānapur', NULL, 17499),
     ROW('IN', 'Bāmor Kalān', NULL, 27860),
@@ -16344,7 +16316,6 @@ FROM (VALUES
     ROW('IN', 'Avinashi', NULL, 28868),
     ROW('IN', 'Avadi', NULL, 345996),
     ROW('IN', 'Ausa', '아수사', 36118),
-    ROW('IN', 'Aurangābād', NULL, 102244),
     ROW('IN', 'Aurangabad', NULL, 1175116),
     ROW('IN', 'Auraiya', '아우라이야', 70508),
     ROW('IN', 'Aurād', NULL, 19849),
@@ -16583,7 +16554,7 @@ FROM (VALUES
     ROW('IN', 'Chemmumiahpet', NULL, 31416),
     ROW('IN', 'Gaddi Annaram', NULL, 53622),
     ROW('IN', 'Dasnapur', NULL, 22216),
-    ROW('IN', 'Kanuru', NULL, 43696),
+    ROW('IN', 'Kānūru', NULL, 49006),
     ROW('IN', 'Lal Bahadur Nagar', NULL, 261987),
     ROW('IN', 'Madhira', NULL, 22716),
     ROW('IN', 'Malkajgiri', NULL, 150000),
@@ -16646,7 +16617,6 @@ FROM (VALUES
     ROW('IN', 'Ramagundam', NULL, 242979),
     ROW('IN', 'Shella', NULL, 54039),
     ROW('IN', 'Hanumana', NULL, 16771),
-    ROW('IN', 'Mirganj', NULL, 26240),
     ROW('IN', 'Sultānganj', NULL, 52892),
     ROW('IN', 'Bagru', NULL, 31229),
     ROW('IN', 'Nimach', NULL, 128561),
@@ -16790,7 +16760,6 @@ FROM (VALUES
     ROW('IN', 'Bablāi', NULL, 26412),
     ROW('IN', 'Ahīwāra', NULL, 20384),
     ROW('IN', 'Birgaon', NULL, 96294),
-    ROW('IN', 'Pipri', NULL, 23661),
     ROW('IN', 'Borgaon', NULL, 19759),
     ROW('IN', 'Sindi', NULL, 20956),
     ROW('IN', 'Mahādula', NULL, 21481),
@@ -16807,7 +16776,6 @@ FROM (VALUES
     ROW('IN', 'Amīnpur', NULL, 36452),
     ROW('IN', 'Bolārum', NULL, 34667),
     ROW('IN', 'Bāspalli', NULL, 27563),
-    ROW('IN', 'Rāniganj', NULL, 217910),
     ROW('IN', 'Nivāri', NULL, 23724),
     ROW('IN', 'Bādepalli', NULL, 32598),
     ROW('IN', 'Achampet', NULL, 20721),
@@ -16854,14 +16822,12 @@ FROM (VALUES
     ROW('IN', 'Chandili', NULL, 18552),
     ROW('IN', 'Ibrāhīmpatnam', NULL, 29432),
     ROW('IN', 'Rāmavarappādu', NULL, 22222),
-    ROW('IN', 'Kānūru', NULL, 49006),
     ROW('IN', 'Poranki', NULL, 25545),
     ROW('IN', 'Tādigadapa', NULL, 17462),
     ROW('IN', 'Bacheli', NULL, 21435),
     ROW('IN', 'Cherthala', '체르탈라', 45827),
     ROW('IN', 'Cheppad', NULL, 20052),
     ROW('IN', 'Keru', NULL, 38429),
-    ROW('IN', 'Sāngaria', NULL, 22853),
     ROW('IN', 'Fālna', NULL, 24839),
     ROW('IN', 'Akalkuva', NULL, 17840),
     ROW('IN', 'Makhdumpur', NULL, 31994),
@@ -16966,7 +16932,6 @@ FROM (VALUES
     ROW('IN', 'Tangla', NULL, 17183),
     ROW('IN', 'Talod', NULL, 18298),
     ROW('IN', 'Sithurajapuram', NULL, 16860),
-    ROW('IN', 'Shrirampur', NULL, 89282),
     ROW('IN', 'Savarkundla', NULL, 78354),
     ROW('IN', 'Resubelpara', NULL, 19595),
     ROW('IN', 'Rangat', NULL, 38824),
@@ -16985,7 +16950,6 @@ FROM (VALUES
     ROW('IN', 'Elamkunnapuzha', NULL, 26997),
     ROW('IN', 'Jalda', NULL, 15789),
     ROW('IN', 'Jamjodhpur', NULL, 25892),
-    ROW('IN', 'Malkapur', NULL, 32000),
     ROW('IN', 'Karthikappally', NULL, 19021),
     ROW('IN', 'Kondalampatti', NULL, 20318),
     ROW('IN', 'Koothappar', NULL, 15943),
@@ -17224,12 +17188,10 @@ FROM (VALUES
     ROW('IN', 'Kanayannur', NULL, 851406),
     ROW('IN', 'Shahuwadi', NULL, 180322),
     ROW('IN', 'Maval', NULL, 15612),
-    ROW('IN', 'Lalganj', NULL, 23124),
     ROW('IN', 'Sadulshahar', NULL, 24980),
     ROW('IN', 'Lehragaga', NULL, 22588),
     ROW('IN', 'Santrampur', NULL, 19465),
     ROW('IN', 'Chanpatia', NULL, 27095),
-    ROW('IN', 'Bhadravati', NULL, 60565),
     ROW('IN', 'Kavisuryanagar', NULL, 17430),
     ROW('IN', 'Talala', NULL, 21060),
     ROW('IN', 'Nowrozabad', NULL, 21883),
@@ -17259,7 +17221,6 @@ FROM (VALUES
     ROW('IN', 'Morampudi', NULL, 15346),
     ROW('IN', 'Hukumpeta', NULL, 16985),
     ROW('IN', 'Nadim Tiruvuru', NULL, 18567),
-    ROW('IN', 'Sriramnagar', NULL, 18893),
     ROW('IN', 'L.A.Sagaram', NULL, 19904),
     ROW('IN', 'Srisailam Project RFC Township', NULL, 21452),
     ROW('IN', 'Tiruchanur', NULL, 22963),
@@ -17311,7 +17272,6 @@ FROM (VALUES
     ROW('IN', 'Khapat', NULL, 16744),
     ROW('IN', 'Undera', NULL, 16902),
     ROW('IN', 'Ambaji', NULL, 17753),
-    ROW('IN', 'Barwala', NULL, 17951),
     ROW('IN', 'Chanod', NULL, 18776),
     ROW('IN', 'Solsumba', NULL, 18796),
     ROW('IN', 'Chhiri', NULL, 18829),
@@ -17437,12 +17397,10 @@ FROM (VALUES
     ROW('IN', 'Moonniyur', NULL, 55535),
     ROW('IN', 'Cheruvannur', NULL, 61614),
     ROW('IN', 'Bangawan', NULL, 20873),
-    ROW('IN', 'Pasan', NULL, 28447),
     ROW('IN', 'Amlai', NULL, 30354),
     ROW('IN', 'Bijuri', NULL, 32682),
     ROW('IN', 'Malajkhand', NULL, 34176),
     ROW('IN', 'Dhanpuri', NULL, 45156),
-    ROW('IN', 'Kolar', NULL, 87882),
     ROW('IN', 'Kalher', NULL, 15573),
     ROW('IN', 'Aurangabad Cantonment', NULL, 18051),
     ROW('IN', 'Pasthal', NULL, 18194),
@@ -17509,11 +17467,9 @@ FROM (VALUES
     ROW('IN', 'Kollancode', NULL, 38385),
     ROW('IN', 'Mappilaiurani', NULL, 40035),
     ROW('IN', 'Milavittan', NULL, 45863),
-    ROW('IN', 'Ramapuram', NULL, 52295),
     ROW('IN', 'Maraimalainagar', NULL, 81872),
     ROW('IN', 'Jawaharnagar', NULL, 44562),
     ROW('IN', 'Khanapuram Haveli', NULL, 53442),
-    ROW('IN', 'Taranagar', NULL, 15481),
     ROW('IN', 'Dukli', NULL, 16941),
     ROW('IN', 'Charipara', NULL, 19598),
     ROW('IN', 'Kanpur Cantonment', NULL, 108534),
@@ -17770,7 +17726,6 @@ FROM (VALUES
     ROW('IR', 'Malāyer', NULL, 170237),
     ROW('IR', 'Malārd', NULL, 56745),
     ROW('IR', 'Maku', NULL, 46581),
-    ROW('IR', 'Makū', NULL, 46581),
     ROW('IR', 'Maḩmūdābād', NULL, 31844),
     ROW('IR', 'Maḩmūdābād Nemūneh', NULL, 21982),
     ROW('IR', 'Māhān', NULL, 19423),
@@ -17945,7 +17900,6 @@ FROM (VALUES
     ROW('IR', 'Abhar', NULL, 69889),
     ROW('IR', 'Ābdānān', NULL, 23946),
     ROW('IR', 'Abarkūh', NULL, 27524),
-    ROW('IR', 'Abadeh', NULL, 59116),
     ROW('IR', 'Abadan', '아바단', 231476),
     ROW('IR', 'Moḩammad Shahr', NULL, 119418),
     ROW('IR', 'Garmdarreh', NULL, 22726),
@@ -18013,7 +17967,6 @@ FROM (VALUES
     ROW('IR', 'Īlkhchī', NULL, 16574),
     ROW('IR', 'Āz̄arshahr', NULL, 44887),
     ROW('IR', 'Mahājerān', NULL, 20346),
-    ROW('IR', 'Kāshān', NULL, 304487),
     ROW('IR', 'Jīroft', NULL, 130429),
     ROW('IR', 'Kahnūj', NULL, 52624),
     ROW('IR', 'Golbahār', NULL, 36877),
@@ -18052,13 +18005,7 @@ FROM (VALUES
     ROW('IT', 'Selargius', NULL, 23285),
     ROW('IT', 'Scordia', NULL, 16645),
     ROW('IT', 'Scicli', NULL, 16109),
-    ROW('IT', 'Sciacca', NULL, 40569)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('IT', 'Sciacca', NULL, 40569),
     ROW('IT', 'San Giovanni la Punta', NULL, 22046),
     ROW('IT', 'San Giovanni in Fiore', NULL, 17358),
     ROW('IT', 'San Cataldo', NULL, 22079),
@@ -18105,7 +18052,13 @@ FROM (VALUES
     ROW('IT', 'Enna', NULL, 22998),
     ROW('IT', 'Crotone', '크로토네', 64603),
     ROW('IT', 'Cosenza', NULL, 63852),
-    ROW('IT', 'Comiso', NULL, 26298),
+    ROW('IT', 'Comiso', NULL, 26298)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('IT', 'Catanzaro', '카탄차로', 78970),
     ROW('IT', 'Catania', NULL, 311584),
     ROW('IT', 'Castrovillari', NULL, 20334),
@@ -18979,7 +18932,6 @@ FROM (VALUES
     ROW('JP', 'Ryōtsu-minato', NULL, 16359),
     ROW('JP', 'Ōzu', '오즈 시', 40575),
     ROW('JP', 'Oyama', '오야마 시', 167647),
-    ROW('JP', 'Ōyama', NULL, 21744),
     ROW('JP', 'Owase', NULL, 16910),
     ROW('JP', 'Ōtsuki', '오쓰키 시', 23976),
     ROW('JP', 'Ōtsu', '오쓰 시', 345070),
@@ -19004,7 +18956,7 @@ FROM (VALUES
     ROW('JP', 'Okaya', NULL, 54286),
     ROW('JP', 'Ōkawa', NULL, 39223),
     ROW('JP', 'Ojiya', NULL, 34704),
-    ROW('JP', 'Ōji', NULL, 23651),
+    ROW('JP', 'Oji', NULL, 24043),
     ROW('JP', 'Ōita', '오이타 시', 477715),
     ROW('JP', 'Ōiso', NULL, 32595),
     ROW('JP', 'Ōi', NULL, 50593),
@@ -19566,7 +19518,6 @@ FROM (VALUES
     ROW('JP', 'Rumoi', '루모이 시', 26454),
     ROW('JP', 'Otofuke', NULL, 44235),
     ROW('JP', 'Otaru', '오타루 시', 115333),
-    ROW('JP', 'Ōno', NULL, 15091),
     ROW('JP', 'Ōdate', '오다테 시', 69237),
     ROW('JP', 'Obihiro', '오비히로 시', 166536),
     ROW('JP', 'Noshiro', '노시로 시', 52283),
@@ -19839,7 +19790,7 @@ FROM (VALUES
     ROW('JP', 'Sendagi', NULL, 20906),
     ROW('JP', 'Matsubushi', NULL, 28787),
     ROW('JP', 'Toneri', NULL, 15547),
-    ROW('JP', 'Ōgi', NULL, 15733),
+    ROW('JP', 'Ogi', NULL, 43952),
     ROW('JP', 'Takenotsuka', NULL, 18766),
     ROW('JP', 'Aoi', NULL, 17422),
     ROW('JP', 'Adachi', NULL, 695043),
@@ -19871,7 +19822,6 @@ FROM (VALUES
     ROW('JP', 'Saito', NULL, 29262),
     ROW('JP', 'Sagamihara', NULL, 720780),
     ROW('JP', 'Ogōri', NULL, 59360),
-    ROW('JP', 'Ogi', NULL, 43952),
     ROW('JP', 'Nagakute', NULL, 60162),
     ROW('JP', 'Munakata', NULL, 97095),
     ROW('JP', 'Mitoyo', NULL, 65713),
@@ -19945,7 +19895,6 @@ FROM (VALUES
     ROW('JP', 'Akaiwa', NULL, 43742),
     ROW('JP', 'Maniwa', NULL, 42725),
     ROW('JP', 'Setouchi', NULL, 36048),
-    ROW('JP', 'Konan', NULL, 54607),
     ROW('JP', 'Mima', NULL, 28055),
     ROW('JP', 'Yoshinogawa', NULL, 38772),
     ROW('JP', 'Inagi', NULL, 93151),
@@ -19964,14 +19913,12 @@ FROM (VALUES
     ROW('JP', 'Asakura', NULL, 50273),
     ROW('JP', 'Semboku', NULL, 25857),
     ROW('JP', 'Chiyoda', NULL, 66680),
-    ROW('JP', 'Tokai', NULL, 37891),
     ROW('JP', 'Nogi', NULL, 24913),
     ROW('JP', 'Haruta', NULL, 32399),
     ROW('JP', 'Agui', NULL, 28383),
     ROW('JP', 'Kaminoma', NULL, 22496),
     ROW('JP', 'Minase', NULL, 30927),
     ROW('JP', 'Oyamazaki', NULL, 15953),
-    ROW('JP', 'Oji', NULL, 24043),
     ROW('JP', 'Nakaiburi', NULL, 15967),
     ROW('JP', 'Shioiri', NULL, 17401),
     ROW('JP', 'Uchiko', NULL, 15322),
@@ -20058,13 +20005,7 @@ FROM (VALUES
     ROW('KE', 'Makindu', NULL, 15038),
     ROW('KE', 'Machakos', '마차코스', 63767),
     ROW('KE', 'Lugulu', NULL, 40894),
-    ROW('KE', 'Lodwar', NULL, 82970)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('KE', 'Lodwar', NULL, 82970),
     ROW('KE', 'Limuru', NULL, 159314),
     ROW('KE', 'Ongata Rongai', NULL, 172569),
     ROW('KE', 'Lamu', '라무', 25385),
@@ -20117,7 +20058,13 @@ FROM (VALUES
     ROW('KE', 'Awendo', NULL, 16815),
     ROW('KE', 'Athi River', NULL, 81302),
     ROW('KE', 'Siaya', NULL, 33153),
-    ROW('KE', 'Takaba', NULL, 21517),
+    ROW('KE', 'Takaba', NULL, 21517)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('KE', 'Ol Kalou', NULL, 47795),
     ROW('KE', 'Kitengela', NULL, 154436),
     ROW('KE', 'Juja', NULL, 156041),
@@ -21828,7 +21775,7 @@ FROM (VALUES
     ROW('MX', 'San Pedro Totoltepec', NULL, 21076),
     ROW('MX', 'Santa María Totoltepec', NULL, 18779),
     ROW('MX', 'San Francisco Cuaxusco', NULL, 24900),
-    ROW('MX', 'Benito Juarez', NULL, 355017),
+    ROW('MX', 'Benito Juárez', NULL, 385439),
     ROW('MX', 'Miguel Hidalgo', NULL, 372889),
     ROW('MX', 'Cuauhtémoc', NULL, 531831),
     ROW('MX', 'Huixquilucan', NULL, 124846),
@@ -22064,13 +22011,7 @@ FROM (VALUES
     ROW('MX', 'Arcelia', NULL, 18685),
     ROW('MX', 'Arandas', NULL, 52175),
     ROW('MX', 'Ciudad Apodaca', NULL, 467157),
-    ROW('MX', 'Apatzingán', NULL, 102362)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('MX', 'Apatzingán', NULL, 102362),
     ROW('MX', 'Apaseo el Grande', NULL, 26121),
     ROW('MX', 'Apaseo el Alto', NULL, 27991),
     ROW('MX', 'Ameca', NULL, 36156),
@@ -22086,7 +22027,6 @@ FROM (VALUES
     ROW('MX', 'Las Guacamayas', NULL, 37980),
     ROW('MX', 'Ciudad Lázaro Cárdenas', NULL, 196003),
     ROW('MX', 'San José del Valle', NULL, 22541),
-    ROW('MX', 'Benito Juárez', NULL, 385439),
     ROW('MX', 'Colonia del Valle', NULL, 250000),
     ROW('MX', 'Colonia Lindavista', NULL, 100000),
     ROW('MX', 'Colonia Nativitas', NULL, 60000),
@@ -22124,7 +22064,13 @@ FROM (VALUES
     ROW('MX', 'Fraccionamiento Ciudad Olmeca', NULL, 16074),
     ROW('MX', 'San Rafael Tlanalapan', NULL, 15998),
     ROW('MX', 'Tecámac de Felipe Villanueva', NULL, 15911),
-    ROW('MX', 'Venceremos', NULL, 15538),
+    ROW('MX', 'Venceremos', NULL, 15538)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('MX', 'Alborada Jaltenco', NULL, 15235),
     ROW('MX', 'Crucecita', NULL, 15130),
     ROW('MX', 'San José de los Olvera', NULL, 18406),
@@ -23213,7 +23159,7 @@ FROM (VALUES
     ROW('NP', 'Rājbirāj', NULL, 69803),
     ROW('NP', 'Pokhara', '포카라', 600051),
     ROW('NP', 'Pātan', NULL, 299283),
-    ROW('NP', 'Panauti̇̄', NULL, 27602),
+    ROW('NP', 'Panauti', NULL, 46595),
     ROW('NP', 'Malaṅgawā', NULL, 20284),
     ROW('NP', 'Bhimdatta', NULL, 88381),
     ROW('NP', 'Lahān', NULL, 102955),
@@ -23247,7 +23193,6 @@ FROM (VALUES
     ROW('NP', 'Birendranagar', NULL, 154886),
     ROW('NP', 'Dipayal', NULL, 33968),
     ROW('NP', 'Nepalgunj', NULL, 166258),
-    ROW('NP', 'Panauti', NULL, 46595),
     ROW('NP', 'Inaruwa', NULL, 70093),
     ROW('NP', 'Triyuga', NULL, 71405),
     ROW('NP', 'Madhyapur Thimi', NULL, 119955),
@@ -23970,7 +23915,6 @@ FROM (VALUES
     ROW('PH', 'Bantay', NULL, 37088),
     ROW('PH', 'Bansalan', NULL, 21391),
     ROW('PH', 'Bangued', NULL, 48331),
-    ROW('PH', 'Bañga', NULL, 58855),
     ROW('PH', 'Banga', NULL, 91536),
     ROW('PH', 'Bambang', NULL, 60146),
     ROW('PH', 'Bamban', NULL, 78260),
@@ -24070,13 +24014,7 @@ FROM (VALUES
     ROW('PK', 'Sukkur', '수쿠르', 563851),
     ROW('PK', 'Sukheke Mandi', NULL, 42626),
     ROW('PK', 'Sodhri', NULL, 15977),
-    ROW('PK', 'Skardu', NULL, 260000)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('PK', 'Skardu', NULL, 260000),
     ROW('PK', 'Sita Road', NULL, 27587),
     ROW('PK', 'Sinjhoro', NULL, 354709),
     ROW('PK', 'Sillanwali', NULL, 49311),
@@ -24132,7 +24070,13 @@ FROM (VALUES
     ROW('PK', 'Pasrur', NULL, 102717),
     ROW('PK', 'Pasni', '파스니', 43494),
     ROW('PK', 'Pano Aqil', NULL, 102701),
-    ROW('PK', 'Pallandri', NULL, 23243),
+    ROW('PK', 'Pallandri', NULL, 23243)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('PK', 'Pakpattan', NULL, 126706),
     ROW('PK', 'Paharpur', NULL, 76027),
     ROW('PK', 'Pad Idan', NULL, 20919),
@@ -24744,7 +24688,6 @@ FROM (VALUES
     ROW('PL', 'Ołbin', NULL, 31216),
     ROW('PL', 'Piecki-Migowo', NULL, 27173),
     ROW('PL', 'Przymorze Wielkie', NULL, 24368),
-    ROW('PL', 'Środmieście', NULL, 23364),
     ROW('PL', 'Ujeścisko-Łostowice', NULL, 29845),
     ROW('PL', 'Wrzeszcz Dolny', NULL, 21648),
     ROW('PL', 'Wrzeszcz Górny', NULL, 20810),
@@ -26076,13 +26019,7 @@ FROM (VALUES
     ROW('RU', 'Tyumen', '튜멘', 768358),
     ROW('RU', 'Turinsk', NULL, 18555),
     ROW('RU', 'Topki', NULL, 30572),
-    ROW('RU', 'Tomsk', '톰스크', 574002)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('RU', 'Tomsk', '톰스크', 574002),
     ROW('RU', 'Toguchin', NULL, 21886),
     ROW('RU', 'Tobolsk', NULL, 113800),
     ROW('RU', 'Tayshet', '타이셰트', 37766),
@@ -26139,7 +26076,13 @@ FROM (VALUES
     ROW('RU', 'Nazarovo', NULL, 55252),
     ROW('RU', 'Nadym', NULL, 46339),
     ROW('RU', 'Myski', NULL, 44082),
-    ROW('RU', 'Minusinsk', '미누신스크', 72781),
+    ROW('RU', 'Minusinsk', '미누신스크', 72781)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('RU', 'Miass', '미아스', 167500),
     ROW('RU', 'Mezhdurechensk', '메즈두레첸스크', 101026),
     ROW('RU', 'Megion', '메기온', 48691),
@@ -28082,13 +28025,7 @@ FROM (VALUES
     ROW('TR', 'Bolu', '볼루', 184682),
     ROW('TR', 'Bilecik', '빌레지크', 74457),
     ROW('TR', 'Biga', NULL, 61066),
-    ROW('TR', 'Beypazarı', '베이파자르', 38769)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('TR', 'Beypazarı', '베이파자르', 38769),
     ROW('TR', 'Beşikdüzü', NULL, 36987),
     ROW('TR', 'Bayburt', '바이부르트', 48036),
     ROW('TR', 'Bartın', '바르틴', 81692),
@@ -28145,7 +28082,13 @@ FROM (VALUES
     ROW('TT', 'Rio Claro', NULL, 35650),
     ROW('TT', 'Port of Spain', '포트오브스페인', 49031),
     ROW('TT', 'Point Fortin', NULL, 19056),
-    ROW('TT', 'Paradise', NULL, 15067),
+    ROW('TT', 'Paradise', NULL, 15067)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('TT', 'Mon Repos', NULL, 56380),
     ROW('TT', 'Marabella', NULL, 26700),
     ROW('TT', 'Laventille', NULL, 21000),
@@ -30088,13 +30031,7 @@ FROM (VALUES
     ROW('US', 'Anniston', '애니스턴', 22347),
     ROW('US', 'Auburn', '오번', 77006),
     ROW('US', 'Glendale Heights', NULL, 34208),
-    ROW('US', 'North Andover', NULL, 28222)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('US', 'North Andover', NULL, 28222),
     ROW('US', 'Revere', '리비어', 53422),
     ROW('US', 'Danbury', '댄베리', 84657),
     ROW('US', 'Darien', NULL, 22256),
@@ -30151,7 +30088,13 @@ FROM (VALUES
     ROW('US', 'Ankeny', NULL, 56764),
     ROW('US', 'Bettendorf', NULL, 35505),
     ROW('US', 'Cedar Falls', '시더폴스', 41255),
-    ROW('US', 'Cedar Rapids', '시더래피즈', 130405),
+    ROW('US', 'Cedar Rapids', '시더래피즈', 130405)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('US', 'Clive', NULL, 15447),
     ROW('US', 'Coralville', NULL, 20608),
     ROW('US', 'Council Bluffs', NULL, 62597),
@@ -32094,13 +32037,7 @@ FROM (VALUES
     ROW('VE', 'Soledad', NULL, 29763),
     ROW('VE', 'Socopó', NULL, 72352),
     ROW('VE', 'San Timoteo', NULL, 81017),
-    ROW('VE', 'Santa Teresa del Tuy', NULL, 278890)
-) AS v(iso_code, name, korean_name, population)
-JOIN country c ON c.iso_code = v.iso_code;
-
-INSERT INTO city (country_id, name, korean_name, population)
-SELECT c.id, v.name, v.korean_name, v.population
-FROM (VALUES
+    ROW('VE', 'Santa Teresa del Tuy', NULL, 278890),
     ROW('VE', 'Santa Rita', NULL, 31810),
     ROW('VE', 'Santa Elena de Uairén', NULL, 29795),
     ROW('VE', 'Santa Cruz de Mora', NULL, 21209),
@@ -32157,7 +32094,13 @@ FROM (VALUES
     ROW('VE', 'Nirgua', NULL, 54080),
     ROW('VE', 'Motatán', NULL, 25437),
     ROW('VE', 'Morón', NULL, 68084),
-    ROW('VE', 'Montalbán', NULL, 29451),
+    ROW('VE', 'Montalbán', NULL, 29451)
+) AS v(iso_code, name, korean_name, population)
+JOIN country c ON c.iso_code = v.iso_code;
+
+INSERT INTO city (country_id, name, korean_name, population)
+SELECT c.id, v.name, v.korean_name, v.population
+FROM (VALUES
     ROW('VE', 'Miranda', NULL, 32907),
     ROW('VE', 'Michelena', NULL, 20539),
     ROW('VE', 'Mérida', '메리다', 300000),
@@ -32447,7 +32390,6 @@ FROM (VALUES
     ROW('VN', 'Cô Tô', NULL, 31278),
     ROW('VN', 'Cờ Đỏ', NULL, 116576),
     ROW('VN', 'Cổ Lóa', NULL, 16514),
-    ROW('VN', 'Cổ Đô', NULL, 70706),
     ROW('VN', 'Chũ', NULL, 127881),
     ROW('VN', 'Chơn Thành', NULL, 121083),
     ROW('VN', 'Chợ Lớn', NULL, 561000),
@@ -32556,7 +32498,6 @@ FROM (VALUES
     ROW('VN', 'Kiên Hải', NULL, 23179),
     ROW('VN', 'Quận Đức Thịnh', NULL, 132000),
     ROW('VN', 'Huyện Lâm Hà', NULL, 144707),
-    ROW('VN', 'Phú Quốc', NULL, 179480),
     ROW('VN', 'thị xã Quảng Trị', NULL, 23356),
     ROW('VN', 'Quang Minh', NULL, 25000),
     ROW('VN', 'Thuận An', NULL, 588616),
