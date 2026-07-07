@@ -31,7 +31,11 @@ public class CityController {
   private final CityService cityService;
 
   @Operation(summary = "도시 검색", description = "특정 국가에 속한 도시를 검색합니다.")
-  @ApiResponses({ @ApiResponse(responseCode = "200", description = "검색 성공") })
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "검색 성공"),
+      @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+      @ApiResponse(responseCode = "404", description = "국가 없음")
+  })
   @InvalidRequestResponse
   @CommonErrorResponses
   @GetMapping("/search")
@@ -45,6 +49,8 @@ public class CityController {
       @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
       @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
   ) {
-    return BaseResponse.success(GlobalSuccessCode.OK, CityListResponse.from(cityService.searchCities(countryId, keyword, page, size)));
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        CityListResponse.from(cityService.searchCities(countryId, keyword, page, size))
+    );
   }
 }
