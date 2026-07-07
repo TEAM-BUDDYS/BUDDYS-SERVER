@@ -15,7 +15,7 @@ public interface CityRepository extends JpaRepository<City, Long> {
           lower(c.name) like lower(concat('%', :keyword, '%'))
           or lower(c.koreanName) like lower(concat('%', :keyword, '%'))
         )
-      order by c.population desc
+      order by c.population desc, c.id desc
       """)
   Slice<City> search(@Param("countryId") Long countryId, @Param("keyword") String keyword, Pageable pageable);
 
