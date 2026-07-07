@@ -56,14 +56,20 @@ jobs:
       - name: Build Docker Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t "$DOCKER_USERNAME/buddys-server:latest" .
+          docker build \
+            -t "$DOCKER_USERNAME/buddys-server:latest" \
+            -t "$DOCKER_USERNAME/buddys-server:$IMAGE_TAG" \
+            .
 
       - name: Push Docker Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker push "$DOCKER_USERNAME/buddys-server:latest"
+          docker push "$DOCKER_USERNAME/buddys-server:$IMAGE_TAG"
 
   cd:
     if: github.event_name == 'push'
@@ -79,8 +85,12 @@ jobs:
       - name: Create .env file
         env:
           ENV_FILE_CONTENT: ${{ secrets.ENV }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           printf '%s\n' "$ENV_FILE_CONTENT" > .env
+          sed -i '/^DOCKER_IMAGE=/d' .env
+          printf 'DOCKER_IMAGE=%s/buddys-server:%s\n' "$DOCKER_USERNAME" "$IMAGE_TAG" >> .env
 
       - name: Prepare EC2 Docker Directory
         uses: appleboy/ssh-action@v1.0.3
@@ -124,6 +134,10 @@ jobs:
               exit 1
             fi
 
+            PREVIOUS_IMAGE=$(sudo docker inspect buddys-server-app --format='{{.Config.Image}}' 2>/dev/null || true)
+            PREVIOUS_IMAGE_ID=$(sudo docker inspect buddys-server-app --format='{{.Image}}' 2>/dev/null || true)
+            ROLLBACK_IMAGE="${PREVIOUS_IMAGE_ID:-$PREVIOUS_IMAGE}"
+
             echo "최신 Docker 이미지 pull"
             sudo docker compose --env-file .env pull
 
@@ -136,9 +150,6 @@ jobs:
 
             echo "Docker 컨테이너 실행"
             sudo docker compose --env-file .env up -d
-
-            echo "불필요한 dangling image 정리"
-            sudo docker image prune -f
 
             echo "실행 중인 컨테이너 확인"
             sudo docker ps
@@ -157,8 +168,34 @@ jobs:
 
             if [ "$STATUS" != "200" ]; then
               echo "❌ 애플리케이션 응답 확인 실패. HTTP status: $STATUS"
-              sudo docker logs buddys-server-app
+              sudo docker logs buddys-server-app || true
+              if [ -n "$ROLLBACK_IMAGE" ]; then
+                echo "직전 Docker 이미지로 롤백합니다: $ROLLBACK_IMAGE"
+                sudo docker compose --env-file .env down --remove-orphans
+                sed -i.bak '/^DOCKER_IMAGE=/d' .env
+                printf 'DOCKER_IMAGE=%s\n' "$ROLLBACK_IMAGE" >> .env
+                sudo docker compose --env-file .env up -d
+
+                ROLLBACK_STATUS="000"
+                for attempt in $(seq 1 30); do
+                  ROLLBACK_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL") || ROLLBACK_STATUS="000"
+                  if [ "$ROLLBACK_STATUS" = "200" ]; then
+                    echo "✅ 롤백 완료. HTTP status: $ROLLBACK_STATUS"
+                    exit 1
+                  fi
+                  echo "롤백 애플리케이션 준비 대기 중... attempt=$attempt status=$ROLLBACK_STATUS"
+                  sleep 5
+                done
+
+                echo "❌ 롤백 후에도 애플리케이션 응답 확인 실패. HTTP status: $ROLLBACK_STATUS"
+                sudo docker logs buddys-server-app || true
+              else
+                echo "롤백할 직전 Docker 이미지가 없습니다."
+              fi
               exit 1
             fi
 
             echo "✅ 배포 완료. HTTP status: $STATUS"
+
+            echo "불필요한 dangling image 정리"
+            sudo docker image prune -f
