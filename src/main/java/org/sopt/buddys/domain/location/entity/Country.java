@@ -19,7 +19,8 @@ import lombok.NoArgsConstructor;
 @Table(
     name = "country",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_country_name", columnNames = "name")
+        @UniqueConstraint(name = "uk_country_name", columnNames = "name"),
+        @UniqueConstraint(name = "uk_country_iso_code", columnNames = "iso_code")
     }
 )
 public class Country {
@@ -30,4 +31,7 @@ public class Country {
 
   @Column(nullable = false, length = 80)
   private String name;
+
+  @Column(name = "iso_code", nullable = false, columnDefinition = "CHAR(2)")
+  private String isoCode;
 }
