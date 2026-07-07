@@ -282,6 +282,7 @@ class ChatRoomServiceTest {
                 LocalDateTime.of(2026, 7, 7, 12, 0)
         );
 
+        // when
         ChatMessageListResult firstPage = chatMessageService.getMessages(
                 user.getId(),
                 chatRoom.getId(),
@@ -289,6 +290,13 @@ class ChatRoomServiceTest {
                 null,
                 2
         );
+
+        // then
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextCursorMessageId()).isEqualTo(cursorMessageId);
+        assertThat(firstPage.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(latestMessageId, cursorMessageId);
 
         // when
         ChatMessageListResult secondPage = chatMessageService.getMessages(
@@ -300,11 +308,6 @@ class ChatRoomServiceTest {
         );
 
         // then
-        assertThat(firstPage.hasNext()).isTrue();
-        assertThat(firstPage.nextCursorMessageId()).isEqualTo(cursorMessageId);
-        assertThat(firstPage.messages())
-                .extracting(message -> message.message().getId())
-                .containsExactly(latestMessageId, cursorMessageId);
         assertThat(secondPage.messages())
                 .extracting(message -> message.message().getId())
                 .containsExactly(oldestMessageId);
