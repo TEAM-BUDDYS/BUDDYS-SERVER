@@ -55,10 +55,14 @@ public class ChatMessageService {
         );
         boolean hasNext = messages.size() > size;
         List<ChatMessage> pageMessages = hasNext ? messages.subList(0, size) : messages;
+        Long participantLastReadMessageId = chatRoomMemberRepository
+                .findParticipantLastReadMessageId(chatRoomId, userId)
+                .orElse(null);
         List<ChatMessageResult> messageResults = pageMessages.stream()
                 .map(message -> new ChatMessageResult(
                         message,
-                        message.getSender().getId().equals(userId)
+                        message.getSender().getId().equals(userId),
+                        isReadByParticipant(message, userId, participantLastReadMessageId)
                 ))
                 .toList();
 
@@ -72,6 +76,16 @@ public class ChatMessageService {
                 nextCursorMessage == null ? null : nextCursorMessage.getId(),
                 hasNext
         );
+    }
+
+    private boolean isReadByParticipant(
+            ChatMessage message,
+            Long userId,
+            Long participantLastReadMessageId
+    ) {
+        return message.getSender().getId().equals(userId)
+                && participantLastReadMessageId != null
+                && message.getId() <= participantLastReadMessageId;
     }
 
     private void validateUserExists(Long userId) {

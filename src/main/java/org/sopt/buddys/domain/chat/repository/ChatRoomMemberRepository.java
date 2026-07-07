@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.chat.repository;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import org.sopt.buddys.domain.chat.entity.ChatRoomMember;
 import org.sopt.buddys.domain.chat.entity.ChatRoomMemberId;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +57,17 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
   Slice<ChatRoomListProjection> findChatRoomListByUserId(
       @Param("userId") Long userId,
       Pageable pageable
+  );
+
+  @Query("""
+      select participantMember.lastReadMessageId
+      from ChatRoomMember participantMember
+      where participantMember.chatRoom.id = :chatRoomId
+        and participantMember.user.id <> :userId
+      """)
+  Optional<Long> findParticipantLastReadMessageId(
+      @Param("chatRoomId") Long chatRoomId,
+      @Param("userId") Long userId
   );
 
   interface ChatRoomListProjection {

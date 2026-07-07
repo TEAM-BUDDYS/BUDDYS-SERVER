@@ -357,6 +357,62 @@ class ChatRoomServiceTest {
                 );
     }
 
+    @DisplayName("내 메시지는 상대방의 마지막 읽음 메시지 기준으로 읽음 여부를 계산한다")
+    @Test
+    void getMessages_marksReadByParticipantForMyMessages() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+
+        Long readMessageId = insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "상대방이 읽은 내 메시지",
+                LocalDateTime.of(2026, 7, 7, 10, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "상대방 메시지",
+                LocalDateTime.of(2026, 7, 7, 11, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "상대방이 아직 안 읽은 내 메시지",
+                LocalDateTime.of(2026, 7, 7, 12, 0)
+        );
+        updateLastReadMessageId(chatRoom.getId(), participant.getId(), readMessageId);
+
+        // when
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                10
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(
+                        message -> message.message().getMessage(),
+                        ChatMessageResult::mine,
+                        ChatMessageResult::readByParticipant
+                )
+                .containsExactly(
+                        tuple("상대방이 아직 안 읽은 내 메시지", true, false),
+                        tuple("상대방 메시지", false, false),
+                        tuple("상대방이 읽은 내 메시지", true, true)
+                );
+    }
+
     private User createUser(
             String email,
             String providerId,

@@ -17,7 +17,8 @@ public record ChatMessageListResult(
 
   public record ChatMessageResult(
       ChatMessage message,
-      boolean mine
+      boolean mine,
+      boolean readByParticipant
   ) {
   }
 }

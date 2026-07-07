@@ -53,7 +53,10 @@ public record ChatMessageListResponse(
       LocalDateTime sentAt,
 
       @Schema(description = "내가 보낸 메시지 여부", example = "false")
-      boolean mine
+      boolean mine,
+
+      @Schema(description = "상대방이 읽은 메시지 여부", example = "true")
+      boolean readByParticipant
   ) {
 
     private static ChatMessageResponse from(ChatMessageResult result) {
@@ -64,7 +67,8 @@ public record ChatMessageListResponse(
           ChatParticipantResponse.from(message.getSender()),
           message.getMessage(),
           message.getCreatedAt(),
-          result.mine()
+          result.mine(),
+          result.readByParticipant()
       );
     }
   }
