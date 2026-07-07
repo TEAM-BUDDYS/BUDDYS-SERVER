@@ -38,8 +38,8 @@ public class ChatRoomMember {
   @Column(name = "joined_at", nullable = false, updatable = false)
   private LocalDateTime joinedAt;
 
-  @Column(name = "last_read_at")
-  private LocalDateTime lastReadAt;
+  @Column(name = "last_read_message_id")
+  private Long lastReadMessageId;
 
   public ChatRoomMember(ChatRoom chatRoom, User user) {
     this.chatRoom = chatRoom;
