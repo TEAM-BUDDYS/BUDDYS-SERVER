@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,34 +38,34 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class ChatRoomServiceTest {
 
-  @Container
-  @ServiceConnection
-  static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
+    @Container
+    @ServiceConnection
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
 
-  @Autowired
-  private ChatRoomService chatRoomService;
+    @Autowired
+    private ChatRoomService chatRoomService;
 
-  @Autowired
-  private ChatRoomRepository chatRoomRepository;
+    @Autowired
+    private ChatRoomRepository chatRoomRepository;
 
-  @Autowired
-  private ChatRoomMemberRepository chatRoomMemberRepository;
+    @Autowired
+    private ChatRoomMemberRepository chatRoomMemberRepository;
 
-  @Autowired
-  private UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-  @Autowired
-  private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-  @BeforeEach
-  void setUp() {
-    cleanUp();
-  }
+    @BeforeEach
+    void setUp() {
+        cleanUp();
+    }
 
-  @AfterEach
-  void tearDown() {
-    cleanUp();
-  }
+    @AfterEach
+    void tearDown() {
+        cleanUp();
+    }
 
     @DisplayName("채팅방 목록은 마지막 메시지가 최신인 순서로 정렬된다")
     @Test
@@ -259,93 +260,93 @@ class ChatRoomServiceTest {
                 );
     }
 
-  private User createUser(
-      String email,
-      String providerId,
-      String nickname
-  ) {
+    private User createUser(
+            String email,
+            String providerId,
+            String nickname
+    ) {
 
-    return User.builder()
-        .email(email)
-        .provider(AuthProvider.KAKAO)
-        .providerId(providerId)
-        .nickname(nickname)
-        .build();
-  }
+        return User.builder()
+                .email(email)
+                .provider(AuthProvider.KAKAO)
+                .providerId(providerId)
+                .nickname(nickname)
+                .build();
+    }
 
-  private Long insertMessage(
-      Long chatRoomId,
-      Long senderId,
-      String message,
-      LocalDateTime createdAt
-  ) {
+    private Long insertMessage(
+            Long chatRoomId,
+            Long senderId,
+            String message,
+            LocalDateTime createdAt
+    ) {
 
-    KeyHolder keyHolder = new GeneratedKeyHolder();
-    jdbcTemplate.update(connection -> {
-          var preparedStatement = connection.prepareStatement(
-              """
-                  INSERT INTO chat_message (chat_room_id, sender_id, message, created_at)
-                  VALUES (?, ?, ?, ?)
-                  """,
-              java.sql.Statement.RETURN_GENERATED_KEYS
-          );
-          preparedStatement.setLong(1, chatRoomId);
-          preparedStatement.setLong(2, senderId);
-          preparedStatement.setString(3, message);
-          preparedStatement.setObject(4, createdAt);
-          return preparedStatement;
-        },
-        keyHolder
-    );
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+                    var preparedStatement = connection.prepareStatement(
+                            """
+                                    INSERT INTO chat_message (chat_room_id, sender_id, message, created_at)
+                                    VALUES (?, ?, ?, ?)
+                                    """,
+                            java.sql.Statement.RETURN_GENERATED_KEYS
+                    );
+                    preparedStatement.setLong(1, chatRoomId);
+                    preparedStatement.setLong(2, senderId);
+                    preparedStatement.setString(3, message);
+                    preparedStatement.setObject(4, createdAt);
+                    return preparedStatement;
+                },
+                keyHolder
+        );
 
-    Number key = keyHolder.getKey();
-    assertThat(key)
-        .as("chat_message insert generated key")
-        .isNotNull();
+        Number key = keyHolder.getKey();
+        assertThat(key)
+                .as("chat_message insert generated key")
+                .isNotNull();
 
-    return key.longValue();
-  }
+        return key.longValue();
+    }
 
-  private void updateLastReadMessageId(
-      Long chatRoomId,
-      Long userId,
-      Long lastReadMessageId
-  ) {
+    private void updateLastReadMessageId(
+            Long chatRoomId,
+            Long userId,
+            Long lastReadMessageId
+    ) {
 
-    jdbcTemplate.update(
-        """
-            UPDATE chat_room_member
-            SET last_read_message_id = ?
-            WHERE chat_room_id = ?
-              AND user_id = ?
-            """,
-        lastReadMessageId,
-        chatRoomId,
-        userId
-    );
-  }
+        jdbcTemplate.update(
+                """
+                        UPDATE chat_room_member
+                        SET last_read_message_id = ?
+                        WHERE chat_room_id = ?
+                          AND user_id = ?
+                        """,
+                lastReadMessageId,
+                chatRoomId,
+                userId
+        );
+    }
 
-  private void updateChatRoomCreatedAt(
-      Long chatRoomId,
-      LocalDateTime createdAt
-  ) {
+    private void updateChatRoomCreatedAt(
+            Long chatRoomId,
+            LocalDateTime createdAt
+    ) {
 
-    jdbcTemplate.update(
-        """
-            UPDATE chat_room
-            SET created_at = ?
-            WHERE id = ?
-            """,
-        createdAt,
-        chatRoomId
-    );
-  }
+        jdbcTemplate.update(
+                """
+                        UPDATE chat_room
+                        SET created_at = ?
+                        WHERE id = ?
+                        """,
+                createdAt,
+                chatRoomId
+        );
+    }
 
-  private void cleanUp() {
-    jdbcTemplate.update("UPDATE chat_room_member SET last_read_message_id = NULL");
-    jdbcTemplate.update("DELETE FROM chat_message");
-    chatRoomMemberRepository.deleteAllInBatch();
-    chatRoomRepository.deleteAllInBatch();
-    userRepository.deleteAllInBatch();
-  }
+    private void cleanUp() {
+        jdbcTemplate.update("UPDATE chat_room_member SET last_read_message_id = NULL");
+        jdbcTemplate.update("DELETE FROM chat_message");
+        chatRoomMemberRepository.deleteAllInBatch();
+        chatRoomRepository.deleteAllInBatch();
+        userRepository.deleteAllInBatch();
+    }
 }
