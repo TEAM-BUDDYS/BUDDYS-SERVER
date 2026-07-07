@@ -1,0 +1,14 @@
+[Unit]
+Description=BUDDYS Spring Boot Server
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/BUDDYS-SERVER
+ExecStart=/bin/bash -lc 'set -a; source /home/ubuntu/BUDDYS-SERVER/.env; set +a; exec /usr/bin/java -jar /home/ubuntu/BUDDYS-SERVER/app.jar'
+Restart=always
+RestartSec=10
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
