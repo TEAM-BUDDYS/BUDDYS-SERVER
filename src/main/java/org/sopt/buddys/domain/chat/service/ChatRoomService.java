@@ -59,13 +59,14 @@ public class ChatRoomService {
 
     validateUserExists(userId);
 
-    if (!chatRoomRepository.existsById(chatRoomId)) {
-      throw new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
-    }
-
     ChatRoomMemberRepository.ChatRoomDetailProjection chatRoomDetail =
         chatRoomMemberRepository.findChatRoomDetailByIdAndUserId(chatRoomId, userId)
-            .orElseThrow(() -> new BaseException(GlobalErrorCode.FORBIDDEN));
+            .orElseThrow(() -> {
+              if (!chatRoomRepository.existsById(chatRoomId)) {
+                return new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
+              }
+              return new BaseException(GlobalErrorCode.FORBIDDEN);
+            });
 
     return new ChatRoomResult(
         chatRoomDetail.getChatRoom(),
