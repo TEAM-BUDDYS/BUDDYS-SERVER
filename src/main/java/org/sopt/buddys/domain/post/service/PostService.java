@@ -25,6 +25,7 @@ import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
+import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
@@ -84,6 +85,27 @@ public class PostService {
     savePostImages(post, command.imageUrls());
 
     return post;
+  }
+
+  @Transactional
+  public PostDetailResult getPostDetail(Long postId) {
+    Post post = postRepository.findDetailById(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
+
+    post.increaseViewCount();
+
+    return new PostDetailResult(
+        post,
+        postImageRepository.findImageUrlsByPostId(postId),
+        postAgeConditionRepository.findAgeConditionsByPostId(postId),
+        postTagRepository.findAllByPostIdWithTag(postId)
+            .stream()
+            .map(postTag -> new PostDetailResult.TagResult(
+                postTag.getTag().getId(),
+                postTag.getTag().getName()
+            ))
+            .toList()
+    );
   }
 
   private City getCity(Long countryId, Long cityId) {
