@@ -22,6 +22,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.entity.UserTag;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.command.OnboardingCommand;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class UserOnboardingService {
   private final TagRepository tagRepository;
 
   @Transactional
-  public User completeOnboarding(Long userId, OnboardingRequest request) {
+  public User completeOnboarding(Long userId, OnboardingCommand request) {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
@@ -108,13 +109,6 @@ public class UserOnboardingService {
   private void validateExchangeDates(LocalDate start, LocalDate end) {
     if (start != null && end != null && start.isAfter(end)) {
       throw new BaseException(UserErrorCode.INVALID_EXCHANGE_PERIOD);
-    }
-  }
-
-  private void validateTagTypes(List<Long> tagIds, TagType expectedType) {
-    List<Tag> tags = tagRepository.findAllById(tagIds);
-    if (tags.size() != tagIds.size() || tags.stream().anyMatch(tag -> tag.getTagType() != expectedType)) {
-      throw new BaseException(UserErrorCode.INVALID_TAG);
     }
   }
 

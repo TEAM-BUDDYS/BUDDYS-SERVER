@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 import org.sopt.buddys.domain.user.entity.Gender;
+import org.sopt.buddys.domain.user.service.command.OnboardingCommand;
 
 public record OnboardingRequest(
     @Schema(description = "관심 국가 ID", example = "31")
@@ -53,4 +54,12 @@ public record OnboardingRequest(
 
     @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.png", nullable = true)
     String profileImageUrl
-) {}
+) {
+    public OnboardingCommand toCommand() {
+        return new OnboardingCommand(
+            interestCountryId, interestCityId, exchangeCountryId, exchangeUniversity,
+            exchangeStartDate, exchangeEndDate, activityTagIds, interestTagIds, travelStyleTagIds,
+            nickname, gender, birthDate, bio, profileImageUrl
+        );
+    }
+}

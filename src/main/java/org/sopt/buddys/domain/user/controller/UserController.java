@@ -104,7 +104,7 @@ public class UserController {
       @LoginUser Long userId,
       @RequestBody @Valid OnboardingRequest request
   ) {
-    User user = userOnboardingService.completeOnboarding(userId, request);
+    User user = userOnboardingService.completeOnboarding(userId, request.toCommand());
     return BaseResponse.success(GlobalSuccessCode.OK, OnboardingResponse.of(user));
   }
 }
