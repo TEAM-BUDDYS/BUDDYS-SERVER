@@ -37,12 +37,9 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.command.OnboardingCommand;
 import org.sopt.buddys.global.exception.BaseException;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 public class UserOnboardingServiceTest {
 
   private static final Long USER_ID = 1L;
@@ -191,7 +188,7 @@ public class UserOnboardingServiceTest {
     Country interestCountry = mockCountry(COUNTRY_ID);
     City interestCity = mockCity(CITY_ID, interestCountry);
     Long exchangeCountryId = 35L;
-    Country exchangeCountry = mockCountry(exchangeCountryId);
+    Country exchangeCountry = mock(Country.class);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
