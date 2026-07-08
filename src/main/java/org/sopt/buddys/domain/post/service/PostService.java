@@ -12,7 +12,6 @@ import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
-import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostAgeCondition;
@@ -22,6 +21,7 @@ import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
+import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
@@ -48,32 +48,32 @@ public class PostService {
   private final TagRepository tagRepository;
 
   @Transactional
-  public Post createPost(Long userId, CreatePostRequest request) {
-    validateDateRange(request);
-    validateRequiredConditions(request);
+  public Post createPost(Long userId, CreatePostCommand command) {
+    validateRequiredConditions(command);
+    validateDateRange(command);
 
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    Country country = countryRepository.findById(request.countryId())
+    Country country = countryRepository.findById(command.countryId())
         .orElseThrow(() -> new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND));
-    City city = getCity(request.countryId(), request.cityId());
+    City city = getCity(command.countryId(), command.cityId());
 
     Post post = postRepository.save(new Post(
         author,
         country,
         city,
-        request.title().trim(),
-        request.content().trim(),
-        request.startDate(),
-        request.endDate(),
-        request.gender(),
-        request.companionType(),
-        request.recruitmentCountType()
+        command.title().trim(),
+        command.content().trim(),
+        command.startDate(),
+        command.endDate(),
+        command.gender(),
+        command.companionType(),
+        command.recruitmentCountType()
     ));
 
-    savePostAgeConditions(post, request.ageConditions());
-    savePostTags(post, request.tagIds());
-    savePostImages(post, request.imageUrls());
+    savePostAgeConditions(post, command.ageConditions());
+    savePostTags(post, command.tagIds());
+    savePostImages(post, command.imageUrls());
 
     return post;
   }
@@ -81,19 +81,28 @@ public class PostService {
   private City getCity(Long countryId, Long cityId) {
     City city = cityRepository.findById(cityId)
         .orElseThrow(() -> new BaseException(PostErrorCode.CITY_NOT_FOUND));
-    if (!cityRepository.existsByIdAndCountry_Id(cityId, countryId)) {
+    if (!city.getCountry().getId().equals(countryId)) {
       throw new BaseException(PostErrorCode.CITY_NOT_IN_COUNTRY);
     }
     return city;
   }
 
-  private void validateRequiredConditions(CreatePostRequest request) {
-    if (request.cityId() == null
-        || request.ageConditions() == null
-        || request.ageConditions().isEmpty()
-        || request.gender() == null
-        || request.companionType() == null
-        || request.recruitmentCountType() == null) {
+  private void validateRequiredConditions(CreatePostCommand command) {
+    if (command.countryId() == null
+        || command.cityId() == null
+        || command.startDate() == null
+        || command.endDate() == null
+        || command.title() == null
+        || command.title().isBlank()
+        || command.content() == null
+        || command.content().isBlank()
+        || command.ageConditions() == null
+        || command.ageConditions().isEmpty()
+        || command.gender() == null
+        || command.companionType() == null
+        || command.recruitmentCountType() == null
+        || command.tagIds() == null
+        || command.tagIds().isEmpty()) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
   }
@@ -135,12 +144,10 @@ public class PostService {
         .toList());
   }
 
-  private void validateDateRange(CreatePostRequest request) {
-    if (request.startDate() == null
-        || request.endDate() == null
-        || request.startDate().isBefore(LocalDate.now())
-        || request.endDate().isBefore(LocalDate.now())
-        || request.endDate().isBefore(request.startDate())) {
+  private void validateDateRange(CreatePostCommand command) {
+    if (command.startDate().isBefore(LocalDate.now())
+        || command.endDate().isBefore(LocalDate.now())
+        || command.endDate().isBefore(command.startDate())) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
   }

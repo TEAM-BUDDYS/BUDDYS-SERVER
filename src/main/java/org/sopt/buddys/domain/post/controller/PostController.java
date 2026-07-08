@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
 import org.sopt.buddys.domain.post.dto.response.CreatePostResponse;
 import org.sopt.buddys.domain.post.service.PostService;
+import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
@@ -48,8 +49,25 @@ public class PostController {
         .status(GlobalSuccessCode.CREATED.getHttpStatus())
         .body(BaseResponse.success(
             GlobalSuccessCode.CREATED,
-            CreatePostResponse.from(postService.createPost(userId, request))
+            CreatePostResponse.from(postService.createPost(userId, toCommand(request)))
         )
+    );
+  }
+
+  private CreatePostCommand toCommand(CreatePostRequest request) {
+    return new CreatePostCommand(
+        request.countryId(),
+        request.cityId(),
+        request.startDate(),
+        request.endDate(),
+        request.title(),
+        request.content(),
+        request.ageConditions(),
+        request.gender(),
+        request.companionType(),
+        request.recruitmentCountType(),
+        request.tagIds(),
+        request.imageUrls()
     );
   }
 }
