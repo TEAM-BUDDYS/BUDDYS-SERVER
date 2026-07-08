@@ -30,12 +30,12 @@ import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
-import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.command.OnboardingCommand;
 import org.sopt.buddys.global.exception.BaseException;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -77,7 +77,7 @@ public class UserOnboardingServiceTest {
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
-    OnboardingRequest request = createValidRequest();
+    OnboardingCommand request = createValidRequest();
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
@@ -171,7 +171,7 @@ public class UserOnboardingServiceTest {
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(countryRepository.findById(exchangeCountryId)).willReturn(Optional.empty());
 
-    OnboardingRequest request = createRequestWithExchangeCountry(exchangeCountryId, null, null);
+    OnboardingCommand request = createRequestWithExchangeCountry(exchangeCountryId, null, null);
 
     // when, then
     assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
@@ -191,7 +191,7 @@ public class UserOnboardingServiceTest {
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
 
-    OnboardingRequest request = createRequestWithExchangeCountry(
+    OnboardingCommand request = createRequestWithExchangeCountry(
         null,
         LocalDate.of(2027, 8, 31),
         LocalDate.of(2027, 3, 1)
@@ -300,6 +300,34 @@ public class UserOnboardingServiceTest {
         .isSameAs(otherViolation);
   }
 
+  @DisplayName("동시 요청으로 태그 저장이 충돌하면 ONBOARDING_ALREADY_COMPLETED로 변환한다")
+  @Test
+  void completeOnboarding_concurrentTagSaveConflict_throwsOnboardingAlreadyCompleted() {
+    // given
+    Country interestCountry = mockCountry(COUNTRY_ID);
+    City interestCity = mockCity(CITY_ID, interestCountry);
+    Tag activityTag = mockTag(1L, TagType.ACTIVITY);
+    Tag interestTag = mockTag(2L, TagType.INTEREST);
+    Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
+
+    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+    given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
+    given(tagRepository.getReferenceById(1L)).willReturn(activityTag);
+    given(tagRepository.getReferenceById(2L)).willReturn(interestTag);
+    given(tagRepository.getReferenceById(3L)).willReturn(travelStyleTag);
+
+    willThrow(new DataIntegrityViolationException("duplicate key"))
+        .given(userTagRepository).saveAll(any());
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, createValidRequest()))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.ONBOARDING_ALREADY_COMPLETED)
+        );
+  }
+
   private User createUser() {
     return User.builder()
         .email("test@test.com")
@@ -329,8 +357,8 @@ public class UserOnboardingServiceTest {
     return tag;
   }
 
-  private OnboardingRequest createValidRequest() {
-    return new OnboardingRequest(
+  private OnboardingCommand createValidRequest() {
+    return new OnboardingCommand(
         COUNTRY_ID,
         CITY_ID,
         null,
@@ -348,12 +376,12 @@ public class UserOnboardingServiceTest {
     );
   }
 
-  private OnboardingRequest createRequestWithExchangeCountry(
+  private OnboardingCommand createRequestWithExchangeCountry(
       Long exchangeCountryId,
       LocalDate exchangeStartDate,
       LocalDate exchangeEndDate
   ) {
-    return new OnboardingRequest(
+    return new OnboardingCommand(
         COUNTRY_ID,
         CITY_ID,
         exchangeCountryId,

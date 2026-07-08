@@ -86,7 +86,11 @@ public class UserOnboardingService {
     List<UserTag> userTags = allTagIds.stream()
         .map(tagId -> new UserTag(user, tagRepository.getReferenceById(tagId)))
         .toList();
-    userTagRepository.saveAll(userTags);
+    try {
+      userTagRepository.saveAll(userTags);
+    } catch (DataIntegrityViolationException e) {
+      throw new BaseException(UserErrorCode.ONBOARDING_ALREADY_COMPLETED);
+    }
 
     return user;
   }
