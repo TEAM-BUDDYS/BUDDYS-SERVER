@@ -91,6 +91,8 @@ public class UserOnboardingServiceTest {
     // then
     assertThat(result.getNickname()).isEqualTo("해령");
     assertThat(result.getGender()).isEqualTo(Gender.FEMALE);
+    assertThat(result.getInterestCountry()).isEqualTo(interestCountry);
+    assertThat(result.getInterestCity()).isEqualTo(interestCity);
     then(userRepository).should(times(1)).flush();
     then(userTagRepository).should(times(1)).saveAll(any());
   }
