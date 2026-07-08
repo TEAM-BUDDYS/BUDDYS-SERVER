@@ -54,18 +54,13 @@ public class Post extends BaseEntity {
   @Column(name = "end_date")
   private LocalDate endDate;
 
-  @Column(name = "recruit_count", nullable = false)
-  private Short recruitCount = 1;
-
-  @Column(name = "min_age")
-  private Short minAge;
-
-  @Column(name = "max_age")
-  private Short maxAge;
-
   @Enumerated(EnumType.STRING)
   @Column(name = "companion_type", nullable = false, length = 30)
   private CompanionType companionType;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "recruitment_count_type", nullable = false, length = 20)
+  private RecruitmentCountType recruitmentCountType;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "gender_condition", nullable = false, length = 10)
@@ -89,11 +84,9 @@ public class Post extends BaseEntity {
       String content,
       LocalDate startDate,
       LocalDate endDate,
-      Short recruitCount,
-      Short minAge,
-      Short maxAge,
       GenderCondition genderCondition,
-      CompanionType companionType
+      CompanionType companionType,
+      RecruitmentCountType recruitmentCountType
   ) {
     this.author = author;
     this.country = country;
@@ -102,11 +95,9 @@ public class Post extends BaseEntity {
     this.content = content;
     this.startDate = startDate;
     this.endDate = endDate;
-    this.recruitCount = recruitCount;
-    this.minAge = minAge;
-    this.maxAge = maxAge;
     this.genderCondition = genderCondition;
     this.companionType = companionType;
+    this.recruitmentCountType = recruitmentCountType;
     this.status = PostStatus.RECRUITING;
     this.viewCount = 0L;
     this.commentCount = 0L;

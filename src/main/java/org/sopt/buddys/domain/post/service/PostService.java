@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.post.service;
 
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -12,10 +13,12 @@ import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
 import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
-import org.sopt.buddys.domain.post.dto.request.CreatePostRequest.AgeRange;
+import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.Post;
+import org.sopt.buddys.domain.post.entity.PostAgeCondition;
 import org.sopt.buddys.domain.post.entity.PostImage;
 import org.sopt.buddys.domain.post.entity.PostTag;
+import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
@@ -35,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostService {
 
   private final PostRepository postRepository;
+  private final PostAgeConditionRepository postAgeConditionRepository;
   private final PostTagRepository postTagRepository;
   private final PostImageRepository postImageRepository;
   private final UserRepository userRepository;
@@ -45,7 +49,7 @@ public class PostService {
   @Transactional
   public Post createPost(Long userId, CreatePostRequest request) {
     validateDateRange(request);
-    validateAgeRange(request.ageRange());
+    validateRequiredConditions(request);
 
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
@@ -61,13 +65,12 @@ public class PostService {
         request.content().trim(),
         request.startDate(),
         request.endDate(),
-        request.maxParticipants(),
-        getMinAge(request.ageRange()),
-        getMaxAge(request.ageRange()),
         request.gender(),
-        request.companionType()
+        request.companionType(),
+        request.recruitmentCountType()
     ));
 
+    savePostAgeConditions(post, request.ageConditions());
     savePostTags(post, request.tagIds());
     savePostImages(post, request.imageUrls());
 
@@ -75,15 +78,31 @@ public class PostService {
   }
 
   private City getCity(Long countryId, Long cityId) {
-    if (cityId == null) {
-      return null;
-    }
     City city = cityRepository.findById(cityId)
         .orElseThrow(() -> new BaseException(PostErrorCode.CITY_NOT_FOUND));
     if (!cityRepository.existsByIdAndCountry_Id(cityId, countryId)) {
       throw new BaseException(PostErrorCode.CITY_NOT_IN_COUNTRY);
     }
     return city;
+  }
+
+  private void validateRequiredConditions(CreatePostRequest request) {
+    if (request.cityId() == null
+        || request.ageConditions() == null
+        || request.ageConditions().isEmpty()
+        || request.gender() == null
+        || request.companionType() == null
+        || request.recruitmentCountType() == null) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
+  private void savePostAgeConditions(Post post, List<AgeCondition> ageConditions) {
+    Set<AgeCondition> distinctAgeConditions = new LinkedHashSet<>(ageConditions);
+
+    postAgeConditionRepository.saveAll(distinctAgeConditions.stream()
+        .map(ageCondition -> new PostAgeCondition(post, ageCondition))
+        .toList());
   }
 
   private void savePostTags(Post post, List<Long> tagIds) {
@@ -113,27 +132,12 @@ public class PostService {
   }
 
   private void validateDateRange(CreatePostRequest request) {
-    if (request.startDate() != null
-        && request.endDate() != null
-        && request.endDate().isBefore(request.startDate())) {
+    if (request.startDate() == null
+        || request.endDate() == null
+        || request.startDate().isBefore(LocalDate.now())
+        || request.endDate().isBefore(LocalDate.now())
+        || request.endDate().isBefore(request.startDate())) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
-  }
-
-  private void validateAgeRange(AgeRange ageRange) {
-    if (ageRange == null || ageRange.minAge() == null || ageRange.maxAge() == null) {
-      return;
-    }
-    if (ageRange.maxAge() < ageRange.minAge()) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
-    }
-  }
-
-  private Short getMinAge(AgeRange ageRange) {
-    return ageRange == null ? null : ageRange.minAge();
-  }
-
-  private Short getMaxAge(AgeRange ageRange) {
-    return ageRange == null ? null : ageRange.maxAge();
   }
 }

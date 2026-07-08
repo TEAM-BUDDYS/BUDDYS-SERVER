@@ -1,15 +1,17 @@
 package org.sopt.buddys.domain.post.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
+import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 
 public record CreatePostRequest(
     @Schema(description = "국가 ID", example = "1")
@@ -17,12 +19,17 @@ public record CreatePostRequest(
     Long countryId,
 
     @Schema(description = "도시 ID", example = "10")
+    @NotNull
     Long cityId,
 
     @Schema(description = "동행 시작일", example = "2026-09-06")
+    @NotNull
+    @FutureOrPresent
     LocalDate startDate,
 
     @Schema(description = "동행 종료일", example = "2026-09-19")
+    @NotNull
+    @FutureOrPresent
     LocalDate endDate,
 
     @Schema(description = "게시글 제목", example = "주말에 파리 근교 함께 가실 분!")
@@ -34,9 +41,13 @@ public record CreatePostRequest(
     @NotBlank
     String content,
 
-    @Schema(description = "희망 연령대")
-    @Valid
-    AgeRange ageRange,
+    @Schema(
+        description = "희망 나이 조건. EARLY_20S(20대 초반), MID_20S(20대 중반), "
+            + "LATE_20S(20대 후반), OVER_30S(30대 이상). 중복 선택 가능",
+        example = "[\"EARLY_20S\", \"MID_20S\"]"
+    )
+    @NotEmpty
+    List<@NotNull AgeCondition> ageConditions,
 
     @Schema(description = "성별 조건", example = "ANY", allowableValues = {"ANY", "MALE", "FEMALE"})
     @NotNull
@@ -51,26 +62,18 @@ public record CreatePostRequest(
     @NotNull
     CompanionType companionType,
 
-    @Schema(description = "최대 모집 인원", example = "4")
+    @Schema(
+        description = "모집 인원. UNDECIDED(미정), ONE(1인), TWO(2인), THREE(3인), FOUR_OR_MORE(4인 이상)",
+        example = "TWO"
+    )
     @NotNull
-    @Min(1)
-    Short maxParticipants,
+    RecruitmentCountType recruitmentCountType,
 
     @Schema(description = "연결할 태그 ID 목록", example = "[1, 2, 3]")
     List<@NotNull Long> tagIds,
 
     @Schema(description = "이미 업로드된 게시글 이미지 URL 목록", example = "[\"https://example.com/post-image.png\"]")
+    @Size(max = 10)
     List<@NotBlank @Size(max = 512) String> imageUrls
 ) {
-
-  public record AgeRange(
-      @Schema(description = "최소 나이", example = "20")
-      @Min(0)
-      Short minAge,
-
-      @Schema(description = "최대 나이", example = "29")
-      @Min(0)
-      Short maxAge
-  ) {
-  }
 }
