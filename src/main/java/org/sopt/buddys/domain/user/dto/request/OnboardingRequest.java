@@ -20,6 +20,7 @@ public record OnboardingRequest(
     Long exchangeCountryId,
 
     @Schema(description = "교환학생 대학교", example = "Technical University of Munich", nullable = true)
+    @Size(max = 100)
     String exchangeUniversity,
 
     @Schema(description = "교환학생 시작일", example = "2027-03-01", nullable = true)

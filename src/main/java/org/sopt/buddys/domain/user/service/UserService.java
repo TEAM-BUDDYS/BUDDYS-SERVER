@@ -46,6 +46,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class UserService {
 
+  private static final String NICKNAME_UNIQUE_CONSTRAINT = "uk_user_nickname";
+
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
@@ -118,8 +120,11 @@ public class UserService {
           exchangeCountry, request.exchangeUniversity(),
           request.exchangeStartDate(), request.exchangeEndDate()
       );
-      userRepository.flush(); // 닉네임 유니크 제약 위반을 이 시점에 즉시 확인
+      userRepository.flush();
     } catch (DataIntegrityViolationException e) {
+      if (!isNicknameConflict(e)) {
+        throw e;
+      }
       throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME);
     }
 
@@ -224,4 +229,16 @@ public class UserService {
             (first, second) -> first
         ));
   }
+
+  private boolean isNicknameConflict(DataIntegrityViolationException exception) {
+    Throwable cause = exception;
+    while (cause != null) {
+      if (cause instanceof org.hibernate.exception.ConstraintViolationException constraintViolationException) {
+        return NICKNAME_UNIQUE_CONSTRAINT.equals(constraintViolationException.getConstraintName());
+      }
+      cause = cause.getCause();
+    }
+    return false;
+  }
+
 }
