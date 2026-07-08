@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
-import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
@@ -22,6 +21,7 @@ import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
+import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -89,7 +89,7 @@ class PostServiceTest {
     Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
     Long tagId = insertTag("여행", TagType.ACTIVITY);
 
-    CreatePostRequest request = new CreatePostRequest(
+    CreatePostCommand command = new CreatePostCommand(
         countryId,
         cityId,
         LocalDate.of(2026, 9, 6),
@@ -105,7 +105,7 @@ class PostServiceTest {
     );
 
     // when
-    Post post = postService.createPost(user.getId(), request);
+    Post post = postService.createPost(user.getId(), command);
 
     // then
     Post savedPost = postRepository.findById(post.getId()).orElseThrow();
@@ -125,15 +125,18 @@ class PostServiceTest {
   @Test
   void createPost_endDateBeforeStartDate_throwsInvalidRequest() {
     // given
-    CreatePostRequest request = createDefaultRequest(
-        1L,
-        1L,
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+
+    CreatePostCommand command = createDefaultCommand(
+        countryId,
+        cityId,
         LocalDate.of(2026, 9, 19),
         LocalDate.of(2026, 9, 6)
     );
 
     // when, then
-    assertThatThrownBy(() -> postService.createPost(1L, request))
+    assertThatThrownBy(() -> postService.createPost(1L, command))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
         );
@@ -148,10 +151,10 @@ class PostServiceTest {
     Long franceId = insertCountry("프랑스", "FR");
     Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
 
-    CreatePostRequest request = createDefaultRequest(koreaId, parisId);
+    CreatePostCommand command = createDefaultCommand(koreaId, parisId);
 
     // when, then
-    assertThatThrownBy(() -> postService.createPost(user.getId(), request))
+    assertThatThrownBy(() -> postService.createPost(user.getId(), command))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.CITY_NOT_IN_COUNTRY)
         );
@@ -166,7 +169,7 @@ class PostServiceTest {
     Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
     Long interestTagId = insertTag("자연", TagType.INTEREST);
 
-    CreatePostRequest request = new CreatePostRequest(
+    CreatePostCommand command = new CreatePostCommand(
         countryId,
         cityId,
         LocalDate.of(2026, 9, 6),
@@ -182,14 +185,15 @@ class PostServiceTest {
     );
 
     // when, then
-    assertThatThrownBy(() -> postService.createPost(user.getId(), request))
+    assertThatThrownBy(() -> postService.createPost(user.getId(), command))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.ACTIVITY_TAG_REQUIRED)
         );
+    assertThat(postRepository.findAll()).isEmpty();
   }
 
-  private CreatePostRequest createDefaultRequest(Long countryId, Long cityId) {
-    return createDefaultRequest(
+  private CreatePostCommand createDefaultCommand(Long countryId, Long cityId) {
+    return createDefaultCommand(
         countryId,
         cityId,
         LocalDate.of(2026, 9, 6),
@@ -197,13 +201,13 @@ class PostServiceTest {
     );
   }
 
-  private CreatePostRequest createDefaultRequest(
+  private CreatePostCommand createDefaultCommand(
       Long countryId,
       Long cityId,
       LocalDate startDate,
       LocalDate endDate
   ) {
-    return new CreatePostRequest(
+    return new CreatePostCommand(
         countryId,
         cityId,
         startDate,
@@ -214,7 +218,7 @@ class PostServiceTest {
         GenderCondition.ANY,
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
-        List.of(insertTag("여행", TagType.ACTIVITY)),
+        List.of(1L),
         List.of()
     );
   }
