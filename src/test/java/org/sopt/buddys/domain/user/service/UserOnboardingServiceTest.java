@@ -171,7 +171,11 @@ public class UserOnboardingServiceTest {
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(countryRepository.findById(exchangeCountryId)).willReturn(Optional.empty());
 
-    OnboardingCommand request = createRequestWithExchangeCountry(exchangeCountryId, null, null);
+    OnboardingCommand request = createRequestWithExchangeCountry(
+        exchangeCountryId,
+        LocalDate.of(2027, 3, 1),
+        LocalDate.of(2027, 8, 31)
+    );
 
     // when, then
     assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
@@ -186,13 +190,16 @@ public class UserOnboardingServiceTest {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
     City interestCity = mockCity(CITY_ID, interestCountry);
+    Long exchangeCountryId = 35L;
+    Country exchangeCountry = mockCountry(exchangeCountryId);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+    given(countryRepository.findById(exchangeCountryId)).willReturn(Optional.of(exchangeCountry));
 
     OnboardingCommand request = createRequestWithExchangeCountry(
-        null,
+        exchangeCountryId,
         LocalDate.of(2027, 8, 31),
         LocalDate.of(2027, 3, 1)
     );
@@ -202,6 +209,31 @@ public class UserOnboardingServiceTest {
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.INVALID_EXCHANGE_PERIOD)
         );
+  }
+
+  @DisplayName("교환학생 국가 없이 대학/기간만 채워지면 EXCHANGE_INFO_INCOMPLETE 예외가 발생한다")
+  @Test
+  void completeOnboarding_exchangeInfoIncomplete_throwsException() {
+    // given
+    Country interestCountry = mockCountry(COUNTRY_ID);
+    City interestCity = mockCity(CITY_ID, interestCountry);
+
+    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+
+    OnboardingCommand request = createRequestWithExchangeCountry(
+        null,
+        LocalDate.of(2027, 3, 1),
+        LocalDate.of(2027, 8, 31)
+    );
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.EXCHANGE_INFO_INCOMPLETE)
+        );
+    then(countryRepository).should(never()).findById(any());
   }
 
   @DisplayName("존재하지 않는 태그 ID가 포함되면 TAG_NOT_FOUND 예외가 발생한다")

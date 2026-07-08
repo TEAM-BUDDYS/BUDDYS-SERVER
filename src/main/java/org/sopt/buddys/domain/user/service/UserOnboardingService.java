@@ -50,6 +50,7 @@ public class UserOnboardingService {
     City interestCity = validateAndGetCity(request.interestCountryId(), request.interestCityId());
     Country interestCountry = interestCity.getCountry();
 
+    validateExchangeFieldsConsistency(request);
     Country exchangeCountry = null;
     if (request.exchangeCountryId() != null) {
       exchangeCountry = countryRepository.findById(request.exchangeCountryId())
@@ -113,6 +114,20 @@ public class UserOnboardingService {
   private void validateExchangeDates(LocalDate start, LocalDate end) {
     if (start != null && end != null && start.isAfter(end)) {
       throw new BaseException(UserErrorCode.INVALID_EXCHANGE_PERIOD);
+    }
+  }
+
+  private void validateExchangeFieldsConsistency(OnboardingCommand request) {
+    boolean anyPresent = request.exchangeCountryId() != null
+        || request.exchangeUniversity() != null
+        || request.exchangeStartDate() != null
+        || request.exchangeEndDate() != null;
+    boolean allPresent = request.exchangeCountryId() != null
+        && request.exchangeUniversity() != null
+        && request.exchangeStartDate() != null
+        && request.exchangeEndDate() != null;
+    if (anyPresent && !allPresent) {
+      throw new BaseException(UserErrorCode.EXCHANGE_INFO_INCOMPLETE);
     }
   }
 
