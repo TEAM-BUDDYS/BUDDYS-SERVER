@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,7 @@ import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
+import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
@@ -75,6 +77,90 @@ class UserServiceTest {
         getTags(result, TagType.INTEREST).get(0),
         getTags(result, TagType.TRAVEL_STYLE).get(0)
     );
+  }
+
+  @DisplayName("성별이 없으면 온보딩이 완료되지 않은 것으로 판단한다")
+  @Test
+  void isOnboardingCompleted_genderMissing_returnsFalse() {
+    // given
+    User user = User.builder()
+        .id(1L)
+        .provider(AuthProvider.KAKAO)
+        .providerId("12345")
+        .email("test@kakao.com")
+        .nickname("버디")
+        .birthDate(LocalDate.of(2000, 1, 1))
+        .build();
+
+    // when
+    boolean result = userService.isOnboardingCompleted(user);
+
+    // then
+    assertThat(result).isFalse();
+  }
+
+  @DisplayName("생년월일이 없으면 온보딩이 완료되지 않은 것으로 판단한다")
+  @Test
+  void isOnboardingCompleted_birthDateMissing_returnsFalse() {
+    // given
+    User user = User.builder()
+        .id(1L)
+        .provider(AuthProvider.KAKAO)
+        .providerId("12345")
+        .email("test@kakao.com")
+        .nickname("버디")
+        .gender(Gender.FEMALE)
+        .build();
+
+    // when
+    boolean result = userService.isOnboardingCompleted(user);
+
+    // then
+    assertThat(result).isFalse();
+  }
+
+  @DisplayName("성별과 생년월일은 있지만 태그가 3개 미만이면 온보딩이 완료되지 않은 것으로 판단한다")
+  @Test
+  void isOnboardingCompleted_tagCountBelowMinimum_returnsFalse() {
+    // given
+    Long userId = 1L;
+    User user = createOnboardedProfileUser(userId);
+
+    given(userTagRepository.countByUserId(userId)).willReturn(2L);
+
+    // when
+    boolean result = userService.isOnboardingCompleted(user);
+
+    // then
+    assertThat(result).isFalse();
+  }
+
+  @DisplayName("성별, 생년월일이 있고 태그가 3개 이상이면 온보딩이 완료된 것으로 판단한다")
+  @Test
+  void isOnboardingCompleted_allRequirementsMet_returnsTrue() {
+    // given
+    Long userId = 1L;
+    User user = createOnboardedProfileUser(userId);
+
+    given(userTagRepository.countByUserId(userId)).willReturn(3L);
+
+    // when
+    boolean result = userService.isOnboardingCompleted(user);
+
+    // then
+    assertThat(result).isTrue();
+  }
+
+  private User createOnboardedProfileUser(Long userId) {
+    return User.builder()
+        .id(userId)
+        .provider(AuthProvider.KAKAO)
+        .providerId("12345")
+        .email("test@kakao.com")
+        .nickname("버디")
+        .gender(Gender.FEMALE)
+        .birthDate(LocalDate.of(2000, 1, 1))
+        .build();
   }
 
   private List<String> getTags(UserProfileResult response, TagType tagType) {
