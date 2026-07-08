@@ -92,6 +92,7 @@ public class UserService {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
+    validateNotAlreadyOnboarded(userId);
     City interestCity = validateAndGetCity(request.interestCountryId(), request.interestCityId());
     Country interestCountry = interestCity.getCountry();
 
@@ -128,6 +129,12 @@ public class UserService {
     userTagRepository.saveAll(userTags);
 
     return user;
+  }
+
+  private void validateNotAlreadyOnboarded(Long userId) {
+    if (userTagRepository.existsByUserId(userId)) {
+      throw new BaseException(UserErrorCode.ONBOARDING_ALREADY_COMPLETED);
+    }
   }
 
   private City validateAndGetCity(Long countryId, Long cityId) {
