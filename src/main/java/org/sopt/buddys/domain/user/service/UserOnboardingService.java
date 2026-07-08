@@ -81,7 +81,7 @@ public class UserOnboardingService {
       if (!isNicknameConflict(e)) {
         throw e;
       }
-      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME);
+      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, e);
     }
 
     List<UserTag> userTags = allTagIds.stream()
