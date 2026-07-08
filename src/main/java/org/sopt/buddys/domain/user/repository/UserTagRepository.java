@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.user.repository;
 
+import java.util.Collection;
 import java.util.List;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.UserTag;
@@ -23,6 +24,20 @@ public interface UserTagRepository extends JpaRepository<UserTag, UserTagId> {
   long countByUserId(Long userId);
 
   boolean existsByUserId(Long userId);
+
+  @Query("""
+      select ut.user.id as userId, t.id as tagId, t.tagType as tagType
+      from UserTag ut
+      join ut.tag t
+      where ut.user.id in :userIds
+      """)
+  List<UserTagBulkProjection> findAllByUserIdIn(@Param("userIds") Collection<Long> userIds);
+
+  interface UserTagBulkProjection {
+    Long getUserId();
+    Long getTagId();
+    TagType getTagType();
+  }
 
   interface UserTagProjection {
     TagType getTagType();
