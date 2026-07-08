@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.location.entity.Country;
+import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
@@ -35,6 +36,9 @@ class CountryServiceTest {
 
   @Autowired
   private CountryRepository countryRepository;
+
+  @Autowired
+  private CityRepository cityRepository;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -153,6 +157,7 @@ class CountryServiceTest {
   }
 
   private void cleanUp() {
+    cityRepository.deleteAllInBatch();
     countryRepository.deleteAllInBatch();
   }
 }
