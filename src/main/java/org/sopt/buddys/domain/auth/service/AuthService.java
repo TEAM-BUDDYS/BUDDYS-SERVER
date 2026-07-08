@@ -5,9 +5,11 @@ import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
 import org.sopt.buddys.domain.auth.entity.RefreshToken;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
@@ -26,6 +28,8 @@ public class AuthService {
   private final JwtProvider jwtProvider;
   private final RefreshTokenRepository refreshTokenRepository;
   private final JwtProperties jwtProperties;
+  private final UserRepository userRepository;
+  private final UserService userService;
 
   public AuthTokens kakaoLogin(String code) {
     String accessToken = kakaoAuthClient.getAccessToken(code);
@@ -57,6 +61,9 @@ public class AuthService {
     refreshTokenRepository.deleteByUserId(userId);
     refreshTokenRepository.save(RefreshToken.of(userId, newRefreshToken, jwtProperties.refreshTokenExpiration()));
 
-    return new AuthTokens(newAccessToken, newRefreshToken, false);
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    return new AuthTokens(newAccessToken, newRefreshToken, userService.isOnboardingCompleted(user));
   }
 }

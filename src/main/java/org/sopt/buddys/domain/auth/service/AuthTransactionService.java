@@ -1,6 +1,5 @@
 package org.sopt.buddys.domain.auth.service;
 
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
@@ -9,6 +8,7 @@ import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
@@ -22,15 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthTransactionService {
 
   private final UserRepository userRepository;
+  private final UserService userService;
   private final JwtProvider jwtProvider;
   private final RefreshTokenRepository refreshTokenRepository;
   private final JwtProperties jwtProperties;
 
   @Transactional
   public AuthTokens processKakaoLogin(String providerId, KakaoUserInfo kakaoUser) {
-    Optional<User> existingUser = userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId);
-    boolean isNewUser = existingUser.isEmpty();
-    User user = existingUser.orElseGet(() -> saveNewKakaoUser(providerId, kakaoUser));
+    User user = userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId)
+        .orElseGet(() -> saveNewKakaoUser(providerId, kakaoUser));
 
     String jwt = jwtProvider.generateToken(user.getId());
     String refreshToken = jwtProvider.generateRefreshToken(user.getId());
@@ -40,7 +40,7 @@ public class AuthTransactionService {
         RefreshToken.of(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration())
     );
 
-    return new AuthTokens(jwt, refreshToken, isNewUser);
+    return new AuthTokens(jwt, refreshToken, userService.isOnboardingCompleted(user));
   }
 
   private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {
