@@ -90,6 +90,7 @@ public class UserOnboardingService {
         .toList();
     try {
       userTagRepository.saveAll(userTags);
+      userTagRepository.flush();
     } catch (DataIntegrityViolationException e) {
       if (!isConstraintViolation(e, USER_TAG_PRIMARY_KEY_CONSTRAINT)) {
         throw e;
