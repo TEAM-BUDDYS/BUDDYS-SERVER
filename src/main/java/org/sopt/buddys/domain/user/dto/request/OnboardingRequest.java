@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,7 +46,7 @@ public record OnboardingRequest(
     @NotNull Gender gender,
 
     @Schema(description = "생년월일", example = "2000-04-02")
-    @NotNull LocalDate birthDate,
+    @NotNull @Past LocalDate birthDate,
 
     @Schema(description = "자기소개. 최대 69자", example = "버디즈 화이팅!", nullable = true)
     @Size(max = 69) String bio,
