@@ -61,6 +61,17 @@ public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember, 
       Pageable pageable
   );
 
+  @Query("""
+      select participantMember.lastReadMessageId
+      from ChatRoomMember participantMember
+      where participantMember.chatRoom.id = :chatRoomId
+        and participantMember.user.id <> :userId
+      """)
+  Optional<Long> findParticipantLastReadMessageId(
+      @Param("chatRoomId") Long chatRoomId,
+      @Param("userId") Long userId
+  );
+
   interface ChatRoomListProjection {
 
     Long getChatRoomId();
