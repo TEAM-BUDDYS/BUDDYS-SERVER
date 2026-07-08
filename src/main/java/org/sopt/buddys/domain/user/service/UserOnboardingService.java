@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserOnboardingService {
 
   private static final String NICKNAME_UNIQUE_CONSTRAINT = "uk_user_nickname";
+  private static final String USER_TAG_PRIMARY_KEY_CONSTRAINT = "PRIMARY";
 
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
@@ -90,7 +91,10 @@ public class UserOnboardingService {
     try {
       userTagRepository.saveAll(userTags);
     } catch (DataIntegrityViolationException e) {
-      throw new BaseException(UserErrorCode.ONBOARDING_ALREADY_COMPLETED);
+      if (!isConstraintViolation(e, USER_TAG_PRIMARY_KEY_CONSTRAINT)) {
+        throw e;
+      }
+      throw new BaseException(UserErrorCode.ONBOARDING_ALREADY_COMPLETED, e);
     }
 
     return user;
@@ -132,10 +136,14 @@ public class UserOnboardingService {
   }
 
   private boolean isNicknameConflict(DataIntegrityViolationException exception) {
+    return isConstraintViolation(exception, NICKNAME_UNIQUE_CONSTRAINT);
+  }
+
+  private boolean isConstraintViolation(DataIntegrityViolationException exception, String constraintName) {
     Throwable cause = exception;
     while (cause != null) {
       if (cause instanceof org.hibernate.exception.ConstraintViolationException constraintViolationException) {
-        return NICKNAME_UNIQUE_CONSTRAINT.equals(constraintViolationException.getConstraintName());
+        return constraintName.equals(constraintViolationException.getConstraintName());
       }
       cause = cause.getCause();
     }
