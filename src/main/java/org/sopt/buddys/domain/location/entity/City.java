@@ -35,4 +35,10 @@ public class City {
 
   @Column(nullable = false, length = 80)
   private String name;
+
+  @Column(name = "korean_name", length = 80)
+  private String koreanName;
+
+  @Column(nullable = false)
+  private Long population;
 }
