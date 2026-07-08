@@ -17,6 +17,7 @@ import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPublicProfileResponse;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.domain.user.service.UserOnboardingService;
 import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -38,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
   private final UserService userService;
+  private final UserOnboardingService userOnboardingService;
 
   @GetMyProfileSwagger
   @GetMapping("/me")
@@ -102,7 +104,7 @@ public class UserController {
       @LoginUser Long userId,
       @RequestBody @Valid OnboardingRequest request
   ) {
-    User user = userService.completeOnboarding(userId, request);
+    User user = userOnboardingService.completeOnboarding(userId, request);
     return BaseResponse.success(GlobalSuccessCode.OK, OnboardingResponse.of(user));
   }
 }
