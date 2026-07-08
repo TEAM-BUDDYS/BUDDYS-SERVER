@@ -1,13 +1,19 @@
 ALTER TABLE post
-    ADD COLUMN recruitment_count_type VARCHAR(20) NOT NULL DEFAULT 'UNDECIDED'
-        AFTER companion_type,
+    ADD COLUMN recruitment_count_type VARCHAR(20)
+        AFTER companion_type;
+
+UPDATE post
+SET recruitment_count_type = 'UNDECIDED'
+WHERE recruitment_count_type IS NULL;
+
+ALTER TABLE post
+    MODIFY city_id BIGINT NOT NULL,
+    MODIFY start_date DATE NOT NULL,
+    MODIFY end_date DATE NOT NULL,
+    MODIFY recruitment_count_type VARCHAR(20) NOT NULL,
     DROP COLUMN recruit_count,
     DROP COLUMN min_age,
     DROP COLUMN max_age;
-
-ALTER TABLE post
-    ALTER companion_type DROP DEFAULT,
-    ALTER recruitment_count_type DROP DEFAULT;
 
 CREATE TABLE post_age_condition
 (

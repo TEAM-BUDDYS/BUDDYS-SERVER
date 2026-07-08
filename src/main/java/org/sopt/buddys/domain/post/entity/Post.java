@@ -38,8 +38,8 @@ public class Post extends BaseEntity {
   @JoinColumn(name = "country_id", nullable = false)
   private Country country;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "city_id")
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "city_id", nullable = false)
   private City city;
 
   @Column(nullable = false, length = 120)
@@ -48,10 +48,10 @@ public class Post extends BaseEntity {
   @Column(nullable = false, columnDefinition = "TEXT")
   private String content;
 
-  @Column(name = "start_date")
+  @Column(name = "start_date", nullable = false)
   private LocalDate startDate;
 
-  @Column(name = "end_date")
+  @Column(name = "end_date", nullable = false)
   private LocalDate endDate;
 
   @Enumerated(EnumType.STRING)
