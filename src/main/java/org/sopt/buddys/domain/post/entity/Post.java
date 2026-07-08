@@ -64,6 +64,10 @@ public class Post extends BaseEntity {
   private Short maxAge;
 
   @Enumerated(EnumType.STRING)
+  @Column(name = "companion_type", nullable = false, length = 30)
+  private CompanionType companionType;
+
+  @Enumerated(EnumType.STRING)
   @Column(name = "gender_condition", nullable = false, length = 10)
   private GenderCondition genderCondition = GenderCondition.ANY;
 
@@ -76,4 +80,35 @@ public class Post extends BaseEntity {
 
   @Column(name = "comment_count", nullable = false)
   private Long commentCount = 0L;
+
+  public Post(
+      User author,
+      Country country,
+      City city,
+      String title,
+      String content,
+      LocalDate startDate,
+      LocalDate endDate,
+      Short recruitCount,
+      Short minAge,
+      Short maxAge,
+      GenderCondition genderCondition,
+      CompanionType companionType
+  ) {
+    this.author = author;
+    this.country = country;
+    this.city = city;
+    this.title = title;
+    this.content = content;
+    this.startDate = startDate;
+    this.endDate = endDate;
+    this.recruitCount = recruitCount;
+    this.minAge = minAge;
+    this.maxAge = maxAge;
+    this.genderCondition = genderCondition;
+    this.companionType = companionType;
+    this.status = PostStatus.RECRUITING;
+    this.viewCount = 0L;
+    this.commentCount = 0L;
+  }
 }
