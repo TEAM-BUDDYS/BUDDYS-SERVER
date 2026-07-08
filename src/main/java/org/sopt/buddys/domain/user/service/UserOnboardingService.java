@@ -85,7 +85,7 @@ public class UserOnboardingService {
     }
 
     List<UserTag> userTags = allTagIds.stream()
-        .map(tagId -> new UserTag(user, tagRepository.getReferenceById(tagId)))
+        .map(tagId -> new UserTag(user, tagsById.get(tagId)))
         .toList();
     try {
       userTagRepository.saveAll(userTags);

@@ -81,9 +81,6 @@ public class UserOnboardingServiceTest {
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
-    given(tagRepository.getReferenceById(1L)).willReturn(activityTag);
-    given(tagRepository.getReferenceById(2L)).willReturn(interestTag);
-    given(tagRepository.getReferenceById(3L)).willReturn(travelStyleTag);
 
     // when
     User result = userOnboardingService.completeOnboarding(USER_ID, request);
@@ -346,9 +343,6 @@ public class UserOnboardingServiceTest {
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
-    given(tagRepository.getReferenceById(1L)).willReturn(activityTag);
-    given(tagRepository.getReferenceById(2L)).willReturn(interestTag);
-    given(tagRepository.getReferenceById(3L)).willReturn(travelStyleTag);
 
     willThrow(new DataIntegrityViolationException("duplicate key"))
         .given(userTagRepository).saveAll(any());
