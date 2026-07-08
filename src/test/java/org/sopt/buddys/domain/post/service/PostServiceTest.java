@@ -87,7 +87,7 @@ class PostServiceTest {
     User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
     Long countryId = insertCountry("대한민국", "KR");
     Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
-    Long tagId = insertTag("맛집", TagType.INTEREST);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
 
     CreatePostRequest request = new CreatePostRequest(
         countryId,
@@ -157,6 +157,37 @@ class PostServiceTest {
         );
   }
 
+  @DisplayName("활동 태그가 하나도 없으면 예외가 발생한다")
+  @Test
+  void createPost_withoutActivityTag_throwsException() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    Long interestTagId = insertTag("자연", TagType.INTEREST);
+
+    CreatePostRequest request = new CreatePostRequest(
+        countryId,
+        cityId,
+        LocalDate.of(2026, 9, 6),
+        LocalDate.of(2026, 9, 19),
+        "제목",
+        "본문",
+        List.of(AgeCondition.EARLY_20S),
+        GenderCondition.ANY,
+        CompanionType.FULL_TRIP,
+        RecruitmentCountType.TWO,
+        List.of(interestTagId),
+        List.of()
+    );
+
+    // when, then
+    assertThatThrownBy(() -> postService.createPost(user.getId(), request))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.ACTIVITY_TAG_REQUIRED)
+        );
+  }
+
   private CreatePostRequest createDefaultRequest(Long countryId, Long cityId) {
     return createDefaultRequest(
         countryId,
@@ -183,7 +214,7 @@ class PostServiceTest {
         GenderCondition.ANY,
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
-        List.of(),
+        List.of(insertTag("여행", TagType.ACTIVITY)),
         List.of()
     );
   }

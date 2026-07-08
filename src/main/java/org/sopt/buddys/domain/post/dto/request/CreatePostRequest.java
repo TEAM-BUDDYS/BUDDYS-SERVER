@@ -70,6 +70,7 @@ public record CreatePostRequest(
     RecruitmentCountType recruitmentCountType,
 
     @Schema(description = "연결할 태그 ID 목록", example = "[1, 2, 3]")
+    @NotEmpty
     List<@NotNull Long> tagIds,
 
     @Schema(description = "이미 업로드된 게시글 이미지 URL 목록", example = "[\"https://example.com/post-image.png\"]")

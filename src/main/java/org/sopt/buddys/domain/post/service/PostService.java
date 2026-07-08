@@ -23,6 +23,7 @@ import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.tag.entity.Tag;
+import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
@@ -107,13 +108,16 @@ public class PostService {
 
   private void savePostTags(Post post, List<Long> tagIds) {
     if (tagIds == null || tagIds.isEmpty()) {
-      return;
+      throw new BaseException(PostErrorCode.ACTIVITY_TAG_REQUIRED);
     }
 
     Set<Long> distinctTagIds = new LinkedHashSet<>(tagIds);
     List<Tag> tags = tagRepository.findAllById(distinctTagIds);
     if (tags.size() != distinctTagIds.size()) {
       throw new BaseException(PostErrorCode.TAG_NOT_FOUND);
+    }
+    if (tags.stream().noneMatch(tag -> tag.getTagType() == TagType.ACTIVITY)) {
+      throw new BaseException(PostErrorCode.ACTIVITY_TAG_REQUIRED);
     }
 
     postTagRepository.saveAll(tags.stream()
