@@ -344,7 +344,7 @@ class PostServiceTest {
     PostDetailResult secondResult = postService.getPostDetail(post.getId());
 
     // then
-    assertThat(secondResult.post().getViewCount()).isEqualTo(2L);
+    assertThat(secondResult.viewCount()).isEqualTo(2L);
     assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(2L);
   }
 

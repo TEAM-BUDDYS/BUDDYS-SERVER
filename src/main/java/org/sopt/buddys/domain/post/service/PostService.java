@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.post.service;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -95,17 +96,49 @@ public class PostService {
     post.increaseViewCount();
 
     return new PostDetailResult(
-        post,
+        post.getId(),
+        new PostDetailResult.AuthorResult(
+            post.getAuthor().getNickname(),
+            post.getAuthor().getExchangeCountry() == null
+                ? null
+                : post.getAuthor().getExchangeCountry().getName(),
+            toAgeRange(post.getAuthor().getBirthDate()),
+            post.getAuthor().getGender()
+        ),
+        post.getStatus(),
+        post.getTitle(),
         postImageRepository.findImageUrlsByPostId(postId),
+        new PostDetailResult.CityResult(
+            post.getCity().getId(),
+            post.getCity().getName()
+        ),
+        post.getStartDate(),
+        post.getEndDate(),
+        post.getRecruitmentCountType(),
+        post.getContent(),
         postAgeConditionRepository.findAgeConditionsByPostId(postId),
+        post.getCompanionType(),
         postTagRepository.findAllByPostIdWithTag(postId)
             .stream()
             .map(postTag -> new PostDetailResult.TagResult(
                 postTag.getTag().getId(),
                 postTag.getTag().getName()
             ))
-            .toList()
+            .toList(),
+        post.getViewCount(),
+        post.getCommentCount()
     );
+  }
+
+  private String toAgeRange(LocalDate birthDate) {
+    if (birthDate == null) {
+      return null;
+    }
+    int age = Period.between(birthDate, LocalDate.now()).getYears();
+    if (age < 10) {
+      return "10대 미만";
+    }
+    return "%d0대".formatted(age / 10);
   }
 
   private City getCity(Long countryId, Long cityId) {
