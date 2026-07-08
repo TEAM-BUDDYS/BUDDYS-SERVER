@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserOnboardingService {
 
   private static final String NICKNAME_UNIQUE_CONSTRAINT = "uk_user_nickname";
+  private static final String USER_TAG_PRIMARY_KEY_CONSTRAINT = "PRIMARY";
 
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
@@ -50,6 +51,7 @@ public class UserOnboardingService {
     City interestCity = validateAndGetCity(request.interestCountryId(), request.interestCityId());
     Country interestCountry = interestCity.getCountry();
 
+    validateExchangeFieldsConsistency(request);
     Country exchangeCountry = null;
     if (request.exchangeCountryId() != null) {
       exchangeCountry = countryRepository.findById(request.exchangeCountryId())
@@ -80,16 +82,20 @@ public class UserOnboardingService {
       if (!isNicknameConflict(e)) {
         throw e;
       }
-      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME);
+      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, e);
     }
 
     List<UserTag> userTags = allTagIds.stream()
-        .map(tagId -> new UserTag(user, tagRepository.getReferenceById(tagId)))
+        .map(tagId -> new UserTag(user, tagsById.get(tagId)))
         .toList();
     try {
       userTagRepository.saveAll(userTags);
+      userTagRepository.flush();
     } catch (DataIntegrityViolationException e) {
-      throw new BaseException(UserErrorCode.ONBOARDING_ALREADY_COMPLETED);
+      if (!isConstraintViolation(e, USER_TAG_PRIMARY_KEY_CONSTRAINT)) {
+        throw e;
+      }
+      throw new BaseException(UserErrorCode.ONBOARDING_ALREADY_COMPLETED, e);
     }
 
     return user;
@@ -116,11 +122,29 @@ public class UserOnboardingService {
     }
   }
 
+  private void validateExchangeFieldsConsistency(OnboardingCommand request) {
+    boolean anyPresent = request.exchangeCountryId() != null
+        || request.exchangeUniversity() != null
+        || request.exchangeStartDate() != null
+        || request.exchangeEndDate() != null;
+    boolean allPresent = request.exchangeCountryId() != null
+        && request.exchangeUniversity() != null
+        && request.exchangeStartDate() != null
+        && request.exchangeEndDate() != null;
+    if (anyPresent && !allPresent) {
+      throw new BaseException(UserErrorCode.EXCHANGE_INFO_INCOMPLETE);
+    }
+  }
+
   private boolean isNicknameConflict(DataIntegrityViolationException exception) {
+    return isConstraintViolation(exception, NICKNAME_UNIQUE_CONSTRAINT);
+  }
+
+  private boolean isConstraintViolation(DataIntegrityViolationException exception, String constraintName) {
     Throwable cause = exception;
     while (cause != null) {
       if (cause instanceof org.hibernate.exception.ConstraintViolationException constraintViolationException) {
-        return NICKNAME_UNIQUE_CONSTRAINT.equals(constraintViolationException.getConstraintName());
+        return constraintName.equals(constraintViolationException.getConstraintName());
       }
       cause = cause.getCause();
     }

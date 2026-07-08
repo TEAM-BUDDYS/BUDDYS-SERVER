@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -37,12 +38,9 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.command.OnboardingCommand;
 import org.sopt.buddys.global.exception.BaseException;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 public class UserOnboardingServiceTest {
 
   private static final Long USER_ID = 1L;
@@ -73,7 +71,7 @@ public class UserOnboardingServiceTest {
     // given
     User user = createUser();
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -83,9 +81,6 @@ public class UserOnboardingServiceTest {
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
-    given(tagRepository.getReferenceById(1L)).willReturn(activityTag);
-    given(tagRepository.getReferenceById(2L)).willReturn(interestTag);
-    given(tagRepository.getReferenceById(3L)).willReturn(travelStyleTag);
 
     // when
     User result = userOnboardingService.completeOnboarding(USER_ID, request);
@@ -93,6 +88,8 @@ public class UserOnboardingServiceTest {
     // then
     assertThat(result.getNickname()).isEqualTo("해령");
     assertThat(result.getGender()).isEqualTo(Gender.FEMALE);
+    assertThat(result.getInterestCountry()).isEqualTo(interestCountry);
+    assertThat(result.getInterestCity()).isEqualTo(interestCity);
     then(userRepository).should(times(1)).flush();
     then(userTagRepository).should(times(1)).saveAll(any());
   }
@@ -145,7 +142,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_interestCityCountryMismatch_throwsException() {
     // given
     Country otherCountry = mockCountry(999L);
-    City interestCity = mockCity(CITY_ID, otherCountry);
+    City interestCity = mockCity(otherCountry);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
@@ -163,7 +160,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_exchangeCountryNotFound_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Long exchangeCountryId = 999L;
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
@@ -171,7 +168,11 @@ public class UserOnboardingServiceTest {
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(countryRepository.findById(exchangeCountryId)).willReturn(Optional.empty());
 
-    OnboardingCommand request = createRequestWithExchangeCountry(exchangeCountryId, null, null);
+    OnboardingCommand request = createRequestWithExchangeCountry(
+        exchangeCountryId,
+        LocalDate.of(2027, 3, 1),
+        LocalDate.of(2027, 8, 31)
+    );
 
     // when, then
     assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
@@ -185,14 +186,17 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_invalidExchangePeriod_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
+    Long exchangeCountryId = 35L;
+    Country exchangeCountry = mock(Country.class);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+    given(countryRepository.findById(exchangeCountryId)).willReturn(Optional.of(exchangeCountry));
 
     OnboardingCommand request = createRequestWithExchangeCountry(
-        null,
+        exchangeCountryId,
         LocalDate.of(2027, 8, 31),
         LocalDate.of(2027, 3, 1)
     );
@@ -204,12 +208,37 @@ public class UserOnboardingServiceTest {
         );
   }
 
+  @DisplayName("교환학생 국가 없이 대학/기간만 채워지면 EXCHANGE_INFO_INCOMPLETE 예외가 발생한다")
+  @Test
+  void completeOnboarding_exchangeInfoIncomplete_throwsException() {
+    // given
+    Country interestCountry = mockCountry(COUNTRY_ID);
+    City interestCity = mockCity(interestCountry);
+
+    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+
+    OnboardingCommand request = createRequestWithExchangeCountry(
+        null,
+        LocalDate.of(2027, 3, 1),
+        LocalDate.of(2027, 8, 31)
+    );
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.EXCHANGE_INFO_INCOMPLETE)
+        );
+    then(countryRepository).should(never()).findById(any());
+  }
+
   @DisplayName("존재하지 않는 태그 ID가 포함되면 TAG_NOT_FOUND 예외가 발생한다")
   @Test
   void completeOnboarding_tagNotFound_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
@@ -229,7 +258,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_tagTypeMismatch_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     // activityTagIds(1L)에 해당하는 태그가 실제로는 INTEREST 타입
     Tag wrongTypeTag = mockTag(1L, TagType.INTEREST);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
@@ -252,7 +281,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_duplicateNickname_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -281,7 +310,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_otherConstraintViolation_rethrowsOriginalException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -305,7 +334,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_concurrentTagSaveConflict_throwsOnboardingAlreadyCompleted() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -314,11 +343,11 @@ public class UserOnboardingServiceTest {
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
-    given(tagRepository.getReferenceById(1L)).willReturn(activityTag);
-    given(tagRepository.getReferenceById(2L)).willReturn(interestTag);
-    given(tagRepository.getReferenceById(3L)).willReturn(travelStyleTag);
 
-    willThrow(new DataIntegrityViolationException("duplicate key"))
+    ConstraintViolationException userTagPrimaryKeyViolation = new ConstraintViolationException(
+        "duplicate key", new SQLException("duplicate"), "PRIMARY"
+    );
+    willThrow(new DataIntegrityViolationException("duplicate key", userTagPrimaryKeyViolation))
         .given(userTagRepository).saveAll(any());
 
     // when, then
@@ -326,6 +355,30 @@ public class UserOnboardingServiceTest {
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.ONBOARDING_ALREADY_COMPLETED)
         );
+  }
+
+  @DisplayName("태그 저장 시 PK 충돌이 아닌 다른 제약 위반은 원본 예외를 그대로 전파한다")
+  @Test
+  void completeOnboarding_otherTagSaveConstraintViolation_rethrowsOriginalException() {
+    // given
+    Country interestCountry = mockCountry(COUNTRY_ID);
+    City interestCity = mockCity(interestCountry);
+    Tag activityTag = mockTag(1L, TagType.ACTIVITY);
+    Tag interestTag = mockTag(2L, TagType.INTEREST);
+    Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
+
+    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+    given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
+
+    DataIntegrityViolationException otherViolation =
+        new DataIntegrityViolationException("data too long", new RuntimeException("cause"));
+    willThrow(otherViolation).given(userTagRepository).saveAll(any());
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, createValidRequest()))
+        .isSameAs(otherViolation);
   }
 
   private User createUser() {
@@ -343,9 +396,8 @@ public class UserOnboardingServiceTest {
     return country;
   }
 
-  private City mockCity(Long id, Country country) {
+  private City mockCity(Country country) {
     City city = mock(City.class);
-    given(city.getId()).willReturn(id);
     given(city.getCountry()).willReturn(country);
     return city;
   }
@@ -353,7 +405,7 @@ public class UserOnboardingServiceTest {
   private Tag mockTag(Long id, TagType tagType) {
     Tag tag = mock(Tag.class);
     given(tag.getId()).willReturn(id);
-    given(tag.getTagType()).willReturn(tagType);
+    lenient().when(tag.getTagType()).thenReturn(tagType);
     return tag;
   }
 
