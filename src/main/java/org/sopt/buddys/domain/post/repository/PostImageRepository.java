@@ -24,6 +24,14 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
       @Param("postIds") Collection<Long> postIds
   );
 
+  @Query("""
+      select pi.imageUrl
+      from PostImage pi
+      where pi.post.id = :postId
+      order by pi.orderNo asc, pi.id asc
+      """)
+  List<String> findImageUrlsByPostId(@Param("postId") Long postId);
+
   interface PostThumbnailProjection {
     Long getPostId();
     String getThumbnailImageUrl();

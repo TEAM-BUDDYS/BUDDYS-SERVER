@@ -13,7 +13,8 @@ public enum PostErrorCode implements ErrorCode {
   CITY_NOT_IN_COUNTRY("POST-E002", HttpStatus.BAD_REQUEST, "해당 국가에 속한 도시가 아닙니다."),
   TAG_NOT_FOUND("POST-E003", HttpStatus.NOT_FOUND, "태그를 찾을 수 없습니다."),
   ACTIVITY_TAG_REQUIRED("POST-E004", HttpStatus.BAD_REQUEST, "활동 태그를 하나 이상 선택해야 합니다."),
-  TAG_LIMIT_EXCEEDED("POST-E005", HttpStatus.BAD_REQUEST, "태그 선택 개수를 초과했습니다.");
+  TAG_LIMIT_EXCEEDED("POST-E005", HttpStatus.BAD_REQUEST, "태그 선택 개수를 초과했습니다."),
+  POST_NOT_FOUND("POST-E006", HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다.");
 
   private final String code;
   private final HttpStatus httpStatus;
