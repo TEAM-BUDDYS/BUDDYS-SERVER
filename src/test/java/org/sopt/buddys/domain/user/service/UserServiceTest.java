@@ -83,12 +83,7 @@ class UserServiceTest {
   @Test
   void isOnboardingCompleted_genderMissing_returnsFalse() {
     // given
-    User user = User.builder()
-        .id(1L)
-        .provider(AuthProvider.KAKAO)
-        .providerId("12345")
-        .email("test@kakao.com")
-        .nickname("버디")
+    User user = baseUserBuilder(1L)
         .birthDate(LocalDate.of(2000, 1, 1))
         .build();
 
@@ -103,12 +98,7 @@ class UserServiceTest {
   @Test
   void isOnboardingCompleted_birthDateMissing_returnsFalse() {
     // given
-    User user = User.builder()
-        .id(1L)
-        .provider(AuthProvider.KAKAO)
-        .providerId("12345")
-        .email("test@kakao.com")
-        .nickname("버디")
+    User user = baseUserBuilder(1L)
         .gender(Gender.FEMALE)
         .build();
 
@@ -152,12 +142,7 @@ class UserServiceTest {
   }
 
   private User createOnboardedProfileUser(Long userId) {
-    return User.builder()
-        .id(userId)
-        .provider(AuthProvider.KAKAO)
-        .providerId("12345")
-        .email("test@kakao.com")
-        .nickname("버디")
+    return baseUserBuilder(userId)
         .gender(Gender.FEMALE)
         .birthDate(LocalDate.of(2000, 1, 1))
         .build();
@@ -173,15 +158,19 @@ class UserServiceTest {
   }
 
   private User createUser(Long id, boolean universityVerified, boolean exchangeVerified) {
+    return baseUserBuilder(id)
+        .universityVerified(universityVerified)
+        .exchangeVerified(exchangeVerified)
+        .build();
+  }
+
+  private User.UserBuilder baseUserBuilder(Long id) {
     return User.builder()
         .id(id)
         .provider(AuthProvider.KAKAO)
         .providerId("12345")
         .email("test@kakao.com")
-        .nickname("버디")
-        .universityVerified(universityVerified)
-        .exchangeVerified(exchangeVerified)
-        .build();
+        .nickname("버디");
   }
 
   private record TestUserTagProjection(
