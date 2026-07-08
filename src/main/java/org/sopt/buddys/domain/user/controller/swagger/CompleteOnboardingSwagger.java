@@ -102,7 +102,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
     ),
     @ApiResponse(
         responseCode = "404",
-        description = "사용자, 국가 또는 도시 없음",
+        description = "사용자, 태그, 국가 또는 도시 없음",
         content = @Content(
             mediaType = "application/json",
             schema = @Schema(implementation = BaseResponse.class),
@@ -139,7 +139,19 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                           "data": null
                         }
                         """
+                ),
+                @ExampleObject(
+                    name = "태그 없음",
+                    value = """
+                        {
+                          "success": false,
+                          "code": "USER-E006",
+                          "message": "존재하지 않는 태그가 포함되어 있습니다.",
+                          "data": null
+                        }
+                        """
                 )
+
             }
         )
     ),
