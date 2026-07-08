@@ -46,4 +46,10 @@ public class ChatRoomMember {
     this.user = user;
     this.id = new ChatRoomMemberId(chatRoom.getId(), user.getId());
   }
+
+  public void updateLastReadMessageId(Long lastReadMessageId) {
+    if (this.lastReadMessageId == null || this.lastReadMessageId < lastReadMessageId) {
+      this.lastReadMessageId = lastReadMessageId;
+    }
+  }
 }
