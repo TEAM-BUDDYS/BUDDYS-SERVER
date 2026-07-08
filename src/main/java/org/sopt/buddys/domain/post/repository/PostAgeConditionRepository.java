@@ -14,7 +14,6 @@ public interface PostAgeConditionRepository extends JpaRepository<PostAgeConditi
       select pac.id.ageCondition
       from PostAgeCondition pac
       where pac.post.id = :postId
-      order by pac.id.ageCondition asc
       """)
   List<AgeCondition> findAgeConditionsByPostId(@Param("postId") Long postId);
 }

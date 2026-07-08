@@ -283,7 +283,7 @@ class PostServiceTest {
         "provider-user",
         "김가윤",
         countryId,
-        LocalDate.of(2001, 1, 1),
+        LocalDate.now().minusYears(25),
         Gender.FEMALE
     ));
     Post post = postService.createPost(user.getId(), new CreatePostCommand(
@@ -293,7 +293,7 @@ class PostServiceTest {
         LocalDate.now().plusDays(12),
         "도쿄 같이 여행할 동행 구해요",
         "같이 맛집이랑 관광지 다니실 분 구해요.",
-        List.of(AgeCondition.EARLY_20S, AgeCondition.MID_20S),
+        List.of(AgeCondition.LATE_20S, AgeCondition.EARLY_20S, AgeCondition.MID_20S),
         List.of(GenderCondition.ANY),
         CompanionType.MEAL,
         RecruitmentCountType.TWO,
@@ -319,7 +319,7 @@ class PostServiceTest {
     assertThat(response.city().name()).isEqualTo("Tokyo");
     assertThat(response.recruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(response.conditions().ageConditions())
-        .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S);
+        .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
     assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
     assertThat(response.conditions().tags())
         .extracting(PostDetailResponse.TagResponse::name)

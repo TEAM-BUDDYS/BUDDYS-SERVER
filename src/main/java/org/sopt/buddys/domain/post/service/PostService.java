@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.post.service;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -95,39 +96,61 @@ public class PostService {
 
     post.increaseViewCount();
 
+    return toPostDetailResult(post);
+  }
+
+  private PostDetailResult toPostDetailResult(Post post) {
     return new PostDetailResult(
         post.getId(),
-        new PostDetailResult.AuthorResult(
-            post.getAuthor().getNickname(),
-            post.getAuthor().getExchangeCountry() == null
-                ? null
-                : post.getAuthor().getExchangeCountry().getName(),
-            toAgeRange(post.getAuthor().getBirthDate()),
-            post.getAuthor().getGender()
-        ),
+        toAuthorResult(post.getAuthor()),
         post.getStatus(),
         post.getTitle(),
-        postImageRepository.findImageUrlsByPostId(postId),
-        new PostDetailResult.CityResult(
-            post.getCity().getId(),
-            post.getCity().getName()
-        ),
+        postImageRepository.findImageUrlsByPostId(post.getId()),
+        toCityResult(post.getCity()),
         post.getStartDate(),
         post.getEndDate(),
         post.getRecruitmentCountType(),
         post.getContent(),
-        postAgeConditionRepository.findAgeConditionsByPostId(postId),
+        getAgeConditions(post.getId()),
         post.getCompanionType(),
-        postTagRepository.findAllByPostIdWithTag(postId)
-            .stream()
-            .map(postTag -> new PostDetailResult.TagResult(
-                postTag.getTag().getId(),
-                postTag.getTag().getName()
-            ))
-            .toList(),
+        getTagResults(post.getId()),
         post.getViewCount(),
         post.getCommentCount()
     );
+  }
+
+  private PostDetailResult.AuthorResult toAuthorResult(User author) {
+    Country country = author.getExchangeCountry();
+    return new PostDetailResult.AuthorResult(
+        author.getNickname(),
+        country == null ? null : country.getName(),
+        toAgeRange(author.getBirthDate()),
+        author.getGender()
+    );
+  }
+
+  private PostDetailResult.CityResult toCityResult(City city) {
+    return new PostDetailResult.CityResult(
+        city.getId(),
+        city.getName()
+    );
+  }
+
+  private List<AgeCondition> getAgeConditions(Long postId) {
+    return postAgeConditionRepository.findAgeConditionsByPostId(postId)
+        .stream()
+        .sorted(Comparator.comparingInt(Enum::ordinal))
+        .toList();
+  }
+
+  private List<PostDetailResult.TagResult> getTagResults(Long postId) {
+    return postTagRepository.findAllByPostIdWithTag(postId)
+        .stream()
+        .map(postTag -> new PostDetailResult.TagResult(
+            postTag.getTag().getId(),
+            postTag.getTag().getName()
+        ))
+        .toList();
   }
 
   private String toAgeRange(LocalDate birthDate) {
