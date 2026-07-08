@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.controller.swagger.CreateChatRoomSwagger;
 import org.sopt.buddys.domain.chat.controller.swagger.GetChatMessagesSwagger;
 import org.sopt.buddys.domain.chat.controller.swagger.GetChatRoomsSwagger;
+import org.sopt.buddys.domain.chat.controller.swagger.GetChatRoomSwagger;
 import org.sopt.buddys.domain.chat.dto.request.CreateChatRoomRequest;
 import org.sopt.buddys.domain.chat.dto.response.ChatMessageListResponse;
 import org.sopt.buddys.domain.chat.dto.response.ChatRoomListResponse;
@@ -69,6 +70,21 @@ public class ChatRoomController {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
         ChatRoomListResponse.from(chatRoomService.getChatRooms(userId, page, size))
+    );
+  }
+
+  @GetChatRoomSwagger
+  @GetMapping("/{chatRoomId}")
+  public BaseResponse<ChatRoomResponse> getChatRoom(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "조회할 채팅방 ID", example = "1")
+      @PathVariable Long chatRoomId
+  ) {
+
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        ChatRoomResponse.from(chatRoomService.getChatRoom(userId, chatRoomId))
     );
   }
 

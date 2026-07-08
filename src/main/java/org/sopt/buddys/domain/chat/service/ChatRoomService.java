@@ -93,6 +93,28 @@ public class ChatRoomService {
     );
   }
 
+  public ChatRoomResult getChatRoom(
+      Long userId,
+      Long chatRoomId
+  ) {
+
+    validateUserExists(userId);
+
+    ChatRoomMemberRepository.ChatRoomDetailProjection chatRoomDetail =
+        chatRoomMemberRepository.findChatRoomDetailByIdAndUserId(chatRoomId, userId)
+            .orElseThrow(() -> {
+              if (!chatRoomRepository.existsById(chatRoomId)) {
+                return new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
+              }
+              return new BaseException(GlobalErrorCode.FORBIDDEN);
+            });
+
+    return new ChatRoomResult(
+        chatRoomDetail.getChatRoom(),
+        chatRoomDetail.getParticipant()
+    );
+  }
+
   private void validateUserExists(Long userId) {
     if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
       throw new BaseException(UserErrorCode.USER_NOT_FOUND);
