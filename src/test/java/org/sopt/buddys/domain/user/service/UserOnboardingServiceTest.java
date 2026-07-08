@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -70,7 +71,7 @@ public class UserOnboardingServiceTest {
     // given
     User user = createUser();
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -142,7 +143,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_interestCityCountryMismatch_throwsException() {
     // given
     Country otherCountry = mockCountry(999L);
-    City interestCity = mockCity(CITY_ID, otherCountry);
+    City interestCity = mockCity(otherCountry);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
@@ -160,7 +161,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_exchangeCountryNotFound_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Long exchangeCountryId = 999L;
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
@@ -186,7 +187,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_invalidExchangePeriod_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Long exchangeCountryId = 35L;
     Country exchangeCountry = mock(Country.class);
 
@@ -213,7 +214,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_exchangeInfoIncomplete_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
@@ -238,7 +239,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_tagNotFound_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
@@ -258,7 +259,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_tagTypeMismatch_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     // activityTagIds(1L)에 해당하는 태그가 실제로는 INTEREST 타입
     Tag wrongTypeTag = mockTag(1L, TagType.INTEREST);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
@@ -281,7 +282,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_duplicateNickname_throwsException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -310,7 +311,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_otherConstraintViolation_rethrowsOriginalException() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -334,7 +335,7 @@ public class UserOnboardingServiceTest {
   void completeOnboarding_concurrentTagSaveConflict_throwsOnboardingAlreadyCompleted() {
     // given
     Country interestCountry = mockCountry(COUNTRY_ID);
-    City interestCity = mockCity(CITY_ID, interestCountry);
+    City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
@@ -372,9 +373,8 @@ public class UserOnboardingServiceTest {
     return country;
   }
 
-  private City mockCity(Long id, Country country) {
+  private City mockCity(Country country) {
     City city = mock(City.class);
-    given(city.getId()).willReturn(id);
     given(city.getCountry()).willReturn(country);
     return city;
   }
@@ -382,7 +382,7 @@ public class UserOnboardingServiceTest {
   private Tag mockTag(Long id, TagType tagType) {
     Tag tag = mock(Tag.class);
     given(tag.getId()).willReturn(id);
-    given(tag.getTagType()).willReturn(tagType);
+    lenient().when(tag.getTagType()).thenReturn(tagType);
     return tag;
   }
 
