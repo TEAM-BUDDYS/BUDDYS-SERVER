@@ -2,23 +2,30 @@ package org.sopt.buddys.domain.user.controller;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.user.controller.swagger.CompleteOnboardingSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
+import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
+import org.sopt.buddys.domain.user.dto.response.OnboardingResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPublicProfileResponse;
+import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -86,5 +93,16 @@ public class UserController {
         GlobalSuccessCode.OK,
         UserPostsResponse.from(userService.getPosts(userId, page, size))
     );
+  }
+
+  @CompleteOnboardingSwagger
+  @PatchMapping("/onboarding")
+  public BaseResponse<OnboardingResponse> completeOnboarding(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @RequestBody @Valid OnboardingRequest request
+  ) {
+    User user = userService.completeOnboarding(userId, request);
+    return BaseResponse.success(GlobalSuccessCode.OK, OnboardingResponse.of(user));
   }
 }

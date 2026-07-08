@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.user.service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -8,12 +9,22 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.auth.code.AuthErrorCode;
+import org.sopt.buddys.domain.location.code.LocationErrorCode;
+import org.sopt.buddys.domain.location.entity.City;
+import org.sopt.buddys.domain.location.entity.Country;
+import org.sopt.buddys.domain.location.repository.CityRepository;
+import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
+import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
+import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.domain.user.entity.UserTag;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
@@ -22,6 +33,7 @@ import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -38,6 +50,9 @@ public class UserService {
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
   private final PostImageRepository postImageRepository;
+  private final CountryRepository countryRepository;
+  private final CityRepository cityRepository;
+  private final TagRepository tagRepository;
 
   public UserProfileResult getProfile(Long userId) {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
@@ -70,6 +85,71 @@ public class UserService {
         posts.getSize(),
         posts.hasNext()
     );
+  }
+
+  @Transactional
+  public User completeOnboarding(Long userId, OnboardingRequest request) {
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    City interestCity = validateAndGetCity(request.interestCountryId(), request.interestCityId());
+    Country interestCountry = interestCity.getCountry();
+
+    Country exchangeCountry = null;
+    if (request.exchangeCountryId() != null) {
+      exchangeCountry = countryRepository.findById(request.exchangeCountryId())
+          .orElseThrow(() -> new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND));
+    }
+    validateExchangeDates(request.exchangeStartDate(), request.exchangeEndDate());
+
+    List<Long> allTagIds = Stream.of(request.activityTagIds(), request.interestTagIds(), request.travelStyleTagIds())
+        .flatMap(List::stream)
+        .toList();
+    validateTagTypes(request.activityTagIds(), TagType.ACTIVITY);
+    validateTagTypes(request.interestTagIds(), TagType.INTEREST);
+    validateTagTypes(request.travelStyleTagIds(), TagType.TRAVEL_STYLE);
+
+    try {
+      user.completeOnboarding(
+          request.nickname(), request.gender(), request.birthDate(),
+          request.bio(), request.profileImageUrl(),
+          interestCountry, interestCity,
+          exchangeCountry, request.exchangeUniversity(),
+          request.exchangeStartDate(), request.exchangeEndDate()
+      );
+      userRepository.flush(); // 닉네임 유니크 제약 위반을 이 시점에 즉시 확인
+    } catch (DataIntegrityViolationException e) {
+      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME);
+    }
+
+    List<UserTag> userTags = allTagIds.stream()
+        .map(tagId -> new UserTag(user, tagRepository.getReferenceById(tagId)))
+        .toList();
+    userTagRepository.saveAll(userTags);
+
+    return user;
+  }
+
+  private City validateAndGetCity(Long countryId, Long cityId) {
+    City city = cityRepository.findById(cityId)
+        .orElseThrow(() -> new BaseException(LocationErrorCode.CITY_NOT_FOUND));
+    if (!city.getCountry().getId().equals(countryId)) {
+      throw new BaseException(UserErrorCode.INTEREST_CITY_COUNTRY_MISMATCH);
+    }
+    return city;
+  }
+
+  private void validateExchangeDates(LocalDate start, LocalDate end) {
+    if (start != null && end != null && start.isAfter(end)) {
+      throw new BaseException(UserErrorCode.INVALID_EXCHANGE_PERIOD);
+    }
+  }
+
+  private void validateTagTypes(List<Long> tagIds, TagType expectedType) {
+    List<Tag> tags = tagRepository.findAllById(tagIds);
+    if (tags.size() != tagIds.size() || tags.stream().anyMatch(tag -> tag.getTagType() != expectedType)) {
+      throw new BaseException(UserErrorCode.INVALID_TAG);
+    }
   }
 
   private void validatePageRequest(int page, int size) {
