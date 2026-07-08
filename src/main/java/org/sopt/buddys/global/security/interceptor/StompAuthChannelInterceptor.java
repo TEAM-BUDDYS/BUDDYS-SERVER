@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.entity.ChatRoomMemberId;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
+import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.Message;
@@ -31,6 +32,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
   private final JwtProvider jwtProvider;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
+  private final UserRepository userRepository;
 
   @Override
   public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -64,6 +66,9 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     String accessToken = authorization.substring(BEARER_PREFIX.length());
     Long userId = jwtProvider.extractUserId(accessToken)
         .orElseThrow(() -> new BadCredentialsException("Invalid WebSocket access token."));
+    if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+      throw new BadCredentialsException("Inactive WebSocket user.");
+    }
 
     Authentication authentication = new UsernamePasswordAuthenticationToken(
         userId,
