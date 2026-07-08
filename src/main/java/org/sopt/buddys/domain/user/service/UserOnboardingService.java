@@ -2,6 +2,9 @@ package org.sopt.buddys.domain.user.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
@@ -56,9 +59,12 @@ public class UserOnboardingService {
     List<Long> allTagIds = Stream.of(request.activityTagIds(), request.interestTagIds(), request.travelStyleTagIds())
         .flatMap(List::stream)
         .toList();
-    validateTagTypes(request.activityTagIds(), TagType.ACTIVITY);
-    validateTagTypes(request.interestTagIds(), TagType.INTEREST);
-    validateTagTypes(request.travelStyleTagIds(), TagType.TRAVEL_STYLE);
+    Map<Long, Tag> tagsById = tagRepository.findAllById(allTagIds).stream()
+        .collect(Collectors.toMap(Tag::getId, Function.identity()));
+    validateTagsExist(tagsById, allTagIds);
+    validateTagType(tagsById, request.activityTagIds(), TagType.ACTIVITY);
+    validateTagType(tagsById, request.interestTagIds(), TagType.INTEREST);
+    validateTagType(tagsById, request.travelStyleTagIds(), TagType.TRAVEL_STYLE);
 
     try {
       user.completeOnboarding(
@@ -121,5 +127,20 @@ public class UserOnboardingService {
       cause = cause.getCause();
     }
     return false;
+  }
+
+  private void validateTagsExist(Map<Long, Tag> tagsById, List<Long> allTagIds) {
+    if (tagsById.size() != allTagIds.size()) {
+      throw new BaseException(UserErrorCode.TAG_NOT_FOUND);
+    }
+  }
+
+  private void validateTagType(Map<Long, Tag> tagsById, List<Long> tagIds, TagType expectedType) {
+    boolean allMatch = tagIds.stream()
+        .map(tagsById::get)
+        .allMatch(tag -> tag.getTagType() == expectedType);
+    if (!allMatch) {
+      throw new BaseException(UserErrorCode.INVALID_TAG);
+    }
   }
 }
