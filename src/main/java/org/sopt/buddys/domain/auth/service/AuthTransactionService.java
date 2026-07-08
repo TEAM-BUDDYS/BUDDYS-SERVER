@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.auth.service;
 
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
@@ -27,8 +28,9 @@ public class AuthTransactionService {
 
   @Transactional
   public AuthTokens processKakaoLogin(String providerId, KakaoUserInfo kakaoUser) {
-    User user = userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId)
-        .orElseGet(() -> saveNewKakaoUser(providerId, kakaoUser));
+    Optional<User> existingUser = userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId);
+    boolean isNewUser = existingUser.isEmpty();
+    User user = existingUser.orElseGet(() -> saveNewKakaoUser(providerId, kakaoUser));
 
     String jwt = jwtProvider.generateToken(user.getId());
     String refreshToken = jwtProvider.generateRefreshToken(user.getId());
@@ -38,7 +40,7 @@ public class AuthTransactionService {
         RefreshToken.of(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration())
     );
 
-    return new AuthTokens(jwt, refreshToken);
+    return new AuthTokens(jwt, refreshToken, isNewUser);
   }
 
   private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {

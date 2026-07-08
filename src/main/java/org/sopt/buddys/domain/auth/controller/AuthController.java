@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Duration;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Auth", description = "인증 관련 API")
 public class AuthController {
 
   private final AuthService authService;
@@ -53,7 +55,9 @@ public class AuthController {
   ) {
     AuthTokens tokens = authService.kakaoLogin(code);
     addRefreshTokenCookie(response, tokens.refreshToken());
-    return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.accessToken())));
+    return ResponseEntity.ok(
+        BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.accessToken(), tokens.isNewUser()))
+    );
   }
 
   @Operation(summary = "JWT 재발급", description = "리프레시 토큰을 이용해 새로운 JWT를 발급합니다.")
@@ -72,7 +76,7 @@ public class AuthController {
     }
     AuthTokens tokens = authService.reissue(refreshToken);
     addRefreshTokenCookie(response, tokens.refreshToken());
-    return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.accessToken())));
+    return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.accessToken(), false)));
   }
 
   private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
