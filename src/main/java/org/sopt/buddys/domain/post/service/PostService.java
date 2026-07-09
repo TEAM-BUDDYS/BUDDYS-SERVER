@@ -162,7 +162,8 @@ public class PostService {
         .stream()
         .map(postTag -> new PostDetailResult.TagResult(
             postTag.getTag().getId(),
-            postTag.getTag().getName()
+            postTag.getTag().getName(),
+            postTag.getTag().getTagType()
         ))
         .toList();
   }

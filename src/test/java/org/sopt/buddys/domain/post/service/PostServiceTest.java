@@ -278,6 +278,7 @@ class PostServiceTest {
     Long cityId = insertCity(countryId, "Tokyo", "도쿄", 14_000_000L);
     Long foodTagId = insertTag("맛집", TagType.ACTIVITY);
     Long photoTagId = insertTag("사진", TagType.INTEREST);
+    Long planTagId = insertTag("계획형", TagType.TRAVEL_STYLE);
     User user = userRepository.save(createUser(
         "user@test.com",
         "provider-user",
@@ -297,7 +298,7 @@ class PostServiceTest {
         List.of(GenderCondition.ANY),
         CompanionType.MEAL,
         RecruitmentCountType.TWO,
-        List.of(foodTagId, photoTagId),
+        List.of(foodTagId, photoTagId, planTagId),
         List.of("https://example.com/image1.jpg", "https://example.com/image2.jpg")
     ));
     jdbcTemplate.update("UPDATE post SET comment_count = 3 WHERE id = ?", post.getId());
@@ -328,9 +329,15 @@ class PostServiceTest {
         .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
     assertThat(response.conditions().genderCondition()).isEqualTo(GenderCondition.ANY);
     assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
-    assertThat(response.conditions().tags())
+    assertThat(response.conditions().activityTags())
         .extracting(PostDetailResponse.TagResponse::name)
-        .containsExactly("맛집", "사진");
+        .containsExactly("맛집");
+    assertThat(response.conditions().interestTags())
+        .extracting(PostDetailResponse.TagResponse::name)
+        .containsExactly("사진");
+    assertThat(response.conditions().travelStyleTags())
+        .extracting(PostDetailResponse.TagResponse::name)
+        .containsExactly("계획형");
     assertThat(response.viewCount()).isEqualTo(1L);
     assertThat(response.commentCount()).isEqualTo(3L);
     assertThat(response.createdAt()).isNotNull();

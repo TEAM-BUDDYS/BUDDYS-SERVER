@@ -10,6 +10,7 @@ import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 import org.sopt.buddys.domain.post.service.result.PostDetailResult;
+import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.Gender;
 
 public record PostDetailResponse(
@@ -159,13 +160,21 @@ public record PostDetailResponse(
       @Schema(description = "동행 유형", example = "MEAL")
       CompanionType travelType,
 
-      @Schema(description = "취향 태그 목록")
-      List<TagResponse> tags
+      @Schema(description = "활동 태그 목록")
+      List<TagResponse> activityTags,
+
+      @Schema(description = "관심사 태그 목록")
+      List<TagResponse> interestTags,
+
+      @Schema(description = "여행 스타일 태그 목록")
+      List<TagResponse> travelStyleTags
   ) {
 
     public ConditionsResponse {
       ageConditions = List.copyOf(ageConditions);
-      tags = List.copyOf(tags);
+      activityTags = List.copyOf(activityTags);
+      interestTags = List.copyOf(interestTags);
+      travelStyleTags = List.copyOf(travelStyleTags);
     }
 
     private static ConditionsResponse from(PostDetailResult result) {
@@ -173,11 +182,18 @@ public record PostDetailResponse(
           result.ageConditions(),
           result.genderCondition(),
           result.travelType(),
-          result.tags()
-              .stream()
-              .map(TagResponse::from)
-              .toList()
+          toTagResponses(result, TagType.ACTIVITY),
+          toTagResponses(result, TagType.INTEREST),
+          toTagResponses(result, TagType.TRAVEL_STYLE)
       );
+    }
+
+    private static List<TagResponse> toTagResponses(PostDetailResult result, TagType tagType) {
+      return result.tags()
+          .stream()
+          .filter(tag -> tag.tagType() == tagType)
+          .map(TagResponse::from)
+          .toList();
     }
   }
 

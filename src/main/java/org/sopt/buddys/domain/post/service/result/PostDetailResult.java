@@ -8,6 +8,7 @@ import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
+import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.Gender;
 
 public record PostDetailResult(
@@ -63,7 +64,8 @@ public record PostDetailResult(
 
   public record TagResult(
       Long tagId,
-      String name
+      String name,
+      TagType tagType
   ) {
   }
 }
