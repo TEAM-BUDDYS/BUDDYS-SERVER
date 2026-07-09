@@ -1,8 +1,10 @@
 package org.sopt.buddys.domain.image.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import org.sopt.buddys.domain.image.entity.ImageDomain;
 
 public record PresignedUrlRequest(
@@ -16,6 +18,12 @@ public record PresignedUrlRequest(
         allowableValues = {"image/jpeg", "image/png", "image/webp"}
     )
     @NotBlank
-    String contentType
+    String contentType,
+
+    @Schema(description = "업로드할 파일 크기(byte). 최대 10MB(10485760)까지 허용됩니다.", example = "204800")
+    @NotNull
+    @Positive
+    @Max(10 * 1024 * 1024)
+    Long fileSize
 ) {
 }

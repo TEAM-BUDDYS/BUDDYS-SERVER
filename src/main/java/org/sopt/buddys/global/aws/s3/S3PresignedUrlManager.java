@@ -20,11 +20,12 @@ public class S3PresignedUrlManager {
   private final S3Utilities s3Utilities;
   private final S3Properties s3Properties;
 
-  public S3PresignedUploadResult createUploadUrl(String key, String contentType) {
+  public S3PresignedUploadResult createUploadUrl(String key, String contentType, long fileSize) {
     PutObjectRequest objectRequest = PutObjectRequest.builder()
         .bucket(s3Properties.getBucket())
         .key(key)
         .contentType(contentType)
+        .contentLength(fileSize)
         .build();
 
     PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(

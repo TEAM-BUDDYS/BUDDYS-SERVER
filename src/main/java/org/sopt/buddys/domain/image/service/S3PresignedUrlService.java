@@ -19,15 +19,20 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class S3PresignedUrlService {
 
+  private static final long MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024;
   private final S3PresignedUrlManager s3PresignedUrlManager;
 
-  public S3PresignedUploadResult createUploadUrl(Long userId, ImageDomain imageDomain, String contentType) {
+  public S3PresignedUploadResult createUploadUrl(Long userId, ImageDomain imageDomain, String contentType, Long fileSize) {
+    if (fileSize == null || fileSize > MAX_FILE_SIZE_BYTES || fileSize <= 0) {
+      throw new BaseException(ImageErrorCode.FILE_TOO_LARGE);
+    }
+
     SupportedImageType imageType = SupportedImageType.fromContentType(contentType)
         .orElseThrow(() -> new BaseException(ImageErrorCode.UNSUPPORTED_CONTENT_TYPE));
 
     String key = imageDomain.getFolder() + "/" + UUID.randomUUID() + imageType.getExtension();
     log.info("[Image] presigned-url 발급 userId={}, domain={}, key={}", userId, imageDomain, key);
 
-    return s3PresignedUrlManager.createUploadUrl(key, imageType.getContentType());
+    return s3PresignedUrlManager.createUploadUrl(key, imageType.getContentType(), fileSize);
   }
 }

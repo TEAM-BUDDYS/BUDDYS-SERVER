@@ -51,7 +51,9 @@ public class ImageController {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
         PresignedUrlResponse.from(
-            s3PresignedUrlService.createUploadUrl(userId, request.imageDomain(), request.contentType())
+            s3PresignedUrlService.createUploadUrl(
+                userId, request.imageDomain(), request.contentType(), request.fileSize()
+            )
         )
     );
   }
