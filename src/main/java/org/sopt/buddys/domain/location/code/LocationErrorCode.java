@@ -8,7 +8,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum LocationErrorCode implements ErrorCode {
-  COUNTRY_NOT_FOUND("LOC-E001", HttpStatus.NOT_FOUND, "국가를 찾을 수 없습니다.");
+  COUNTRY_NOT_FOUND("LOC-E001", HttpStatus.NOT_FOUND, "국가를 찾을 수 없습니다."),
+  CITY_NOT_FOUND("LOC-E002", HttpStatus.NOT_FOUND, "도시를 찾을 수 없습니다.");
 
   private final String code;
   private final HttpStatus httpStatus;

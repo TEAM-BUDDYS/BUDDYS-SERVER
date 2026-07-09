@@ -166,7 +166,7 @@ public class PostService {
 
   private City getCity(Long countryId, Long cityId) {
     City city = cityRepository.findById(cityId)
-        .orElseThrow(() -> new BaseException(PostErrorCode.CITY_NOT_FOUND));
+        .orElseThrow(() -> new BaseException(LocationErrorCode.CITY_NOT_FOUND));
     if (!city.getCountry().getId().equals(countryId)) {
       throw new BaseException(PostErrorCode.CITY_NOT_IN_COUNTRY);
     }
