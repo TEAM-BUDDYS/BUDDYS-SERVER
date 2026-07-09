@@ -200,7 +200,7 @@ class CommentControllerTest {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.success").value(false))
-        .andExpect(jsonPath("$.code").value("POST-E005"));
+        .andExpect(jsonPath("$.code").value("POST-E006"));
   }
 
   @DisplayName("로그인하지 않은 사용자는 댓글 목록을 조회할 수 없다")
