@@ -53,7 +53,7 @@ public record OnboardingRequest(
     @Size(max = 69) String bio,
 
     @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.png", nullable = true)
-    String profileImageUrl
+    @Size(max = 512) String profileImageUrl
 ) {
     public OnboardingCommand toCommand() {
         return new OnboardingCommand(
