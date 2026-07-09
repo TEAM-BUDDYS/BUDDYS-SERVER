@@ -213,8 +213,8 @@ class CommentControllerTest {
         city,
         "동행 구해요",
         "함께 여행하실 분을 구합니다.",
-        LocalDate.of(2026, 9, 6),
-        LocalDate.of(2026, 9, 19),
+        LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(13),
         GenderCondition.ANY,
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO
