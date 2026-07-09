@@ -1,12 +1,14 @@
 package org.sopt.buddys.domain.comment.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,6 +118,98 @@ class CommentControllerTest {
     assertThat(comment.getContent()).isEqualTo("저도 같이 가고 싶어요!");
     assertThat(comment.getCreatedAt()).isNotNull();
     assertThat(postRepository.findById(post.getId()).orElseThrow().getCommentCount()).isEqualTo(1L);
+  }
+
+  @DisplayName("댓글 목록을 작성 시간 오름차순으로 조회할 수 있다")
+  @Test
+  void getComments_returnsCommentsOrderByCreatedAtAsc() throws Exception {
+    // given
+    User postAuthor = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User commentAuthor = userRepository.save(createUser("commenter@test.com", "provider-commenter", "댓글작성자"));
+    Post post = createPost(postAuthor);
+
+    Comment recentComment = saveComment(post, commentAuthor, "최신 댓글", LocalDateTime.now().minusMinutes(3));
+    Comment oldComment = saveComment(post, commentAuthor, "오래된 댓글", LocalDateTime.now().minusHours(2));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("COMMENT-S002"))
+        .andExpect(jsonPath("$.message").value("댓글 목록 조회에 성공했습니다."))
+        .andExpect(jsonPath("$.data.comments").isArray())
+        .andExpect(jsonPath("$.data.comments.length()").value(2))
+        .andExpect(jsonPath("$.data.comments[0].commentId").value(oldComment.getId()))
+        .andExpect(jsonPath("$.data.comments[0].writerName").value("댓글작성자"))
+        .andExpect(jsonPath("$.data.comments[0].content").value("오래된 댓글"))
+        .andExpect(jsonPath("$.data.comments[0].createdAt").exists())
+        .andExpect(jsonPath("$.data.comments[0].timeAgo").value("2시간 전"))
+        .andExpect(jsonPath("$.data.comments[1].commentId").value(recentComment.getId()))
+        .andExpect(jsonPath("$.data.comments[1].writerName").value("댓글작성자"))
+        .andExpect(jsonPath("$.data.comments[1].content").value("최신 댓글"))
+        .andExpect(jsonPath("$.data.comments[1].createdAt").exists())
+        .andExpect(jsonPath("$.data.comments[1].timeAgo").value("3분 전"));
+  }
+
+  @DisplayName("댓글 목록 조회 시 30일 이상은 월 단위, 1년 이상은 년 단위로 상대 시간을 반환한다")
+  @Test
+  void getComments_returnsMonthAndYearTimeAgo() throws Exception {
+    // given
+    User postAuthor = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User commentAuthor = userRepository.save(createUser("commenter@test.com", "provider-commenter", "댓글작성자"));
+    Post post = createPost(postAuthor);
+
+    saveComment(post, commentAuthor, "월 단위 댓글", LocalDateTime.now().minusDays(60));
+    saveComment(post, commentAuthor, "년 단위 댓글", LocalDateTime.now().minusDays(365));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments[0].content").value("년 단위 댓글"))
+        .andExpect(jsonPath("$.data.comments[0].timeAgo").value("1년 전"))
+        .andExpect(jsonPath("$.data.comments[1].content").value("월 단위 댓글"))
+        .andExpect(jsonPath("$.data.comments[1].timeAgo").value("2개월 전"));
+  }
+
+  @DisplayName("댓글이 없는 게시글은 빈 댓글 배열을 반환한다")
+  @Test
+  void getComments_emptyPost_returnsEmptyArray() throws Exception {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.comments").isArray())
+        .andExpect(jsonPath("$.data.comments.length()").value(0));
+  }
+
+  @DisplayName("존재하지 않는 게시글의 댓글 목록을 조회하면 예외가 발생한다")
+  @Test
+  void getComments_postNotFound_returnsNotFound() throws Exception {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", 999L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("POST-E005"));
+  }
+
+  @DisplayName("로그인하지 않은 사용자는 댓글 목록을 조회할 수 없다")
+  @Test
+  void getComments_unauthenticatedUser_returnsUnauthorized() throws Exception {
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", 1L))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E002"));
   }
 
   @DisplayName("존재하지 않는 게시글에 댓글을 작성하면 예외가 발생한다")
@@ -240,6 +334,22 @@ class CommentControllerTest {
 
   private String bearerToken(Long userId) {
     return "Bearer " + jwtProvider.generateToken(userId);
+  }
+
+  private Comment saveComment(
+      Post post,
+      User author,
+      String content,
+      LocalDateTime createdAt
+  ) {
+    Comment comment = commentRepository.saveAndFlush(new Comment(post, author, content));
+    jdbcTemplate.update(
+        "UPDATE post_comment SET created_at = ?, updated_at = ? WHERE id = ?",
+        createdAt,
+        createdAt,
+        comment.getId()
+    );
+    return comment;
   }
 
   private Long insertCountry(String name, String isoCode) {
