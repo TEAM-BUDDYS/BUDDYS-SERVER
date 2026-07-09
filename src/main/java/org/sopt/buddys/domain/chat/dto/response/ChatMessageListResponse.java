@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.chat.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,8 +56,9 @@ public record ChatMessageListResponse(
       @Schema(description = "내가 보낸 메시지 여부", example = "false")
       boolean mine,
 
-      @Schema(description = "상대방이 읽은 메시지 여부", example = "true")
-      boolean readByParticipant
+      @JsonProperty("isRead")
+      @Schema(description = "메시지를 읽어야 하는 사용자가 읽은 여부", example = "true")
+      boolean read
   ) {
 
     private static ChatMessageResponse from(ChatMessageResult result) {
@@ -68,7 +70,7 @@ public record ChatMessageListResponse(
           message.getMessage(),
           message.getCreatedAt(),
           result.mine(),
-          result.readByParticipant()
+          result.read()
       );
     }
   }

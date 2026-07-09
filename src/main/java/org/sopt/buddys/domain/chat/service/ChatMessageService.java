@@ -65,7 +65,7 @@ public class ChatMessageService {
                 .map(message -> new ChatMessageResult(
                         message,
                         message.getSender().getId().equals(userId),
-                        isReadByParticipant(
+                        isRead(
                                 message,
                                 userId,
                                 myLastReadMessageId,
@@ -86,7 +86,7 @@ public class ChatMessageService {
         );
     }
 
-    private boolean isReadByParticipant(
+    private boolean isRead(
             ChatMessage message,
             Long userId,
             Long myLastReadMessageId,

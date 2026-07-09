@@ -473,7 +473,7 @@ class ChatRoomServiceTest {
                 .extracting(
                         message -> message.message().getMessage(),
                         ChatMessageResult::mine,
-                        ChatMessageResult::readByParticipant
+                        ChatMessageResult::read
                 )
                 .containsExactly(
                         tuple("상대방이 아직 안 읽은 내 메시지", true, false),
@@ -516,7 +516,7 @@ class ChatRoomServiceTest {
                 .extracting(
                         message -> message.message().getId(),
                         ChatMessageResult::mine,
-                        ChatMessageResult::readByParticipant
+                        ChatMessageResult::read
                 )
                 .containsExactly(tuple(messageId, true, true));
     }
@@ -555,7 +555,7 @@ class ChatRoomServiceTest {
                 .extracting(
                         message -> message.message().getId(),
                         ChatMessageResult::mine,
-                        ChatMessageResult::readByParticipant
+                        ChatMessageResult::read
                 )
                 .containsExactly(tuple(messageId, false, true));
     }
