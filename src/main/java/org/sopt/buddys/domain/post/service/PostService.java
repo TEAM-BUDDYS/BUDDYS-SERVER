@@ -20,6 +20,7 @@ import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostAgeCondition;
 import org.sopt.buddys.domain.post.entity.PostGenderCondition;
 import org.sopt.buddys.domain.post.entity.PostImage;
+import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.PostTag;
 import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostGenderConditionRepository;
@@ -97,6 +98,23 @@ public class PostService {
     post.increaseViewCount();
 
     return toPostDetailResult(userId, post);
+  }
+
+  @Transactional
+  public Post updatePostStatus(Long userId, Long postId, PostStatus status) {
+    if (status == null) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
+
+    if (!post.getAuthor().getId().equals(userId)) {
+      throw new BaseException(GlobalErrorCode.FORBIDDEN);
+    }
+
+    post.updateStatus(status);
+    return post;
   }
 
   private PostDetailResult toPostDetailResult(Long userId, Post post) {
