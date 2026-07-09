@@ -48,6 +48,10 @@ public class ChatRoomMember {
   }
 
   public void updateLastReadMessageId(Long lastReadMessageId) {
+    if (lastReadMessageId == null) {
+      return;
+    }
+
     if (this.lastReadMessageId == null || this.lastReadMessageId < lastReadMessageId) {
       this.lastReadMessageId = lastReadMessageId;
     }
