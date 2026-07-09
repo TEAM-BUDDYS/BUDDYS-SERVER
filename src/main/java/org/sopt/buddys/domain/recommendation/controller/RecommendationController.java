@@ -47,8 +47,8 @@ public class RecommendationController {
   public BaseResponse<RecommendedPostListResponse> getRecommendedPosts(
       @Parameter(hidden = true)
       @LoginUser Long userId,
-      @Parameter(description = "조회할 개수. 1 이상 10 이하입니다.", example = "4")
-      @RequestParam(defaultValue = "4") @Min(1) @Max(10) int size
+      @Parameter(description = "조회할 개수. 1 이상 " + MAX_SIZE + "이하입니다.", example = "4")
+      @RequestParam(defaultValue = "4") @Min(1) @Max(MAX_SIZE) int size
   ) {
     return BaseResponse.success(GlobalSuccessCode.OK,
         RecommendedPostListResponse.from(recommendationService.getRecommendedPosts(userId, size)));
