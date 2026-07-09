@@ -53,4 +53,14 @@ public class ChatRoomMember {
       joinedAt = ChatTimeConverter.now();
     }
   }
+
+  public void updateLastReadMessageId(Long lastReadMessageId) {
+    if (lastReadMessageId == null) {
+      return;
+    }
+
+    if (this.lastReadMessageId == null || this.lastReadMessageId < lastReadMessageId) {
+      this.lastReadMessageId = lastReadMessageId;
+    }
+  }
 }

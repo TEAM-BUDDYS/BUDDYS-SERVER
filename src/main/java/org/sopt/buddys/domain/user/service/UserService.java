@@ -34,10 +34,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class UserService {
 
+  private static final int REQUIRED_ONBOARDING_TAG_COUNT = 3;
+
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
   private final PostImageRepository postImageRepository;
+
+  public boolean isOnboardingCompleted(User user) {
+    boolean hasRequiredProfile = user.getGender() != null && user.getBirthDate() != null;
+    if (!hasRequiredProfile) {
+      return false;
+    }
+    return userTagRepository.countByUserId(user.getId()) >= REQUIRED_ONBOARDING_TAG_COUNT;
+  }
 
   public UserProfileResult getProfile(Long userId) {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)

@@ -20,6 +20,10 @@ public interface UserTagRepository extends JpaRepository<UserTag, UserTagId> {
       """)
   List<UserTagProjection> findTagsByUserId(@Param("userId") Long userId);
 
+  boolean existsByUserId(Long userId);
+
+  long countByUserId(Long userId);
+
   interface UserTagProjection {
     TagType getTagType();
     String getTagName();

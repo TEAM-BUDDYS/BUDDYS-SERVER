@@ -21,6 +21,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
+import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.global.common.entity.BaseEntity;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
@@ -86,6 +87,14 @@ public class User extends BaseEntity {
   private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
   @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "interest_country_id")
+  private Country interestCountry;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "interest_city_id")
+  private City interestCity;
+
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "exchange_country_id")
   private Country exchangeCountry;
 
@@ -120,5 +129,31 @@ public class User extends BaseEntity {
     user.notificationEnabled = true;
     user.accountStatus = AccountStatus.ACTIVE;
     return user;
+  }
+
+  public void completeOnboarding(
+      String nickname,
+      Gender gender,
+      LocalDate birthDate,
+      String introduction,
+      String profileImageUrl,
+      Country interestCountry,
+      City interestCity,
+      Country exchangeCountry,
+      String exchangeUniversity,
+      LocalDate exchangeStartDate,
+      LocalDate exchangeEndDate
+  ) {
+    this.gender = gender;
+    this.birthDate = birthDate;
+    this.nickname = nickname;
+    this.introduction = introduction;
+    this.profileImageUrl = profileImageUrl;
+    this.exchangeCountry = exchangeCountry;
+    this.exchangeUniversity = exchangeUniversity;
+    this.exchangeStartDate = exchangeStartDate;
+    this.exchangeEndDate = exchangeEndDate;
+    this.interestCountry = interestCountry;
+    this.interestCity = interestCity;
   }
 }

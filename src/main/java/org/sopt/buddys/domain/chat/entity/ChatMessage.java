@@ -41,6 +41,16 @@ public class ChatMessage {
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
+  public ChatMessage(
+      ChatRoom chatRoom,
+      User sender,
+      String message
+  ) {
+    this.chatRoom = chatRoom;
+    this.sender = sender;
+    this.message = message;
+  }
+
   @PrePersist
   private void prePersist() {
     if (createdAt == null) {
