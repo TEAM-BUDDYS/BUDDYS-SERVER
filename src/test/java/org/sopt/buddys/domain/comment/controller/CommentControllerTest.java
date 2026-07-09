@@ -19,7 +19,6 @@ import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.entity.CompanionType;
-import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 import org.sopt.buddys.domain.post.repository.PostRepository;
@@ -136,7 +135,7 @@ class CommentControllerTest {
                 """))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.success").value(false))
-        .andExpect(jsonPath("$.code").value("POST-E005"));
+        .andExpect(jsonPath("$.code").value("POST-E006"));
 
     assertThat(commentRepository.findAll()).isEmpty();
   }
@@ -225,7 +224,6 @@ class CommentControllerTest {
         "함께 여행하실 분을 구합니다.",
         LocalDate.now().plusDays(10),
         LocalDate.now().plusDays(13),
-        GenderCondition.ANY,
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO
     ));
