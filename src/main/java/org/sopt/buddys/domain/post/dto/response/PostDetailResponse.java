@@ -157,8 +157,8 @@ public record PostDetailResponse(
       @Schema(description = "선호 나이 조건")
       List<AgeCondition> ageConditions,
 
-      @Schema(description = "성별 조건", example = "ANY")
-      GenderCondition genderCondition,
+      @Schema(description = "성별 조건", example = "[\"ANY\"]")
+      List<GenderCondition> genderConditions,
 
       @Schema(description = "동행 유형", example = "MEAL")
       CompanionType travelType,
@@ -175,6 +175,7 @@ public record PostDetailResponse(
 
     public ConditionsResponse {
       ageConditions = List.copyOf(ageConditions);
+      genderConditions = List.copyOf(genderConditions);
       activityTags = List.copyOf(activityTags);
       interestTags = List.copyOf(interestTags);
       travelStyleTags = List.copyOf(travelStyleTags);
@@ -183,7 +184,7 @@ public record PostDetailResponse(
     private static ConditionsResponse from(PostDetailResult result) {
       return new ConditionsResponse(
           result.ageConditions(),
-          result.genderCondition(),
+          result.genderConditions(),
           result.travelType(),
           toTagResponses(result, TagType.ACTIVITY),
           toTagResponses(result, TagType.INTEREST),

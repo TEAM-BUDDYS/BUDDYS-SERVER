@@ -114,7 +114,7 @@ public class PostService {
         post.getRecruitmentCountType(),
         post.getContent(),
         getAgeConditions(post.getId()),
-        post.getGenderCondition(),
+        getGenderConditions(post.getId()),
         post.getCompanionType(),
         getTagResults(post.getId()),
         post.getViewCount(),
@@ -153,6 +153,13 @@ public class PostService {
 
   private List<AgeCondition> getAgeConditions(Long postId) {
     return postAgeConditionRepository.findAgeConditionsByPostId(postId)
+        .stream()
+        .sorted(Comparator.comparingInt(Enum::ordinal))
+        .toList();
+  }
+
+  private List<GenderCondition> getGenderConditions(Long postId) {
+    return postGenderConditionRepository.findGenderConditionsByPostId(postId)
         .stream()
         .sorted(Comparator.comparingInt(Enum::ordinal))
         .toList();

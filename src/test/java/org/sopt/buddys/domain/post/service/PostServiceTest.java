@@ -328,7 +328,7 @@ class PostServiceTest {
     assertThat(response.recruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(response.conditions().ageConditions())
         .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
-    assertThat(response.conditions().genderCondition()).isEqualTo(GenderCondition.ANY);
+    assertThat(response.conditions().genderConditions()).containsExactly(GenderCondition.ANY);
     assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
     assertThat(response.conditions().activityTags())
         .extracting(PostDetailResponse.TagResponse::name)

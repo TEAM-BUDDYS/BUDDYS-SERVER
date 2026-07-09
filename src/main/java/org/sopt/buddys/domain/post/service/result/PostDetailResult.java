@@ -25,7 +25,7 @@ public record PostDetailResult(
     RecruitmentCountType recruitmentCountType,
     String content,
     List<AgeCondition> ageConditions,
-    GenderCondition genderCondition,
+    List<GenderCondition> genderConditions,
     CompanionType travelType,
     List<TagResult> tags,
     Long viewCount,
@@ -36,6 +36,7 @@ public record PostDetailResult(
   public PostDetailResult {
     imageUrls = List.copyOf(imageUrls);
     ageConditions = List.copyOf(ageConditions);
+    genderConditions = List.copyOf(genderConditions);
     tags = List.copyOf(tags);
   }
 
