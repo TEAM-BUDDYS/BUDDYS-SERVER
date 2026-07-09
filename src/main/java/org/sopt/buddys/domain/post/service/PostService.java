@@ -107,16 +107,19 @@ public class PostService {
         post.getStatus(),
         post.getTitle(),
         postImageRepository.findImageUrlsByPostId(post.getId()),
+        toCountryResult(post.getCountry()),
         toCityResult(post.getCity()),
         post.getStartDate(),
         post.getEndDate(),
         post.getRecruitmentCountType(),
         post.getContent(),
         getAgeConditions(post.getId()),
+        post.getGenderCondition(),
         post.getCompanionType(),
         getTagResults(post.getId()),
         post.getViewCount(),
-        post.getCommentCount()
+        post.getCommentCount(),
+        post.getCreatedAt()
     );
   }
 
@@ -137,6 +140,13 @@ public class PostService {
     return new PostDetailResult.CityResult(
         city.getId(),
         city.getName()
+    );
+  }
+
+  private PostDetailResult.CountryResult toCountryResult(Country country) {
+    return new PostDetailResult.CountryResult(
+        country.getId(),
+        country.getName()
     );
   }
 

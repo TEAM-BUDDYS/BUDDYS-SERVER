@@ -17,6 +17,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
       from Post p
       join fetch p.author author
       left join fetch author.exchangeCountry
+      join fetch p.country
       join fetch p.city
       where p.id = :postId
       """)

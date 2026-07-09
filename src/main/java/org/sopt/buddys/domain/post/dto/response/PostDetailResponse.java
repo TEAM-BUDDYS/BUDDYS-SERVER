@@ -2,9 +2,11 @@ package org.sopt.buddys.domain.post.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.CompanionType;
+import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 import org.sopt.buddys.domain.post.service.result.PostDetailResult;
@@ -29,6 +31,9 @@ public record PostDetailResponse(
     @Schema(description = "첨부 이미지 URL 목록")
     List<String> imageUrls,
 
+    @Schema(description = "동행 모집 국가")
+    CountryResponse country,
+
     @Schema(description = "동행 모집 도시")
     CityResponse city,
 
@@ -51,7 +56,10 @@ public record PostDetailResponse(
     Long viewCount,
 
     @Schema(description = "댓글 수", example = "3")
-    Long commentCount
+    Long commentCount,
+
+    @Schema(description = "게시글 생성일시", example = "2027-02-20T14:30:00")
+    LocalDateTime createdAt
 ) {
 
   public PostDetailResponse {
@@ -66,6 +74,7 @@ public record PostDetailResponse(
         result.recruitmentStatus(),
         result.title(),
         result.imageUrls(),
+        CountryResponse.from(result.country()),
         CityResponse.from(result.city()),
         result.startDate(),
         result.endDate(),
@@ -73,7 +82,8 @@ public record PostDetailResponse(
         result.content(),
         ConditionsResponse.from(result),
         result.viewCount(),
-        result.commentCount()
+        result.commentCount(),
+        result.createdAt()
     );
   }
 
@@ -126,9 +136,25 @@ public record PostDetailResponse(
     }
   }
 
+  public record CountryResponse(
+      @Schema(description = "국가 ID", example = "1")
+      Long countryId,
+
+      @Schema(description = "국가 이름", example = "France")
+      String name
+  ) {
+
+    private static CountryResponse from(PostDetailResult.CountryResult country) {
+      return new CountryResponse(country.countryId(), country.name());
+    }
+  }
+
   public record ConditionsResponse(
       @Schema(description = "선호 나이 조건")
       List<AgeCondition> ageConditions,
+
+      @Schema(description = "성별 조건", example = "ANY")
+      GenderCondition genderCondition,
 
       @Schema(description = "동행 유형", example = "MEAL")
       CompanionType travelType,
@@ -145,6 +171,7 @@ public record PostDetailResponse(
     private static ConditionsResponse from(PostDetailResult result) {
       return new ConditionsResponse(
           result.ageConditions(),
+          result.genderCondition(),
           result.travelType(),
           result.tags()
               .stream()

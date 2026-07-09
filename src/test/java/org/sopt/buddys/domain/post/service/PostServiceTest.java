@@ -319,17 +319,21 @@ class PostServiceTest {
     assertThat(response.recruitmentStatus()).isEqualTo(PostStatus.RECRUITING);
     assertThat(response.imageUrls())
         .containsExactly("https://example.com/image1.jpg", "https://example.com/image2.jpg");
+    assertThat(response.country().countryId()).isEqualTo(countryId);
+    assertThat(response.country().name()).isEqualTo("일본");
     assertThat(response.city().cityId()).isEqualTo(cityId);
     assertThat(response.city().name()).isEqualTo("Tokyo");
     assertThat(response.recruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(response.conditions().ageConditions())
         .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
+    assertThat(response.conditions().genderCondition()).isEqualTo(GenderCondition.ANY);
     assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
     assertThat(response.conditions().tags())
         .extracting(PostDetailResponse.TagResponse::name)
         .containsExactly("맛집", "사진");
     assertThat(response.viewCount()).isEqualTo(1L);
     assertThat(response.commentCount()).isEqualTo(3L);
+    assertThat(response.createdAt()).isNotNull();
     assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(1L);
   }
 
