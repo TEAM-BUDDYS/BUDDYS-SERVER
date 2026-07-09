@@ -62,11 +62,10 @@ public class RecommendationService {
     return onboardedCandidates.stream()
         .map(candidate -> {
           Map<TagType, Set<Long>> tags = candidateTags.getOrDefault(candidate.getId(), Map.of());
-          double total = totalSimilarity(ctx.myTags(), tags);
-          double activity = categorySimilarity(ctx.myTags(), tags, TagType.ACTIVITY);
+          SimilarityScore score = similarityOf(ctx.myTags(), tags);
           long postCount = postCounts.getOrDefault(candidate.getId(), 0L);
-          return new RecommendedUserResult(candidate, total, activity, postCount);
-    })
+          return new RecommendedUserResult(candidate, score.total(), score.activity(), postCount);
+        })
         .sorted(Comparator.comparingDouble(RecommendedUserResult::totalSimilarity).reversed()
             .thenComparing(Comparator.comparingDouble(RecommendedUserResult::activitySimilarity).reversed())
             .thenComparing(Comparator.comparingLong(RecommendedUserResult::postCount).reversed()))
@@ -86,10 +85,9 @@ public class RecommendationService {
     return candidates.stream()
         .map(post -> {
           Map<TagType, Set<Long>> tags = postTags.getOrDefault(post.getId(), Map.of());
-          double total = totalSimilarity(ctx.myTags(), tags);
-          double activity = categorySimilarity(ctx.myTags(), tags, TagType.ACTIVITY);
+          SimilarityScore score = similarityOf(ctx.myTags(), tags);
           String thumbnailUrl = thumbnails.get(post.getId());
-          return new RecommendedPostResult(post, total, activity, thumbnailUrl);
+          return new RecommendedPostResult(post, score.total(), score.activity(), thumbnailUrl);
         })
         .sorted(Comparator.comparingDouble(RecommendedPostResult::totalSimilarity).reversed()
             .thenComparing(Comparator.comparingDouble(RecommendedPostResult::activitySimilarity).reversed())
@@ -167,12 +165,6 @@ public class RecommendationService {
         ));
   }
 
-  private double totalSimilarity(Map<TagType, Set<Long>> a, Map<TagType, Set<Long>> b) {
-    return ACTIVITY_WEIGHT * categorySimilarity(a, b, TagType.ACTIVITY)
-        + INTEREST_WEIGHT * categorySimilarity(a, b, TagType.INTEREST)
-        + TRAVEL_STYLE_WEIGHT * categorySimilarity(a, b, TagType.TRAVEL_STYLE);
-  }
-
   private double categorySimilarity(Map<TagType, Set<Long>> a, Map<TagType, Set<Long>> b, TagType type) {
     return jaccard(a.getOrDefault(type, Set.of()), b.getOrDefault(type, Set.of()));
   }
@@ -186,5 +178,15 @@ public class RecommendationService {
     Set<Long> intersection = new HashSet<>(a);
     intersection.retainAll(b);
     return (double) intersection.size() / union.size();
+  }
+
+  private record SimilarityScore(double total, double activity) {}
+
+  private SimilarityScore similarityOf(Map<TagType, Set<Long>> a, Map<TagType, Set<Long>> b) {
+    double activity = categorySimilarity(a, b, TagType.ACTIVITY);
+    double total = ACTIVITY_WEIGHT * activity
+        + INTEREST_WEIGHT * categorySimilarity(a, b, TagType.INTEREST)
+        + TRAVEL_STYLE_WEIGHT * categorySimilarity(a, b, TagType.TRAVEL_STYLE);
+    return new SimilarityScore(total, activity);
   }
 }
