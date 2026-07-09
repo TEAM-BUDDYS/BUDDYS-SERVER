@@ -1,6 +1,7 @@
 package org.sopt.buddys.global.config;
 
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.global.exception.StompErrorHandler;
 import org.sopt.buddys.global.security.interceptor.StompAuthChannelInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
+  private final StompErrorHandler stompErrorHandler;
 
   @Value("${cors.allowed-origins}")
   private String allowedOrigins;
@@ -24,6 +26,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   public void registerStompEndpoints(StompEndpointRegistry registry) {
     registry.addEndpoint("/ws")
         .setAllowedOriginPatterns(allowedOrigins);
+    registry.setErrorHandler(stompErrorHandler);
   }
 
   @Override
