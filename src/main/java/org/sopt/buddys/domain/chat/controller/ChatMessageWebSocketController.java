@@ -9,8 +9,10 @@ import org.sopt.buddys.domain.chat.dto.response.ChatMessageEventResponse;
 import org.sopt.buddys.domain.chat.dto.response.ChatReadEventResponse;
 import org.sopt.buddys.domain.chat.service.ChatMessageCommandService;
 import org.sopt.buddys.domain.chat.service.ChatReadService;
-import org.sopt.buddys.domain.chat.service.result.ChatReadResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageSendResult;
+import org.sopt.buddys.domain.chat.service.result.ChatReadResult;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
+import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -36,7 +38,7 @@ public class ChatMessageWebSocketController {
       Principal principal
   ) {
 
-    Long userId = Long.valueOf(principal.getName());
+    Long userId = getUserId(principal);
     ChatMessageSendResult result = chatMessageCommandService.sendMessage(
         userId,
         chatRoomId,
@@ -56,7 +58,7 @@ public class ChatMessageWebSocketController {
       Principal principal
   ) {
 
-    Long userId = Long.valueOf(principal.getName());
+    Long userId = getUserId(principal);
     ChatReadResult result = chatReadService.markAsRead(
         userId,
         chatRoomId,
@@ -67,5 +69,16 @@ public class ChatMessageWebSocketController {
         CHAT_ROOM_TOPIC_PREFIX + chatRoomId,
         ChatReadEventResponse.from(result)
     );
+  }
+
+  private Long getUserId(
+      Principal principal
+  ) {
+
+    try {
+      return Long.valueOf(principal.getName());
+    } catch (NullPointerException | NumberFormatException e) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
   }
 }
