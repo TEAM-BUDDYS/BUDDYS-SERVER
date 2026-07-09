@@ -35,7 +35,7 @@ public class ChatMessageCommandService {
 
     User sender = getActiveUser(userId);
     ChatRoom chatRoom = getAccessibleChatRoom(userId, chatRoomId);
-    ChatMessage message = chatMessageRepository.saveAndFlush(
+    ChatMessage message = chatMessageRepository.save(
         new ChatMessage(chatRoom, sender, content)
     );
 
