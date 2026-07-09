@@ -171,6 +171,16 @@ class CommentControllerTest {
         """);
   }
 
+  @DisplayName("댓글 내용이 100자를 초과하면 예외가 발생한다")
+  @Test
+  void createComment_contentLongerThan100_returnsBadRequest() throws Exception {
+    assertInvalidContent("""
+        {
+          "content": "%s"
+        }
+        """.formatted("a".repeat(101)));
+  }
+
   @DisplayName("로그인하지 않은 사용자는 댓글을 작성할 수 없다")
   @Test
   void createComment_unauthenticatedUser_returnsUnauthorized() throws Exception {
