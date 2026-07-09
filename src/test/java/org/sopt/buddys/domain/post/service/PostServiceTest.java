@@ -92,8 +92,8 @@ class PostServiceTest {
     CreatePostCommand command = new CreatePostCommand(
         countryId,
         cityId,
-        LocalDate.of(2026, 9, 6),
-        LocalDate.of(2026, 9, 19),
+        LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(20),
         " 주말에 파리 근교 함께 가실 분! ",
         " 안녕하세요. 같이 여행하실 분을 구합니다. ",
         List.of(AgeCondition.EARLY_20S, AgeCondition.MID_20S),
@@ -131,8 +131,8 @@ class PostServiceTest {
     CreatePostCommand command = createDefaultCommand(
         countryId,
         cityId,
-        LocalDate.of(2026, 9, 19),
-        LocalDate.of(2026, 9, 6)
+        LocalDate.now().plusDays(20),
+        LocalDate.now().plusDays(10)
     );
 
     // when, then
@@ -172,8 +172,8 @@ class PostServiceTest {
     CreatePostCommand command = new CreatePostCommand(
         countryId,
         cityId,
-        LocalDate.of(2026, 9, 6),
-        LocalDate.of(2026, 9, 19),
+        LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(20),
         "제목",
         "본문",
         List.of(AgeCondition.EARLY_20S),
@@ -196,8 +196,8 @@ class PostServiceTest {
     return createDefaultCommand(
         countryId,
         cityId,
-        LocalDate.of(2026, 9, 6),
-        LocalDate.of(2026, 9, 19)
+        LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(20)
     );
   }
 
