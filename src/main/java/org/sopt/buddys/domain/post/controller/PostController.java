@@ -66,12 +66,14 @@ public class PostController {
   @CommonErrorResponses
   @GetMapping("/{postId}")
   public BaseResponse<PostDetailResponse> getPostDetail(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
       @Parameter(description = "조회할 게시글 ID", example = "1")
       @PathVariable Long postId
   ) {
     return BaseResponse.success(
         PostSuccessCode.POST_DETAIL_FOUND,
-        PostDetailResponse.from(postService.getPostDetail(postId))
+        PostDetailResponse.from(postService.getPostDetail(userId, postId))
     );
   }
 

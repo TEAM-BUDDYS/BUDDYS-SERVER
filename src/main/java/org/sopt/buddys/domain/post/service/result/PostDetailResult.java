@@ -11,6 +11,7 @@ import org.sopt.buddys.domain.user.entity.Gender;
 public record PostDetailResult(
     Long postId,
     AuthorResult author,
+    boolean isMine,
     PostStatus recruitmentStatus,
     String title,
     List<String> imageUrls,
@@ -33,8 +34,11 @@ public record PostDetailResult(
   }
 
   public record AuthorResult(
-      String name,
+      Long userId,
+      String nickname,
+      String profileImageUrl,
       String country,
+      Integer age,
       String ageRange,
       Gender gender
   ) {

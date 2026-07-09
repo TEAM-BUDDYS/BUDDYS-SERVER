@@ -17,6 +17,9 @@ public record PostDetailResponse(
     @Schema(description = "작성자 정보")
     AuthorResponse author,
 
+    @Schema(description = "로그인 사용자의 게시글 여부", example = "false")
+    boolean isMine,
+
     @Schema(description = "모집 상태", example = "RECRUITING")
     PostStatus recruitmentStatus,
 
@@ -59,6 +62,7 @@ public record PostDetailResponse(
     return new PostDetailResponse(
         result.postId(),
         AuthorResponse.from(result.author()),
+        result.isMine(),
         result.recruitmentStatus(),
         result.title(),
         result.imageUrls(),
@@ -74,11 +78,20 @@ public record PostDetailResponse(
   }
 
   public record AuthorResponse(
-      @Schema(description = "작성자 이름", example = "김가윤")
-      String name,
+      @Schema(description = "작성자 ID", example = "10")
+      Long userId,
+
+      @Schema(description = "작성자 닉네임", example = "김가윤")
+      String nickname,
+
+      @Schema(description = "작성자 프로필 이미지 URL", example = "https://example.com/profile.png")
+      String profileImageUrl,
 
       @Schema(description = "작성자 국가", example = "대한민국")
       String country,
+
+      @Schema(description = "작성자 나이", example = "24")
+      Integer age,
 
       @Schema(description = "작성자 나이대", example = "20대")
       String ageRange,
@@ -89,8 +102,11 @@ public record PostDetailResponse(
 
     private static AuthorResponse from(PostDetailResult.AuthorResult author) {
       return new AuthorResponse(
-          author.name(),
+          author.userId(),
+          author.nickname(),
+          author.profileImageUrl(),
           author.country(),
+          author.age(),
           author.ageRange(),
           author.gender()
       );

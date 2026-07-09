@@ -303,15 +303,19 @@ class PostServiceTest {
     jdbcTemplate.update("UPDATE post SET comment_count = 3 WHERE id = ?", post.getId());
 
     // when
-    PostDetailResult result = postService.getPostDetail(post.getId());
+    PostDetailResult result = postService.getPostDetail(user.getId(), post.getId());
     PostDetailResponse response = PostDetailResponse.from(result);
 
     // then
     assertThat(response.postId()).isEqualTo(post.getId());
-    assertThat(response.author().name()).isEqualTo("김가윤");
+    assertThat(response.author().userId()).isEqualTo(user.getId());
+    assertThat(response.author().nickname()).isEqualTo("김가윤");
+    assertThat(response.author().profileImageUrl()).isEqualTo("https://example.com/profile.png");
     assertThat(response.author().country()).isEqualTo("일본");
+    assertThat(response.author().age()).isEqualTo(25);
     assertThat(response.author().ageRange()).isEqualTo("20대");
     assertThat(response.author().gender()).isEqualTo(Gender.FEMALE);
+    assertThat(response.isMine()).isTrue();
     assertThat(response.recruitmentStatus()).isEqualTo(PostStatus.RECRUITING);
     assertThat(response.imageUrls())
         .containsExactly("https://example.com/image1.jpg", "https://example.com/image2.jpg");
@@ -340,8 +344,8 @@ class PostServiceTest {
     Post post = postService.createPost(user.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
 
     // when
-    postService.getPostDetail(post.getId());
-    PostDetailResult secondResult = postService.getPostDetail(post.getId());
+    postService.getPostDetail(user.getId(), post.getId());
+    PostDetailResult secondResult = postService.getPostDetail(user.getId(), post.getId());
 
     // then
     assertThat(secondResult.viewCount()).isEqualTo(2L);
@@ -351,7 +355,7 @@ class PostServiceTest {
   @DisplayName("존재하지 않는 게시글 상세 조회 시 예외가 발생한다")
   @Test
   void getPostDetail_postNotFound_throwsException() {
-    assertThatThrownBy(() -> postService.getPostDetail(999L))
+    assertThatThrownBy(() -> postService.getPostDetail(1L, 999L))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND)
         );
@@ -425,6 +429,7 @@ class PostServiceTest {
         .provider(AuthProvider.KAKAO)
         .providerId(providerId)
         .nickname(nickname)
+        .profileImageUrl("https://example.com/profile.png")
         .exchangeCountry(countryRepository.findById(exchangeCountryId).orElseThrow())
         .birthDate(birthDate)
         .gender(gender)

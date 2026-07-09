@@ -90,19 +90,20 @@ public class PostService {
   }
 
   @Transactional
-  public PostDetailResult getPostDetail(Long postId) {
+  public PostDetailResult getPostDetail(Long userId, Long postId) {
     Post post = postRepository.findDetailById(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     post.increaseViewCount();
 
-    return toPostDetailResult(post);
+    return toPostDetailResult(userId, post);
   }
 
-  private PostDetailResult toPostDetailResult(Post post) {
+  private PostDetailResult toPostDetailResult(Long userId, Post post) {
     return new PostDetailResult(
         post.getId(),
         toAuthorResult(post.getAuthor()),
+        post.getAuthor().getId().equals(userId),
         post.getStatus(),
         post.getTitle(),
         postImageRepository.findImageUrlsByPostId(post.getId()),
@@ -122,8 +123,11 @@ public class PostService {
   private PostDetailResult.AuthorResult toAuthorResult(User author) {
     Country country = author.getExchangeCountry();
     return new PostDetailResult.AuthorResult(
+        author.getId(),
         author.getNickname(),
+        author.getProfileImageUrl(),
         country == null ? null : country.getName(),
+        toAge(author.getBirthDate()),
         toAgeRange(author.getBirthDate()),
         author.getGender()
     );
@@ -154,14 +158,21 @@ public class PostService {
   }
 
   private String toAgeRange(LocalDate birthDate) {
-    if (birthDate == null) {
+    Integer age = toAge(birthDate);
+    if (age == null) {
       return null;
     }
-    int age = Period.between(birthDate, LocalDate.now()).getYears();
     if (age < 10) {
       return "10대 미만";
     }
     return "%d0대".formatted(age / 10);
+  }
+
+  private Integer toAge(LocalDate birthDate) {
+    if (birthDate == null) {
+      return null;
+    }
+    return Period.between(birthDate, LocalDate.now()).getYears();
   }
 
   private City getCity(Long countryId, Long cityId) {
