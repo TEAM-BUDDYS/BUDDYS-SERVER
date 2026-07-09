@@ -63,7 +63,7 @@ public class PostController {
         request.title(),
         request.content(),
         request.ageConditions(),
-        request.gender(),
+        request.genderConditions(),
         request.companionType(),
         request.recruitmentCountType(),
         request.tagIds(),

@@ -13,11 +13,14 @@ import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
+import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostAgeCondition;
+import org.sopt.buddys.domain.post.entity.PostGenderCondition;
 import org.sopt.buddys.domain.post.entity.PostImage;
 import org.sopt.buddys.domain.post.entity.PostTag;
 import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
+import org.sopt.buddys.domain.post.repository.PostGenderConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
@@ -40,6 +43,7 @@ public class PostService {
 
   private final PostRepository postRepository;
   private final PostAgeConditionRepository postAgeConditionRepository;
+  private final PostGenderConditionRepository postGenderConditionRepository;
   private final PostTagRepository postTagRepository;
   private final PostImageRepository postImageRepository;
   private final UserRepository userRepository;
@@ -66,12 +70,12 @@ public class PostService {
         command.content().trim(),
         command.startDate(),
         command.endDate(),
-        command.gender(),
         command.companionType(),
         command.recruitmentCountType()
     ));
 
     savePostAgeConditions(post, command.ageConditions());
+    savePostGenderConditions(post, command.genderConditions());
     savePostTags(post, command.tagIds());
     savePostImages(post, command.imageUrls());
 
@@ -98,7 +102,8 @@ public class PostService {
         || command.content().isBlank()
         || command.ageConditions() == null
         || command.ageConditions().isEmpty()
-        || command.gender() == null
+        || command.genderConditions() == null
+        || command.genderConditions().isEmpty()
         || command.companionType() == null
         || command.recruitmentCountType() == null
         || command.tagIds() == null
@@ -112,6 +117,14 @@ public class PostService {
 
     postAgeConditionRepository.saveAll(distinctAgeConditions.stream()
         .map(ageCondition -> new PostAgeCondition(post, ageCondition))
+        .toList());
+  }
+
+  private void savePostGenderConditions(Post post, List<GenderCondition> genderConditions) {
+    Set<GenderCondition> distinctGenderConditions = new LinkedHashSet<>(genderConditions);
+
+    postGenderConditionRepository.saveAll(distinctGenderConditions.stream()
+        .map(genderCondition -> new PostGenderCondition(post, genderCondition))
         .toList());
   }
 

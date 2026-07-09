@@ -49,9 +49,9 @@ public record CreatePostRequest(
     @NotEmpty
     List<@NotNull AgeCondition> ageConditions,
 
-    @Schema(description = "성별 조건", example = "ANY", allowableValues = {"ANY", "MALE", "FEMALE"})
-    @NotNull
-    GenderCondition gender,
+    @Schema(description = "성별 조건. ANY(상관없음), MALE(남성), FEMALE(여성). 중복 선택 가능", example = "[\"MALE\", \"FEMALE\"]")
+    @NotEmpty
+    List<@NotNull GenderCondition> genderConditions,
 
     @Schema(
         description = "동행 유형. FULL_TRIP(여행 전체 동행), PARTIAL_TRIP(여행 부분 동행), "

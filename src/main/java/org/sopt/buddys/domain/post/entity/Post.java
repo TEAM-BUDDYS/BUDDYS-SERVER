@@ -63,10 +63,6 @@ public class Post extends BaseEntity {
   private RecruitmentCountType recruitmentCountType;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "gender_condition", nullable = false, length = 10)
-  private GenderCondition genderCondition = GenderCondition.ANY;
-
-  @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private PostStatus status = PostStatus.RECRUITING;
 
@@ -84,7 +80,6 @@ public class Post extends BaseEntity {
       String content,
       LocalDate startDate,
       LocalDate endDate,
-      GenderCondition genderCondition,
       CompanionType companionType,
       RecruitmentCountType recruitmentCountType
   ) {
@@ -95,7 +90,6 @@ public class Post extends BaseEntity {
     this.content = content;
     this.startDate = startDate;
     this.endDate = endDate;
-    this.genderCondition = genderCondition;
     this.companionType = companionType;
     this.recruitmentCountType = recruitmentCountType;
     this.status = PostStatus.RECRUITING;

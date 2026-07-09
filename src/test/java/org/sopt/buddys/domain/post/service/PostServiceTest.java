@@ -18,6 +18,7 @@ import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
+import org.sopt.buddys.domain.post.repository.PostGenderConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
@@ -59,6 +60,9 @@ class PostServiceTest {
   private PostAgeConditionRepository postAgeConditionRepository;
 
   @Autowired
+  private PostGenderConditionRepository postGenderConditionRepository;
+
+  @Autowired
   private PostTagRepository postTagRepository;
 
   @Autowired
@@ -97,7 +101,7 @@ class PostServiceTest {
         " 주말에 파리 근교 함께 가실 분! ",
         " 안녕하세요. 같이 여행하실 분을 구합니다. ",
         List.of(AgeCondition.EARLY_20S, AgeCondition.MID_20S),
-        GenderCondition.ANY,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE),
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
         List.of(tagId),
@@ -115,6 +119,7 @@ class PostServiceTest {
     assertThat(savedPost.getCompanionType()).isEqualTo(CompanionType.FULL_TRIP);
     assertThat(savedPost.getRecruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(postAgeConditionRepository.findAll()).hasSize(2);
+    assertThat(postGenderConditionRepository.findAll()).hasSize(2);
     assertThat(postTagRepository.findAll()).hasSize(1);
     assertThat(postImageRepository.findAll(Sort.by("orderNo")))
         .extracting("imageUrl")
@@ -177,7 +182,7 @@ class PostServiceTest {
         "제목",
         "본문",
         List.of(AgeCondition.EARLY_20S),
-        GenderCondition.ANY,
+        List.of(GenderCondition.ANY),
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
         List.of(interestTagId),
@@ -215,7 +220,7 @@ class PostServiceTest {
         "제목",
         "본문",
         List.of(AgeCondition.EARLY_20S),
-        GenderCondition.ANY,
+        List.of(GenderCondition.ANY),
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
         List.of(1L),
@@ -285,6 +290,7 @@ class PostServiceTest {
   private void cleanUp() {
     jdbcTemplate.update("DELETE FROM post_image");
     jdbcTemplate.update("DELETE FROM post_age_condition");
+    jdbcTemplate.update("DELETE FROM post_gender_condition");
     jdbcTemplate.update("DELETE FROM post_tag");
     jdbcTemplate.update("DELETE FROM post");
     jdbcTemplate.update("DELETE FROM tag");
