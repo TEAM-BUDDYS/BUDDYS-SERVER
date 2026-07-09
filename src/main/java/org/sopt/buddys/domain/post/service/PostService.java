@@ -139,7 +139,8 @@ public class PostService {
   private PostDetailResult.CityResult toCityResult(City city) {
     return new PostDetailResult.CityResult(
         city.getId(),
-        city.getName()
+        city.getName(),
+        city.getKoreanName()
     );
   }
 

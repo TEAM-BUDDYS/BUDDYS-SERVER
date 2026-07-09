@@ -52,7 +52,8 @@ public record PostDetailResult(
 
   public record CityResult(
       Long cityId,
-      String name
+      String name,
+      String koreanName
   ) {
   }
 

@@ -129,11 +129,14 @@ public record PostDetailResponse(
       Long cityId,
 
       @Schema(description = "도시 이름", example = "Tokyo")
-      String name
+      String name,
+
+      @Schema(description = "도시 한글 이름", example = "도쿄")
+      String koreanName
   ) {
 
     private static CityResponse from(PostDetailResult.CityResult city) {
-      return new CityResponse(city.cityId(), city.name());
+      return new CityResponse(city.cityId(), city.name(), city.koreanName());
     }
   }
 

@@ -324,6 +324,7 @@ class PostServiceTest {
     assertThat(response.country().name()).isEqualTo("일본");
     assertThat(response.city().cityId()).isEqualTo(cityId);
     assertThat(response.city().name()).isEqualTo("Tokyo");
+    assertThat(response.city().koreanName()).isEqualTo("도쿄");
     assertThat(response.recruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(response.conditions().ageConditions())
         .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
