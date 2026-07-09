@@ -55,14 +55,14 @@ public class AuthService {
       throw new BaseException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
     }
 
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     String newAccessToken = jwtProvider.generateToken(userId);
     String newRefreshToken = jwtProvider.generateRefreshToken(userId);
 
     refreshTokenRepository.deleteByUserId(userId);
     refreshTokenRepository.save(RefreshToken.of(userId, newRefreshToken, jwtProperties.refreshTokenExpiration()));
-
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
-        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     return new AuthTokens(newAccessToken, newRefreshToken, userService.isOnboardingCompleted(user));
   }
