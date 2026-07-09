@@ -197,12 +197,89 @@ class PostServiceTest {
     assertThat(postRepository.findAll()).isEmpty();
   }
 
+  @DisplayName("활동 태그를 4개 이상 선택하면 예외가 발생한다")
+  @Test
+  void createPost_activityTagLimitExceeded_throwsException() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    List<Long> tagIds = List.of(
+        insertTag("여행", TagType.ACTIVITY),
+        insertTag("맛집 탐방", TagType.ACTIVITY),
+        insertTag("카페 탐방", TagType.ACTIVITY),
+        insertTag("쇼핑", TagType.ACTIVITY)
+    );
+    CreatePostCommand command = createDefaultCommand(countryId, cityId, tagIds);
+
+    // when, then
+    assertThatThrownBy(() -> postService.createPost(user.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.TAG_LIMIT_EXCEEDED)
+        );
+  }
+
+  @DisplayName("관심사 태그를 3개 이상 선택하면 예외가 발생한다")
+  @Test
+  void createPost_interestTagLimitExceeded_throwsException() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    List<Long> tagIds = List.of(
+        insertTag("여행", TagType.ACTIVITY),
+        insertTag("자연", TagType.INTEREST),
+        insertTag("도시", TagType.INTEREST),
+        insertTag("예술", TagType.INTEREST)
+    );
+    CreatePostCommand command = createDefaultCommand(countryId, cityId, tagIds);
+
+    // when, then
+    assertThatThrownBy(() -> postService.createPost(user.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.TAG_LIMIT_EXCEEDED)
+        );
+  }
+
+  @DisplayName("동행 스타일 태그를 3개 이상 선택하면 예외가 발생한다")
+  @Test
+  void createPost_travelStyleTagLimitExceeded_throwsException() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    List<Long> tagIds = List.of(
+        insertTag("여행", TagType.ACTIVITY),
+        insertTag("계획형", TagType.TRAVEL_STYLE),
+        insertTag("즉흥형", TagType.TRAVEL_STYLE),
+        insertTag("아침형", TagType.TRAVEL_STYLE)
+    );
+    CreatePostCommand command = createDefaultCommand(countryId, cityId, tagIds);
+
+    // when, then
+    assertThatThrownBy(() -> postService.createPost(user.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.TAG_LIMIT_EXCEEDED)
+        );
+  }
+
   private CreatePostCommand createDefaultCommand(Long countryId, Long cityId) {
     return createDefaultCommand(
         countryId,
         cityId,
         LocalDate.now().plusDays(10),
-        LocalDate.now().plusDays(20)
+        LocalDate.now().plusDays(20),
+        List.of(1L)
+    );
+  }
+
+  private CreatePostCommand createDefaultCommand(Long countryId, Long cityId, List<Long> tagIds) {
+    return createDefaultCommand(
+        countryId,
+        cityId,
+        LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(20),
+        tagIds
     );
   }
 
@@ -211,6 +288,16 @@ class PostServiceTest {
       Long cityId,
       LocalDate startDate,
       LocalDate endDate
+  ) {
+    return createDefaultCommand(countryId, cityId, startDate, endDate, List.of(1L));
+  }
+
+  private CreatePostCommand createDefaultCommand(
+      Long countryId,
+      Long cityId,
+      LocalDate startDate,
+      LocalDate endDate,
+      List<Long> tagIds
   ) {
     return new CreatePostCommand(
         countryId,
@@ -223,7 +310,7 @@ class PostServiceTest {
         List.of(GenderCondition.ANY),
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
-        List.of(1L),
+        tagIds,
         List.of()
     );
   }

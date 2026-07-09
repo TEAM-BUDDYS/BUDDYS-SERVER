@@ -41,6 +41,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PostService {
 
+  private static final int MAX_ACTIVITY_TAG_COUNT = 3;
+  private static final int MAX_INTEREST_TAG_COUNT = 2;
+  private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 2;
+
   private final PostRepository postRepository;
   private final PostAgeConditionRepository postAgeConditionRepository;
   private final PostGenderConditionRepository postGenderConditionRepository;
@@ -138,13 +142,29 @@ public class PostService {
     if (tags.size() != distinctTagIds.size()) {
       throw new BaseException(PostErrorCode.TAG_NOT_FOUND);
     }
-    if (tags.stream().noneMatch(tag -> tag.getTagType() == TagType.ACTIVITY)) {
-      throw new BaseException(PostErrorCode.ACTIVITY_TAG_REQUIRED);
-    }
+    validateTagTypeCounts(tags);
 
     postTagRepository.saveAll(tags.stream()
         .map(tag -> new PostTag(post, tag))
         .toList());
+  }
+
+  private void validateTagTypeCounts(List<Tag> tags) {
+    long activityTagCount = countTagsByType(tags, TagType.ACTIVITY);
+    if (activityTagCount == 0) {
+      throw new BaseException(PostErrorCode.ACTIVITY_TAG_REQUIRED);
+    }
+    if (activityTagCount > MAX_ACTIVITY_TAG_COUNT
+        || countTagsByType(tags, TagType.INTEREST) > MAX_INTEREST_TAG_COUNT
+        || countTagsByType(tags, TagType.TRAVEL_STYLE) > MAX_TRAVEL_STYLE_TAG_COUNT) {
+      throw new BaseException(PostErrorCode.TAG_LIMIT_EXCEEDED);
+    }
+  }
+
+  private long countTagsByType(List<Tag> tags, TagType tagType) {
+    return tags.stream()
+        .filter(tag -> tag.getTagType() == tagType)
+        .count();
   }
 
   private void savePostImages(Post post, List<String> imageUrls) {
