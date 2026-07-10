@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.chat.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +14,8 @@ import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
+import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult.ChatRoomListItemResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomResult;
@@ -44,6 +47,12 @@ class ChatRoomServiceTest {
 
     @Autowired
     private ChatRoomService chatRoomService;
+
+    @Autowired
+    private ChatMessageService chatMessageService;
+
+    @Autowired
+    private ChatReadService chatReadService;
 
     @Autowired
     private ChatRoomRepository chatRoomRepository;
@@ -258,6 +267,297 @@ class ChatRoomServiceTest {
                 .isInstanceOfSatisfying(BaseException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.FORBIDDEN)
                 );
+    }
+
+    @DisplayName("채팅 메시지 목록은 전송 시각 최신순, 같은 시각이면 메시지 ID 최신순으로 조회된다")
+    @Test
+    void getMessages_ordersByCreatedAtDescAndIdDesc() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+
+        Long oldestMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "가장 오래된 메시지",
+                LocalDateTime.of(2026, 7, 7, 10, 0)
+        );
+        Long sameTimeEarlierMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "같은 시각 먼저 저장된 메시지",
+                LocalDateTime.of(2026, 7, 7, 11, 0)
+        );
+        Long sameTimeLaterMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "같은 시각 나중에 저장된 메시지",
+                LocalDateTime.of(2026, 7, 7, 11, 0)
+        );
+
+        // when
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                10
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(sameTimeLaterMessageId, sameTimeEarlierMessageId, oldestMessageId);
+    }
+
+    @DisplayName("커서 다음 페이지 조회 시 커서 메시지는 제외하고 이전 메시지부터 조회한다")
+    @Test
+    void getMessages_withCursor_excludesCursorMessage() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+
+        Long oldestMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "첫 번째 메시지",
+                LocalDateTime.of(2026, 7, 7, 10, 0)
+        );
+        Long cursorMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "커서가 될 메시지",
+                LocalDateTime.of(2026, 7, 7, 11, 0)
+        );
+        Long latestMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "가장 최신 메시지",
+                LocalDateTime.of(2026, 7, 7, 12, 0)
+        );
+
+        // when
+        ChatMessageListResult firstPage = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                2
+        );
+
+        // then
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextCursorMessageId()).isEqualTo(cursorMessageId);
+        assertThat(firstPage.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(latestMessageId, cursorMessageId);
+
+        // when
+        ChatMessageListResult secondPage = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                firstPage.nextCursorSentAt(),
+                firstPage.nextCursorMessageId(),
+                2
+        );
+
+        // then
+        assertThat(secondPage.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(oldestMessageId);
+    }
+
+    @DisplayName("내가 보낸 메시지는 mine이 true이고 상대방이 보낸 메시지는 false이다")
+    @Test
+    void getMessages_marksMineBySender() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "상대방 메시지",
+                LocalDateTime.of(2026, 7, 7, 10, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "내 메시지",
+                LocalDateTime.of(2026, 7, 7, 11, 0)
+        );
+
+        // when
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                10
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(
+                        message -> message.message().getMessage(),
+                        ChatMessageResult::mine
+                )
+                .containsExactly(
+                        tuple("내 메시지", true),
+                        tuple("상대방 메시지", false)
+                );
+    }
+
+    @DisplayName("내 메시지는 상대방의 마지막 읽음 메시지 기준으로 읽음 여부를 계산한다")
+    @Test
+    void getMessages_marksReadByParticipantForMyMessages() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+
+        Long readMessageId = insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "상대방이 읽은 내 메시지",
+                LocalDateTime.of(2026, 7, 7, 10, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "상대방 메시지",
+                LocalDateTime.of(2026, 7, 7, 11, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "상대방이 아직 안 읽은 내 메시지",
+                LocalDateTime.of(2026, 7, 7, 12, 0)
+        );
+        updateLastReadMessageId(chatRoom.getId(), participant.getId(), readMessageId);
+
+        // when
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                10
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(
+                        message -> message.message().getMessage(),
+                        ChatMessageResult::mine,
+                        ChatMessageResult::read
+                )
+                .containsExactly(
+                        tuple("상대방이 아직 안 읽은 내 메시지", true, false),
+                        tuple("상대방 메시지", false, false),
+                        tuple("상대방이 읽은 내 메시지", true, true)
+                );
+    }
+
+    @DisplayName("상대방이 읽음 처리하면 내 메시지는 읽음 상태로 조회된다")
+    @Test
+    void getMessages_afterParticipantMarksAsRead_marksReadByParticipant() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        Long messageId = insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "상대방이 읽을 내 메시지",
+                LocalDateTime.of(2026, 7, 8, 10, 0)
+        );
+
+        // when
+        chatReadService.markAsRead(participant.getId(), chatRoom.getId(), messageId);
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                10
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(
+                        message -> message.message().getId(),
+                        ChatMessageResult::mine,
+                        ChatMessageResult::read
+                )
+                .containsExactly(tuple(messageId, true, true));
+    }
+
+    @DisplayName("내가 읽음 처리하면 상대방 메시지도 읽음 상태로 조회된다")
+    @Test
+    void getMessages_afterMeMarksAsRead_marksParticipantMessageAsRead() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        Long messageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "내가 읽을 상대방 메시지",
+                LocalDateTime.of(2026, 7, 8, 11, 0)
+        );
+
+        // when
+        chatReadService.markAsRead(user.getId(), chatRoom.getId(), messageId);
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                10
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(
+                        message -> message.message().getId(),
+                        ChatMessageResult::mine,
+                        ChatMessageResult::read
+                )
+                .containsExactly(tuple(messageId, false, true));
     }
 
     private User createUser(
