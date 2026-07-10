@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.chat.controller;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -86,6 +87,41 @@ class ChatRoomControllerTest {
         sentAt,
         cursorMessageId,
         30
+    );
+  }
+
+  @DisplayName("메시지 목록 첫 페이지 조회는 커서가 없으면 null을 서비스에 전달한다")
+  @Test
+  void getMessages_withoutCursor_passesNullCursorToService() throws Exception {
+    // given
+    Long chatRoomId = 1L;
+
+    when(chatMessageService.getMessages(
+        eq(LOGIN_USER_ID),
+        eq(chatRoomId),
+        isNull(),
+        isNull(),
+        eq(30)
+    )).thenReturn(new ChatMessageListResult(
+        List.of(),
+        null,
+        null,
+        false
+    ));
+
+    // when & then
+    mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId)
+            .param("size", "30"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.messages").isArray())
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+
+    verify(chatMessageService).getMessages(
+        eq(LOGIN_USER_ID),
+        eq(chatRoomId),
+        isNull(),
+        isNull(),
+        eq(30)
     );
   }
 
