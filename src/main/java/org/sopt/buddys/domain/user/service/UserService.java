@@ -80,6 +80,17 @@ public class UserService {
 
   public UserPostsResult getPosts(Long userId, int page, int size) {
     validateUserExists(userId);
+
+    return getPostsResult(userId, page, size);
+  }
+
+  public UserPostsResult getPublicPosts(Long userId, int page, int size) {
+    validateUserExistsIncludingDeleted(userId);
+
+    return getPostsResult(userId, page, size);
+  }
+
+  private UserPostsResult getPostsResult(Long userId, int page, int size) {
     validatePageRequest(page, size);
 
     Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -107,6 +118,12 @@ public class UserService {
 
   private void validateUserExists(Long userId) {
     if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+      throw new BaseException(UserErrorCode.USER_NOT_FOUND);
+    }
+  }
+
+  private void validateUserExistsIncludingDeleted(Long userId) {
+    if (!userRepository.existsById(userId)) {
       throw new BaseException(UserErrorCode.USER_NOT_FOUND);
     }
   }
