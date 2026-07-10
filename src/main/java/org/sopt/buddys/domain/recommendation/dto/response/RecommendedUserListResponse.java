@@ -5,19 +5,9 @@ import java.util.List;
 import org.sopt.buddys.domain.recommendation.service.result.RecommendedUserResult;
 
 public record RecommendedUserListResponse(
-    @Schema(description = "추천 사용자 목록")
-    List<RecommendedUserResponse> users
+    @Schema(description = "추천 사용자 리스트") List<RecommendedUserResponse> users
 ) {
-
-  public RecommendedUserListResponse {
-    users = List.copyOf(users);
-  }
-
   public static RecommendedUserListResponse from(List<RecommendedUserResult> results) {
-    return new RecommendedUserListResponse(
-        results.stream()
-            .map(RecommendedUserResponse::from)
-            .toList()
-    );
+    return new RecommendedUserListResponse(results.stream().map(RecommendedUserResponse::from).toList());
   }
 }
