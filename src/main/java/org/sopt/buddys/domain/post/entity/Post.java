@@ -38,8 +38,8 @@ public class Post extends BaseEntity {
   @JoinColumn(name = "country_id", nullable = false)
   private Country country;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "city_id")
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "city_id", nullable = false)
   private City city;
 
   @Column(nullable = false, length = 120)
@@ -48,24 +48,19 @@ public class Post extends BaseEntity {
   @Column(nullable = false, columnDefinition = "TEXT")
   private String content;
 
-  @Column(name = "start_date")
+  @Column(name = "start_date", nullable = false)
   private LocalDate startDate;
 
-  @Column(name = "end_date")
+  @Column(name = "end_date", nullable = false)
   private LocalDate endDate;
 
-  @Column(name = "recruit_count", nullable = false)
-  private Short recruitCount = 1;
-
-  @Column(name = "min_age")
-  private Short minAge;
-
-  @Column(name = "max_age")
-  private Short maxAge;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "companion_type", nullable = false, length = 30)
+  private CompanionType companionType;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "gender_condition", nullable = false, length = 10)
-  private GenderCondition genderCondition = GenderCondition.ANY;
+  @Column(name = "recruitment_count_type", nullable = false, length = 20)
+  private RecruitmentCountType recruitmentCountType;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
@@ -76,4 +71,29 @@ public class Post extends BaseEntity {
 
   @Column(name = "comment_count", nullable = false)
   private Long commentCount = 0L;
+
+  public Post(
+      User author,
+      Country country,
+      City city,
+      String title,
+      String content,
+      LocalDate startDate,
+      LocalDate endDate,
+      CompanionType companionType,
+      RecruitmentCountType recruitmentCountType
+  ) {
+    this.author = author;
+    this.country = country;
+    this.city = city;
+    this.title = title;
+    this.content = content;
+    this.startDate = startDate;
+    this.endDate = endDate;
+    this.companionType = companionType;
+    this.recruitmentCountType = recruitmentCountType;
+    this.status = PostStatus.RECRUITING;
+    this.viewCount = 0L;
+    this.commentCount = 0L;
+  }
 }
