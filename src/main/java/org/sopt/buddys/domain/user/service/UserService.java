@@ -54,16 +54,43 @@ public class UserService {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
+    return getProfileResult(user, true);
+  }
+
+  public UserProfileResult getPublicProfile(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    return getProfileResult(user, false);
+  }
+
+  private UserProfileResult getProfileResult(
+      User user,
+      boolean includeAllTags
+  ) {
+
+    Long userId = user.getId();
     List<UserTagRepository.UserTagProjection> userTags = userTagRepository.findTagsByUserId(userId);
     Map<TagType, List<String>> tagsByType = shuffleTagsByType(groupTagsByType(userTags));
     List<String> representativeTags = getFirstTagsByType(tagsByType);
-    List<TagGroupResult> allTags = toTagGroupResponses(tagsByType);
+    List<TagGroupResult> allTags = includeAllTags ? toTagGroupResponses(tagsByType) : List.of();
 
     return new UserProfileResult(user, representativeTags, allTags);
   }
 
   public UserPostsResult getPosts(Long userId, int page, int size) {
     validateUserExists(userId);
+
+    return getPostsResult(userId, page, size);
+  }
+
+  public UserPostsResult getPublicPosts(Long userId, int page, int size) {
+    validateUserExistsIncludingDeleted(userId);
+
+    return getPostsResult(userId, page, size);
+  }
+
+  private UserPostsResult getPostsResult(Long userId, int page, int size) {
     validatePageRequest(page, size);
 
     Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -91,6 +118,12 @@ public class UserService {
 
   private void validateUserExists(Long userId) {
     if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+      throw new BaseException(UserErrorCode.USER_NOT_FOUND);
+    }
+  }
+
+  private void validateUserExistsIncludingDeleted(Long userId) {
+    if (!userRepository.existsById(userId)) {
       throw new BaseException(UserErrorCode.USER_NOT_FOUND);
     }
   }

@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.user.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import org.sopt.buddys.domain.user.entity.User;
@@ -23,7 +24,11 @@ public record UserPublicProfileResponse(
     VerificationBadge verificationBadge,
 
     @Schema(description = "대표 취향 태그", example = "[\"문화생활\", \"액티비티\", \"활발한\"]")
-    List<String> representativeTags
+    List<String> representativeTags,
+
+    @JsonProperty("isDeleted")
+    @Schema(description = "삭제된 사용자 여부", example = "false")
+    boolean deleted
 ) {
 
   public UserPublicProfileResponse {
@@ -38,7 +43,8 @@ public record UserPublicProfileResponse(
         user.getProfileImageUrl(),
         user.getIntroduction(),
         VerificationBadge.from(user),
-        result.representativeTags()
+        result.representativeTags(),
+        user.getDeletedAt() != null
     );
   }
 }
