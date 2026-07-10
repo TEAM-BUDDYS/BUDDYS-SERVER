@@ -6,9 +6,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.comment.code.CommentSuccessCode;
 import org.sopt.buddys.domain.comment.dto.request.CreateCommentRequest;
+import org.sopt.buddys.domain.comment.dto.response.CommentListResponse;
 import org.sopt.buddys.domain.comment.dto.response.CreateCommentResponse;
 import org.sopt.buddys.domain.comment.service.CommentService;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -17,11 +20,15 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
 import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @RestController
 @Validated
@@ -31,6 +38,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class CommentController {
 
   private final CommentService commentService;
+
+  @Operation(summary = "댓글 목록 조회", description = "게시글에 작성된 댓글 목록을 작성 시간 오름차순으로 조회합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "401", description = "인증 필요"),
+      @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @GetMapping
+  public BaseResponse<CommentListResponse> getComments(
+      @Parameter(description = "댓글 목록을 조회할 게시글 ID", example = "1")
+      @PathVariable Long postId,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+  ) {
+    return BaseResponse.success(
+        CommentSuccessCode.COMMENT_LIST_FOUND,
+        CommentListResponse.from(commentService.getComments(postId, page, size))
+    );
+  }
 
   @Operation(summary = "댓글 작성", description = "로그인한 사용자가 게시글에 댓글을 작성합니다.")
   @ApiResponses({
