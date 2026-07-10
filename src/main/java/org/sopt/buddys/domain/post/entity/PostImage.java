@@ -38,4 +38,10 @@ public class PostImage {
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
+
+  public PostImage(Post post, String imageUrl, Short orderNo) {
+    this.post = post;
+    this.imageUrl = imageUrl;
+    this.orderNo = orderNo;
+  }
 }
