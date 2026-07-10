@@ -8,12 +8,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
+import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
 import org.sopt.buddys.domain.user.entity.User;
 
 @Getter
@@ -37,7 +38,6 @@ public class ChatMessage {
   @Column(nullable = false, length = 2000)
   private String message;
 
-  @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
@@ -49,5 +49,12 @@ public class ChatMessage {
     this.chatRoom = chatRoom;
     this.sender = sender;
     this.message = message;
+  }
+
+  @PrePersist
+  private void prePersist() {
+    if (createdAt == null) {
+      createdAt = ChatTimeConverter.now();
+    }
   }
 }

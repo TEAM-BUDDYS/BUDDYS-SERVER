@@ -7,12 +7,13 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
+import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
 import org.sopt.buddys.domain.user.entity.User;
 
 @Getter
@@ -34,7 +35,6 @@ public class ChatRoomMember {
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
 
-  @CreationTimestamp
   @Column(name = "joined_at", nullable = false, updatable = false)
   private LocalDateTime joinedAt;
 
@@ -45,6 +45,13 @@ public class ChatRoomMember {
     this.chatRoom = chatRoom;
     this.user = user;
     this.id = new ChatRoomMemberId(chatRoom.getId(), user.getId());
+  }
+
+  @PrePersist
+  private void prePersist() {
+    if (joinedAt == null) {
+      joinedAt = ChatTimeConverter.now();
+    }
   }
 
   public void updateLastReadMessageId(Long lastReadMessageId) {

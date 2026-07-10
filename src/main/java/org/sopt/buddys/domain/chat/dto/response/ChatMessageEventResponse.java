@@ -1,8 +1,9 @@
 package org.sopt.buddys.domain.chat.dto.response;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import org.sopt.buddys.domain.chat.entity.ChatMessage;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageSendResult;
+import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
 
 public record ChatMessageEventResponse(
     String type,
@@ -26,7 +27,7 @@ public record ChatMessageEventResponse(
       Long messageId,
       ChatParticipantResponse sender,
       String content,
-      LocalDateTime sentAt
+      OffsetDateTime sentAt
   ) {
 
     private static MessageResponse from(ChatMessage message) {
@@ -34,7 +35,7 @@ public record ChatMessageEventResponse(
           message.getId(),
           ChatParticipantResponse.from(message.getSender()),
           message.getMessage(),
-          message.getCreatedAt()
+          ChatTimeConverter.toCommonTime(message.getCreatedAt())
       );
     }
   }

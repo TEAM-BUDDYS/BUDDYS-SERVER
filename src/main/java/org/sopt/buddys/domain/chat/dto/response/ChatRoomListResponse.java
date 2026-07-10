@@ -1,10 +1,11 @@
 package org.sopt.buddys.domain.chat.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult.ChatRoomListItemResult;
+import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
 
 public record ChatRoomListResponse(
     @Schema(description = "채팅방 목록")
@@ -57,8 +58,8 @@ public record ChatRoomListResponse(
       @Schema(description = "마지막 메시지", example = "내일 몇 시에 만날까요?")
       String lastMessage,
 
-      @Schema(description = "마지막 메시지 시각", example = "2026-07-05T14:30:00")
-      LocalDateTime lastMessageSentAt,
+      @Schema(description = "마지막 메시지 시각. UTC 기준입니다.", example = "2026-07-05T14:30:00Z")
+      OffsetDateTime lastMessageSentAt,
 
       @Schema(description = "읽지 않은 메시지 수", example = "3")
       long unreadMessageCount
@@ -73,7 +74,7 @@ public record ChatRoomListResponse(
               result.participantProfileImageUrl()
           ),
           result.lastMessage(),
-          result.lastMessageSentAt(),
+          ChatTimeConverter.toCommonTime(result.lastMessageSentAt()),
           result.unreadMessageCount()
       );
     }

@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.controller.swagger.CreateChatRoomSwagger;
 import org.sopt.buddys.domain.chat.controller.swagger.GetChatMessagesSwagger;
@@ -17,6 +17,7 @@ import org.sopt.buddys.domain.chat.dto.response.ChatRoomListResponse;
 import org.sopt.buddys.domain.chat.dto.response.ChatRoomResponse;
 import org.sopt.buddys.domain.chat.service.ChatMessageService;
 import org.sopt.buddys.domain.chat.service.ChatRoomService;
+import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
@@ -95,10 +96,10 @@ public class ChatRoomController {
       @LoginUser Long userId,
       @Parameter(description = "조회할 채팅방 ID", example = "1")
       @PathVariable Long chatRoomId,
-      @Parameter(description = "커서 메시지 전송 시각", example = "2026-07-07T14:30:00")
+      @Parameter(description = "커서 메시지 전송 시각. UTC 기준입니다.", example = "2026-07-07T14:30:00Z")
       @RequestParam(required = false)
       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-      LocalDateTime cursorSentAt,
+      OffsetDateTime cursorSentAt,
       @Parameter(description = "커서 메시지 ID", example = "101")
       @RequestParam(required = false) Long cursorMessageId,
       @Parameter(description = "조회 개수. 1 이상 100 이하입니다.", example = "30")
@@ -111,7 +112,7 @@ public class ChatRoomController {
             chatMessageService.getMessages(
                 userId,
                 chatRoomId,
-                cursorSentAt,
+                ChatTimeConverter.toStorageTime(cursorSentAt),
                 cursorMessageId,
                 size
             )
