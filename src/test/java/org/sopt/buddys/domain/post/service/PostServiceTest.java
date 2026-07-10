@@ -345,6 +345,26 @@ class PostServiceTest {
     assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(1L);
   }
 
+  @DisplayName("도시 한글명이 없으면 상세 조회에서 도시 이름을 한글명 필드에 반환한다")
+  @Test
+  void getPostDetail_cityWithoutKoreanName_returnsNameAsKoreanName() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Long countryId = insertCountry("미국", "US");
+    Long cityId = insertCity(countryId, "Post Falls", null, 30_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(user.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+
+    // when
+    PostDetailResponse response = PostDetailResponse.from(
+        postService.getPostDetail(user.getId(), post.getId())
+    );
+
+    // then
+    assertThat(response.city().name()).isEqualTo("Post Falls");
+    assertThat(response.city().koreanName()).isEqualTo("Post Falls");
+  }
+
   @DisplayName("게시글 상세 조회를 할 때마다 조회수가 1씩 증가한다")
   @Test
   void getPostDetail_increasesViewCountEveryTime() {

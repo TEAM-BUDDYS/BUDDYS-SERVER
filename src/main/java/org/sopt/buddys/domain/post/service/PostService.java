@@ -140,8 +140,15 @@ public class PostService {
     return new PostDetailResult.CityResult(
         city.getId(),
         city.getName(),
-        city.getKoreanName()
+        getCityKoreanName(city)
     );
+  }
+
+  private String getCityKoreanName(City city) {
+    if (city.getKoreanName() == null || city.getKoreanName().isBlank()) {
+      return city.getName();
+    }
+    return city.getKoreanName();
   }
 
   private PostDetailResult.CountryResult toCountryResult(Country country) {
