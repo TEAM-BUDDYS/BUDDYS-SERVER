@@ -10,6 +10,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PostTagRepository extends JpaRepository<PostTag, PostTagId> {
+
+  @Query("""
+      select pt
+      from PostTag pt
+      join fetch pt.tag
+      where pt.post.id = :postId
+      order by pt.tag.id asc
+      """)
+  List<PostTag> findAllByPostIdWithTag(@Param("postId") Long postId);
+
   @Query("""
       select pt.post.id as postId, t.id as tagId, t.tagType as tagType
       from PostTag pt

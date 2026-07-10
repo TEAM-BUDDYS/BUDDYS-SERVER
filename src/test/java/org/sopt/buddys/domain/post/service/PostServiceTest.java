@@ -10,7 +10,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
+import org.sopt.buddys.domain.post.dto.response.PostDetailResponse;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
@@ -23,8 +25,10 @@ import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
+import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
+import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
@@ -70,6 +74,9 @@ class PostServiceTest {
 
   @Autowired
   private UserRepository userRepository;
+
+  @Autowired
+  private CountryRepository countryRepository;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -263,14 +270,131 @@ class PostServiceTest {
         );
   }
 
-  private CreatePostCommand createDefaultCommand(Long countryId, Long cityId) {
-    return createDefaultCommand(
+  @DisplayName("게시글 상세 조회 시 상세 정보가 반환되고 조회수가 1 증가한다")
+  @Test
+  void getPostDetail_returnsDetailAndIncreasesViewCount() {
+    // given
+    Long countryId = insertCountry("일본", "JP");
+    Long cityId = insertCity(countryId, "Tokyo", "도쿄", 14_000_000L);
+    Long foodTagId = insertTag("맛집", TagType.ACTIVITY);
+    Long photoTagId = insertTag("사진", TagType.INTEREST);
+    Long planTagId = insertTag("계획형", TagType.TRAVEL_STYLE);
+    User user = userRepository.save(createUser(
+        "user@test.com",
+        "provider-user",
+        "김가윤",
+        countryId,
+        LocalDate.now().minusYears(25),
+        Gender.FEMALE
+    ));
+    Post post = postService.createPost(user.getId(), new CreatePostCommand(
         countryId,
         cityId,
         LocalDate.now().plusDays(10),
-        LocalDate.now().plusDays(20),
-        List.of(1L)
+        LocalDate.now().plusDays(12),
+        "도쿄 같이 여행할 동행 구해요",
+        "같이 맛집이랑 관광지 다니실 분 구해요.",
+        List.of(AgeCondition.LATE_20S, AgeCondition.EARLY_20S, AgeCondition.MID_20S),
+        List.of(GenderCondition.ANY),
+        CompanionType.MEAL,
+        RecruitmentCountType.TWO,
+        List.of(foodTagId, photoTagId, planTagId),
+        List.of("https://example.com/image1.jpg", "https://example.com/image2.jpg")
+    ));
+    jdbcTemplate.update("UPDATE post SET comment_count = 3 WHERE id = ?", post.getId());
+
+    // when
+    PostDetailResult result = postService.getPostDetail(user.getId(), post.getId());
+    PostDetailResponse response = PostDetailResponse.from(result);
+
+    // then
+    assertThat(response.postId()).isEqualTo(post.getId());
+    assertThat(response.author().userId()).isEqualTo(user.getId());
+    assertThat(response.author().nickname()).isEqualTo("김가윤");
+    assertThat(response.author().profileImageUrl()).isEqualTo("https://example.com/profile.png");
+    assertThat(response.author().country()).isEqualTo("일본");
+    assertThat(response.author().age()).isEqualTo(25);
+    assertThat(response.author().ageRange()).isEqualTo("20대");
+    assertThat(response.author().gender()).isEqualTo(Gender.FEMALE);
+    assertThat(response.isMine()).isTrue();
+    assertThat(response.recruitmentStatus()).isEqualTo(PostStatus.RECRUITING);
+    assertThat(response.imageUrls())
+        .containsExactly("https://example.com/image1.jpg", "https://example.com/image2.jpg");
+    assertThat(response.country().countryId()).isEqualTo(countryId);
+    assertThat(response.country().name()).isEqualTo("일본");
+    assertThat(response.city().cityId()).isEqualTo(cityId);
+    assertThat(response.city().name()).isEqualTo("Tokyo");
+    assertThat(response.city().koreanName()).isEqualTo("도쿄");
+    assertThat(response.recruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
+    assertThat(response.conditions().ageConditions())
+        .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
+    assertThat(response.conditions().genderConditions()).containsExactly(GenderCondition.ANY);
+    assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
+    assertThat(response.conditions().activityTags())
+        .extracting(PostDetailResponse.TagResponse::name)
+        .containsExactly("맛집");
+    assertThat(response.conditions().interestTags())
+        .extracting(PostDetailResponse.TagResponse::name)
+        .containsExactly("사진");
+    assertThat(response.conditions().travelStyleTags())
+        .extracting(PostDetailResponse.TagResponse::name)
+        .containsExactly("계획형");
+    assertThat(response.viewCount()).isEqualTo(1L);
+    assertThat(response.commentCount()).isEqualTo(3L);
+    assertThat(response.createdAt()).isNotNull();
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(1L);
+  }
+
+  @DisplayName("도시 한글명이 없으면 상세 조회에서 도시 이름을 한글명 필드에 반환한다")
+  @Test
+  void getPostDetail_cityWithoutKoreanName_returnsNameAsKoreanName() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Long countryId = insertCountry("미국", "US");
+    Long cityId = insertCity(countryId, "Post Falls", null, 30_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(user.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+
+    // when
+    PostDetailResponse response = PostDetailResponse.from(
+        postService.getPostDetail(user.getId(), post.getId())
     );
+
+    // then
+    assertThat(response.city().name()).isEqualTo("Post Falls");
+    assertThat(response.city().koreanName()).isEqualTo("Post Falls");
+  }
+
+  @DisplayName("게시글 상세 조회를 할 때마다 조회수가 1씩 증가한다")
+  @Test
+  void getPostDetail_increasesViewCountEveryTime() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(user.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+
+    // when
+    postService.getPostDetail(user.getId(), post.getId());
+    PostDetailResult secondResult = postService.getPostDetail(user.getId(), post.getId());
+
+    // then
+    assertThat(secondResult.viewCount()).isEqualTo(2L);
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(2L);
+  }
+
+  @DisplayName("존재하지 않는 게시글 상세 조회 시 예외가 발생한다")
+  @Test
+  void getPostDetail_postNotFound_throwsException() {
+    assertThatThrownBy(() -> postService.getPostDetail(1L, 999L))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND)
+        );
+  }
+
+  private CreatePostCommand createDefaultCommand(Long countryId, Long cityId) {
+    return createDefaultCommand(countryId, cityId, List.of(1L));
   }
 
   private CreatePostCommand createDefaultCommand(Long countryId, Long cityId, List<Long> tagIds) {
@@ -321,6 +445,26 @@ class PostServiceTest {
         .provider(AuthProvider.KAKAO)
         .providerId(providerId)
         .nickname(nickname)
+        .build();
+  }
+
+  private User createUser(
+      String email,
+      String providerId,
+      String nickname,
+      Long exchangeCountryId,
+      LocalDate birthDate,
+      Gender gender
+  ) {
+    return User.builder()
+        .email(email)
+        .provider(AuthProvider.KAKAO)
+        .providerId(providerId)
+        .nickname(nickname)
+        .profileImageUrl("https://example.com/profile.png")
+        .exchangeCountry(countryRepository.findById(exchangeCountryId).orElseThrow())
+        .birthDate(birthDate)
+        .gender(gender)
         .build();
   }
 
@@ -381,8 +525,8 @@ class PostServiceTest {
     jdbcTemplate.update("DELETE FROM post_tag");
     jdbcTemplate.update("DELETE FROM post");
     jdbcTemplate.update("DELETE FROM tag");
+    jdbcTemplate.update("DELETE FROM `user`");
     jdbcTemplate.update("DELETE FROM city");
     jdbcTemplate.update("DELETE FROM country");
-    jdbcTemplate.update("DELETE FROM `user`");
   }
 }

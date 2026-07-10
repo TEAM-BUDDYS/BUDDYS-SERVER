@@ -1,6 +1,8 @@
 package org.sopt.buddys.domain.post.service;
 
 import java.time.LocalDate;
+import java.time.Period;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,6 +27,7 @@ import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
+import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
@@ -86,9 +89,123 @@ public class PostService {
     return post;
   }
 
+  @Transactional
+  public PostDetailResult getPostDetail(Long userId, Long postId) {
+    if (postRepository.increaseViewCount(postId) == 0) {
+      throw new BaseException(PostErrorCode.POST_NOT_FOUND);
+    }
+
+    Post post = postRepository.findDetailById(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
+
+    return toPostDetailResult(userId, post);
+  }
+
+  private PostDetailResult toPostDetailResult(Long userId, Post post) {
+    return new PostDetailResult(
+        post.getId(),
+        toAuthorResult(post.getAuthor()),
+        post.getAuthor().getId().equals(userId),
+        post.getStatus(),
+        post.getTitle(),
+        postImageRepository.findImageUrlsByPostId(post.getId()),
+        toCountryResult(post.getCountry()),
+        toCityResult(post.getCity()),
+        post.getStartDate(),
+        post.getEndDate(),
+        post.getRecruitmentCountType(),
+        post.getContent(),
+        getAgeConditions(post.getId()),
+        getGenderConditions(post.getId()),
+        post.getCompanionType(),
+        getTagResults(post.getId()),
+        post.getViewCount(),
+        post.getCommentCount(),
+        post.getCreatedAt()
+    );
+  }
+
+  private PostDetailResult.AuthorResult toAuthorResult(User author) {
+    Country country = author.getExchangeCountry();
+    return new PostDetailResult.AuthorResult(
+        author.getId(),
+        author.getNickname(),
+        author.getProfileImageUrl(),
+        country == null ? null : country.getName(),
+        toAge(author.getBirthDate()),
+        toAgeRange(author.getBirthDate()),
+        author.getGender()
+    );
+  }
+
+  private PostDetailResult.CityResult toCityResult(City city) {
+    return new PostDetailResult.CityResult(
+        city.getId(),
+        city.getName(),
+        getCityKoreanName(city)
+    );
+  }
+
+  private String getCityKoreanName(City city) {
+    if (city.getKoreanName() == null || city.getKoreanName().isBlank()) {
+      return city.getName();
+    }
+    return city.getKoreanName();
+  }
+
+  private PostDetailResult.CountryResult toCountryResult(Country country) {
+    return new PostDetailResult.CountryResult(
+        country.getId(),
+        country.getName()
+    );
+  }
+
+  private List<AgeCondition> getAgeConditions(Long postId) {
+    return postAgeConditionRepository.findAgeConditionsByPostId(postId)
+        .stream()
+        .sorted(Comparator.comparingInt(Enum::ordinal))
+        .toList();
+  }
+
+  private List<GenderCondition> getGenderConditions(Long postId) {
+    return postGenderConditionRepository.findGenderConditionsByPostId(postId)
+        .stream()
+        .sorted(Comparator.comparingInt(Enum::ordinal))
+        .toList();
+  }
+
+  private List<PostDetailResult.TagResult> getTagResults(Long postId) {
+    return postTagRepository.findAllByPostIdWithTag(postId)
+        .stream()
+        .map(postTag -> new PostDetailResult.TagResult(
+            postTag.getTag().getId(),
+            postTag.getTag().getName(),
+            postTag.getTag().getTagType()
+        ))
+        .toList();
+  }
+
+  private String toAgeRange(LocalDate birthDate) {
+    Integer age = toAge(birthDate);
+    if (age == null) {
+      return null;
+    }
+    if (age < 10) {
+      return "10대 미만";
+    }
+    return "%d0대".formatted(age / 10);
+  }
+
+  private Integer toAge(LocalDate birthDate) {
+    if (birthDate == null) {
+      return null;
+    }
+    return Period.between(birthDate, LocalDate.now()).getYears();
+  }
+
   private City getCity(Long countryId, Long cityId) {
     City city = cityRepository.findById(cityId)
-        .orElseThrow(() -> new BaseException(PostErrorCode.CITY_NOT_FOUND));
+        .orElseThrow(() -> new BaseException(LocationErrorCode.CITY_NOT_FOUND));
     if (!city.getCountry().getId().equals(countryId)) {
       throw new BaseException(PostErrorCode.CITY_NOT_IN_COUNTRY);
     }
