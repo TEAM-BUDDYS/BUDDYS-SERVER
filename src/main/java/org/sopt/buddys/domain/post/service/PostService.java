@@ -5,7 +5,9 @@ import java.time.Period;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
@@ -25,10 +27,14 @@ import org.sopt.buddys.domain.post.entity.PostTag;
 import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostGenderConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
+import org.sopt.buddys.domain.post.repository.PostImageRepository.PostThumbnailProjection;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
+import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
 import org.sopt.buddys.domain.post.service.result.PostDetailResult;
+import org.sopt.buddys.domain.post.service.result.PostListResult;
+import org.sopt.buddys.domain.post.service.result.PostListResult.PostSummaryResult;
 import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
@@ -37,6 +43,8 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -117,6 +125,26 @@ public class PostService {
 
     post.updateStatus(status);
     return post;
+  }
+
+  public PostListResult getPosts(Long userId, PostSearchCondition condition, int page, int size) {
+    validatePageRequest(page, size);
+    validateSearchDateRange(condition);
+
+    Slice<Post> posts = postRepository.searchPosts(userId, condition, PageRequest.of(page, size));
+    Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts.getContent());
+
+    List<PostSummaryResult> postResults = posts.getContent()
+        .stream()
+        .map(post -> new PostSummaryResult(post, thumbnailImageUrls.get(post.getId())))
+        .toList();
+
+    return new PostListResult(
+        postResults,
+        posts.getNumber(),
+        posts.getSize(),
+        posts.hasNext()
+    );
   }
 
   private PostDetailResult toPostDetailResult(Long userId, Post post) {
@@ -318,5 +346,37 @@ public class PostService {
         || command.endDate().isBefore(command.startDate())) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
+  }
+
+  private void validatePageRequest(int page, int size) {
+    if (page < 0 || size < 1) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
+  private void validateSearchDateRange(PostSearchCondition condition) {
+    if (condition.startDate() != null
+        && condition.endDate() != null
+        && condition.endDate().isBefore(condition.startDate())) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
+  private Map<Long, String> getThumbnailImageUrls(List<Post> posts) {
+    List<Long> postIds = posts.stream()
+        .map(Post::getId)
+        .toList();
+
+    if (postIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return postImageRepository.findThumbnailImageUrlsByPostIds(postIds)
+        .stream()
+        .collect(Collectors.toMap(
+            PostThumbnailProjection::getPostId,
+            PostThumbnailProjection::getThumbnailImageUrl,
+            (first, second) -> first
+        ));
   }
 }

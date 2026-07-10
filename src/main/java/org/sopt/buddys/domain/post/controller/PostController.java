@@ -10,7 +10,9 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.post.code.PostSuccessCode;
 import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
+import org.sopt.buddys.domain.post.dto.request.PostListRequest;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostStatusRequest;
+import org.sopt.buddys.domain.post.dto.response.PostListResponse;
 import org.sopt.buddys.domain.post.dto.response.CreatePostResponse;
 import org.sopt.buddys.domain.post.dto.response.PostDetailResponse;
 import org.sopt.buddys.domain.post.dto.response.UpdatePostStatusResponse;
@@ -21,9 +23,11 @@ import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.sopt.buddys.global.swagger.CommonErrorResponses;
 import org.sopt.buddys.global.swagger.InvalidRequestResponse;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,6 +43,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class PostController {
 
   private final PostService postService;
+
+  @Operation(summary = "동행 게시글 목록 조회", description = "모집중인 동행 게시글 목록을 조건에 따라 조회합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "401", description = "인증 필요")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @GetMapping
+  public BaseResponse<PostListResponse> getPosts(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @ParameterObject @Valid @ModelAttribute PostListRequest request
+  ) {
+    return BaseResponse.success(
+        PostSuccessCode.POST_LIST_FOUND,
+        PostListResponse.from(
+            postService.getPosts(userId, request.toCondition(), request.pageOrDefault(), request.sizeOrDefault()))
+    );
+  }
 
   @Operation(summary = "게시글 작성", description = "로그인한 사용자가 게시글을 작성합니다.")
   @ApiResponses({

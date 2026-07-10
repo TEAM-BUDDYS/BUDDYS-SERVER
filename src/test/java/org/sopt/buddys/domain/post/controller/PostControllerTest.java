@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.post.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -78,6 +79,120 @@ class PostControllerTest {
   @AfterEach
   void tearDown() {
     cleanUp();
+  }
+
+  @DisplayName("동행 게시글 목록을 조회한다")
+  @Test
+  void getPosts_returnsPostList() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "0")
+            .param("size", "20"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("POST-S003"))
+        .andExpect(jsonPath("$.message").value("동행 게시글 목록 조회에 성공했습니다."))
+        .andExpect(jsonPath("$.data.content[0].postId").value(post.getId()))
+        .andExpect(jsonPath("$.data.content[0].title").value("동행 구해요"))
+        .andExpect(jsonPath("$.data.content[0].durationDays").value(4))
+        .andExpect(jsonPath("$.data.content[0].recruitmentStatus").value("RECRUITING"))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(20))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
+  @DisplayName("로그인하지 않은 사용자는 동행 게시글 목록을 조회할 수 없다")
+  @Test
+  void getPosts_unauthenticatedUser_returnsUnauthorized() throws Exception {
+    mockMvc.perform(get("/api/v1/posts"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E002"));
+  }
+
+  @DisplayName("동행 게시글 목록 조회 시 page가 음수이면 실패한다")
+  @Test
+  void getPosts_negativePage_returnsBadRequest() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "-1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("동행 게시글 목록 조회 시 size가 0이면 실패한다")
+  @Test
+  void getPosts_zeroSize_returnsBadRequest() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("size", "0"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("동행 게시글 목록 조회 시 쉼표로 구분된 enum 목록 파라미터를 바인딩한다")
+  @Test
+  void getPosts_commaSeparatedEnumParams_returnsOk() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("ageConditions", "EARLY_20S,MID_20S")
+            .param("genderConditions", "FEMALE")
+            .param("companionTypes", "FULL_TRIP,MEAL")
+            .param("page", "0")
+            .param("size", "10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.content").isArray());
+  }
+
+  @DisplayName("동행 게시글 목록 조회 시 잘못된 enum 값이면 실패한다")
+  @Test
+  void getPosts_invalidEnum_returnsBadRequest() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("genderConditions", "UNKNOWN"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("동행 게시글 목록 조회 시 잘못된 날짜 형식이면 실패한다")
+  @Test
+  void getPosts_invalidDateFormat_returnsBadRequest() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("startDate", "2026/07/23"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   @DisplayName("작성자는 모집 상태를 모집 완료로 변경할 수 있다")
