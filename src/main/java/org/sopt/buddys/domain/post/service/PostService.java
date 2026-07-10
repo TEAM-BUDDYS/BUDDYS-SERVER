@@ -91,10 +91,12 @@ public class PostService {
 
   @Transactional
   public PostDetailResult getPostDetail(Long userId, Long postId) {
+    if (postRepository.increaseViewCount(postId) == 0) {
+      throw new BaseException(PostErrorCode.POST_NOT_FOUND);
+    }
+
     Post post = postRepository.findDetailById(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-
-    post.increaseViewCount();
 
     return toPostDetailResult(userId, post);
   }
