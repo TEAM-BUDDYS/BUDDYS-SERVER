@@ -20,8 +20,24 @@ public interface UserTagRepository extends JpaRepository<UserTag, UserTagId> {
       """)
   List<UserTagProjection> findTagsByUserId(@Param("userId") Long userId);
 
+  @Query("""
+      select ut.user.id as userId,
+             t.id as tagId,
+             t.tagType as tagType
+      from UserTag ut
+      join ut.tag t
+      where ut.user.id in :userIds
+      """)
+  List<UserTagBulkProjection> findAllByUserIdIn(@Param("userIds") List<Long> userIds);
+
   interface UserTagProjection {
     TagType getTagType();
     String getTagName();
+  }
+
+  interface UserTagBulkProjection {
+    Long getUserId();
+    Long getTagId();
+    TagType getTagType();
   }
 }
