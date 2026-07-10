@@ -26,7 +26,6 @@ import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
-import org.sopt.buddys.domain.recommendation.code.ExchangeCountryRecommendationErrorCode;
 import org.sopt.buddys.domain.recommendation.code.RecommendationErrorCode;
 import org.sopt.buddys.domain.recommendation.service.result.RecommendedPostResult;
 import org.sopt.buddys.domain.recommendation.service.result.RecommendedUserResult;
@@ -323,7 +322,7 @@ class RecommendationServiceTest {
     assertThatThrownBy(() -> recommendationService.getExchangeCountryRecommendedUsers(userId, 5))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(
-                ExchangeCountryRecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET
+                RecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET
             )
         );
   }

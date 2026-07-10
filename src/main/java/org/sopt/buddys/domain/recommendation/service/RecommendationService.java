@@ -14,7 +14,6 @@ import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository.AuthorPostCountProjection;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository.PostTagBulkProjection;
-import org.sopt.buddys.domain.recommendation.code.ExchangeCountryRecommendationErrorCode;
 import org.sopt.buddys.domain.recommendation.code.RecommendationErrorCode;
 import org.sopt.buddys.domain.recommendation.service.result.RecommendedPostResult;
 import org.sopt.buddys.domain.recommendation.service.result.RecommendedUserResult;
@@ -98,7 +97,7 @@ public class RecommendationService {
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     if (me.getExchangeCountry() == null) {
-      throw new BaseException(ExchangeCountryRecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET);
+      throw new BaseException(RecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET);
     }
 
     List<User> candidates = userRepository.findByExchangeCountryIdWithExchangeCountry(
