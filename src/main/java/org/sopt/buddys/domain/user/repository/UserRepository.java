@@ -13,5 +13,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
   boolean existsByIdAndDeletedAtIsNull(Long id);
 
-  List<User> findByInterestCountryIdAndIdNot(Long interestCountryId, Long excludeUserId);
+  List<User> findByInterestCountryIdAndIdNotAndDeletedAtIsNull(Long interestCountryId, Long excludeUserId);
 }

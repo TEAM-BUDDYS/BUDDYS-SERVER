@@ -75,7 +75,7 @@ class RecommendationServiceTest {
     User lowSimilarity = createUser(3L, COUNTRY_ID);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(me));
-    given(userRepository.findByInterestCountryIdAndIdNot(COUNTRY_ID, USER_ID))
+    given(userRepository.findByInterestCountryIdAndIdNotAndDeletedAtIsNull(COUNTRY_ID, USER_ID))
         .willReturn(List.of(highSimilarity, lowSimilarity));
     given(userService.isOnboardingCompleted(any(), anyLong())).willReturn(true);
 
@@ -108,7 +108,7 @@ class RecommendationServiceTest {
     User notOnboarded = createUser(2L, COUNTRY_ID);
 
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(me));
-    given(userRepository.findByInterestCountryIdAndIdNot(COUNTRY_ID, USER_ID)).willReturn(List.of(notOnboarded));
+    given(userRepository.findByInterestCountryIdAndIdNotAndDeletedAtIsNull(COUNTRY_ID, USER_ID)).willReturn(List.of(notOnboarded));
     given(userService.isOnboardingCompleted(eq(notOnboarded), anyLong())).willReturn(false);
     given(userTagRepository.findAllByUserIdIn(List.of(USER_ID))).willReturn(List.of());
     given(userTagRepository.findAllByUserIdIn(List.of(2L))).willReturn(List.of());

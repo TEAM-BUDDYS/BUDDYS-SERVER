@@ -48,7 +48,7 @@ public class RecommendationService {
   public List<RecommendedUserResult> getRecommendedUsers(Long userId, int size) {
     RequesterContext ctx = resolveRequester(userId);
 
-    List<User> candidates = userRepository.findByInterestCountryIdAndIdNot(ctx.interestCountryId(), userId);
+    List<User> candidates = userRepository.findByInterestCountryIdAndIdNotAndDeletedAtIsNull(ctx.interestCountryId(), userId);
     List<Long> candidateIds = candidates.stream().map(User::getId).toList();
 
     Map<Long, Map<TagType, Set<Long>>> candidateTags = fetchUserTagMap(candidateIds);
