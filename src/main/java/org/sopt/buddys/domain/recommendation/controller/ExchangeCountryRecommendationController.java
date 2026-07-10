@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.recommendation.dto.response.RecommendedUserListResponse;
-import org.sopt.buddys.domain.recommendation.service.RecommendationService;
+import org.sopt.buddys.domain.recommendation.service.ExchangeCountryRecommendationService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
@@ -26,12 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/recommendations")
 @Tag(name = "Recommendation", description = "추천 API")
-public class RecommendationController {
+public class ExchangeCountryRecommendationController {
 
   private static final int DEFAULT_EXCHANGE_COUNTRY_USER_SIZE = 5;
   private static final int MAX_SIZE = 10;
 
-  private final RecommendationService recommendationService;
+  private final ExchangeCountryRecommendationService exchangeCountryRecommendationService;
 
   @Operation(
       summary = "같은 파견 국가 추천 사용자 조회",
@@ -54,7 +54,9 @@ public class RecommendationController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        RecommendedUserListResponse.from(recommendationService.getExchangeCountryRecommendedUsers(userId, size))
+        RecommendedUserListResponse.from(
+            exchangeCountryRecommendationService.getExchangeCountryRecommendedUsers(userId, size)
+        )
     );
   }
 }

@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.location.entity.Country;
-import org.sopt.buddys.domain.recommendation.code.RecommendationErrorCode;
+import org.sopt.buddys.domain.recommendation.code.ExchangeCountryRecommendationErrorCode;
 import org.sopt.buddys.domain.recommendation.service.result.RecommendedUserResult;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
@@ -24,10 +24,10 @@ import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.global.exception.BaseException;
 
 @ExtendWith(MockitoExtension.class)
-class RecommendationServiceTest {
+class ExchangeCountryRecommendationServiceTest {
 
   @InjectMocks
-  private RecommendationService recommendationService;
+  private ExchangeCountryRecommendationService exchangeCountryRecommendationService;
 
   @Mock
   private UserRepository userRepository;
@@ -60,7 +60,8 @@ class RecommendationServiceTest {
     ));
 
     // when
-    List<RecommendedUserResult> results = recommendationService.getExchangeCountryRecommendedUsers(userId, 5);
+    List<RecommendedUserResult> results =
+        exchangeCountryRecommendationService.getExchangeCountryRecommendedUsers(userId, 5);
 
     // then
     assertThat(results).extracting(result -> result.user().getId())
@@ -86,7 +87,8 @@ class RecommendationServiceTest {
     given(userTagRepository.findAllByUserIdIn(List.of(2L, 3L, 1L))).willReturn(List.of());
 
     // when
-    List<RecommendedUserResult> results = recommendationService.getExchangeCountryRecommendedUsers(userId, 1);
+    List<RecommendedUserResult> results =
+        exchangeCountryRecommendationService.getExchangeCountryRecommendedUsers(userId, 1);
 
     // then
     assertThat(results).hasSize(1);
@@ -102,9 +104,11 @@ class RecommendationServiceTest {
     given(userRepository.findByIdWithExchangeCountry(userId)).willReturn(Optional.of(me));
 
     // when, then
-    assertThatThrownBy(() -> recommendationService.getExchangeCountryRecommendedUsers(userId, 5))
+    assertThatThrownBy(() -> exchangeCountryRecommendationService.getExchangeCountryRecommendedUsers(userId, 5))
         .isInstanceOfSatisfying(BaseException.class, exception ->
-            assertThat(exception.getErrorCode()).isEqualTo(RecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET)
+            assertThat(exception.getErrorCode()).isEqualTo(
+                ExchangeCountryRecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET
+            )
         );
   }
 

@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.sopt.buddys.domain.recommendation.code.RecommendationErrorCode;
+import org.sopt.buddys.domain.recommendation.code.ExchangeCountryRecommendationErrorCode;
 import org.sopt.buddys.domain.recommendation.service.result.RecommendedUserResult;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class RecommendationService {
+public class ExchangeCountryRecommendationService {
 
   private static final double ACTIVITY_WEIGHT = 0.4;
   private static final double INTEREST_WEIGHT = 0.3;
@@ -36,7 +36,7 @@ public class RecommendationService {
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     if (me.getExchangeCountry() == null) {
-      throw new BaseException(RecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET);
+      throw new BaseException(ExchangeCountryRecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET);
     }
 
     List<User> candidates = userRepository.findByExchangeCountryIdWithExchangeCountry(

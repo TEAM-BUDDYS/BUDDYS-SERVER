@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 @RequiredArgsConstructor
-public enum RecommendationErrorCode implements ErrorCode {
+public enum ExchangeCountryRecommendationErrorCode implements ErrorCode {
 
   EXCHANGE_COUNTRY_NOT_SET(
       "REC-E001",
