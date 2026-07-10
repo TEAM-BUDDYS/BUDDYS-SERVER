@@ -201,6 +201,7 @@ class CommentControllerTest {
     Post post = createPost(postAuthor);
 
     saveComment(post, commentAuthor, "월 단위 댓글", LocalDateTime.now().minusDays(60));
+    saveComment(post, commentAuthor, "364일 경계 댓글", LocalDateTime.now().minusDays(364));
     saveComment(post, commentAuthor, "년 단위 댓글", LocalDateTime.now().minusDays(365));
 
     // when, then
@@ -209,8 +210,10 @@ class CommentControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.comments[0].content").value("년 단위 댓글"))
         .andExpect(jsonPath("$.data.comments[0].timeAgo").value("1년 전"))
-        .andExpect(jsonPath("$.data.comments[1].content").value("월 단위 댓글"))
-        .andExpect(jsonPath("$.data.comments[1].timeAgo").value("2개월 전"));
+        .andExpect(jsonPath("$.data.comments[1].content").value("364일 경계 댓글"))
+        .andExpect(jsonPath("$.data.comments[1].timeAgo").value("11개월 전"))
+        .andExpect(jsonPath("$.data.comments[2].content").value("월 단위 댓글"))
+        .andExpect(jsonPath("$.data.comments[2].timeAgo").value("2개월 전"));
   }
 
   @DisplayName("댓글이 없는 게시글은 빈 댓글 배열을 반환한다")

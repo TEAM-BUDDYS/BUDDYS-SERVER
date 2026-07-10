@@ -109,9 +109,8 @@ public class CommentService {
       return "%d일 전".formatted(days);
     }
 
-    long months = days / 30;
-    if (months < 12) {
-      return "%d개월 전".formatted(months);
+    if (days < 365) {
+      return "%d개월 전".formatted(Math.min(days / 30, 11));
     }
 
     return "%d년 전".formatted(days / 365);
