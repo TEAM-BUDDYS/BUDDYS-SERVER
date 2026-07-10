@@ -22,6 +22,7 @@ import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
@@ -36,6 +37,9 @@ public class AuthTransactionServiceTest {
 
   @Mock
   private UserRepository userRepository;
+
+  @Mock
+  private UserService userService;
 
   @Mock
   private JwtProvider jwtProvider;
@@ -59,6 +63,7 @@ public class AuthTransactionServiceTest {
     given(jwtProvider.generateToken(anyLong())).willReturn("jwt-token");
     given(jwtProvider.generateRefreshToken(anyLong())).willReturn("refresh-token");
     given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
+    given(userService.isOnboardingCompleted(any(User.class))).willReturn(false);
 
     // when
     AuthTokens result = authTransactionService.processKakaoLogin(providerId, kakaoUserInfo);
@@ -81,6 +86,7 @@ public class AuthTransactionServiceTest {
     given(jwtProvider.generateToken(anyLong())).willReturn("jwt-token");
     given(jwtProvider.generateRefreshToken(anyLong())).willReturn("refresh-token");
     given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
+    given(userService.isOnboardingCompleted(any(User.class))).willReturn(false);
 
     // when
     AuthTokens result = authTransactionService.processKakaoLogin(providerId, kakaoUserInfo);
@@ -120,6 +126,7 @@ public class AuthTransactionServiceTest {
     given(jwtProvider.generateToken(anyLong())).willReturn("jwt-token");
     given(jwtProvider.generateRefreshToken(anyLong())).willReturn("refresh-token");
     given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
+    given(userService.isOnboardingCompleted(any(User.class))).willReturn(false);
 
     // when
     authTransactionService.processKakaoLogin(providerId, kakaoUserInfo);

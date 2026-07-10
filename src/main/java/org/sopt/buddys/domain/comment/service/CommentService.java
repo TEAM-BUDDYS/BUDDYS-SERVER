@@ -4,19 +4,24 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.sopt.buddys.domain.comment.dto.response.CommentListResponse;
-import org.sopt.buddys.domain.comment.dto.response.CommentListResponse.CommentResponse;
 import org.sopt.buddys.domain.comment.entity.Comment;
 import org.sopt.buddys.domain.comment.repository.CommentRepository;
+import org.sopt.buddys.domain.comment.service.result.CommentListResult;
+import org.sopt.buddys.domain.comment.service.result.CommentListResult.CommentResult;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @Service
 @RequiredArgsConstructor
@@ -27,15 +32,20 @@ public class CommentService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
 
-  public CommentListResponse getComments(Long postId) {
+  public CommentListResult getComments(Long postId, int page, int size) {
+    validatePageRequest(page, size);
     if (!postRepository.existsById(postId)) {
       throw new BaseException(PostErrorCode.POST_NOT_FOUND);
     }
 
     LocalDateTime now = LocalDateTime.now();
-    List<CommentResponse> comments = commentRepository.findAllByPostIdWithAuthorOrderByCreatedAtAsc(postId)
+    Slice<Comment> commentSlice = commentRepository.findAllByPostIdWithAuthorOrderByCreatedAtAsc(
+        postId,
+        PageRequest.of(page, size)
+    );
+    List<CommentResult> comments = commentSlice.getContent()
         .stream()
-        .map(comment -> new CommentResponse(
+        .map(comment -> new CommentResult(
             comment.getId(),
             comment.getAuthor().getNickname(),
             comment.getContent(),
@@ -44,7 +54,12 @@ public class CommentService {
         ))
         .toList();
 
-    return CommentListResponse.of(comments);
+    return new CommentListResult(
+        comments,
+        commentSlice.getNumber(),
+        commentSlice.getSize(),
+        commentSlice.hasNext()
+    );
   }
 
   @Transactional
@@ -58,13 +73,19 @@ public class CommentService {
     Post post = postRepository.findById(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
-    post.increaseCommentCount();
-
-    return commentRepository.save(new Comment(
+    Comment comment = commentRepository.save(new Comment(
         post,
         author,
         content.trim()
     ));
+    postRepository.increaseCommentCount(postId);
+    return comment;
+  }
+
+  private void validatePageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
   }
 
   private String toTimeAgo(LocalDateTime createdAt, LocalDateTime now) {
@@ -88,9 +109,8 @@ public class CommentService {
       return "%d일 전".formatted(days);
     }
 
-    long months = days / 30;
-    if (months < 12) {
-      return "%d개월 전".formatted(months);
+    if (days < 365) {
+      return "%d개월 전".formatted(Math.min(days / 30, 11));
     }
 
     return "%d년 전".formatted(days / 365);

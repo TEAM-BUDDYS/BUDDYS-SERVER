@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.user.repository;
 
+import java.util.List;
 import java.util.Optional;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -11,4 +12,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
 
   boolean existsByIdAndDeletedAtIsNull(Long id);
+
+  List<User> findByInterestCountryIdAndIdNotAndDeletedAtIsNull(Long interestCountryId, Long excludeUserId);
 }
