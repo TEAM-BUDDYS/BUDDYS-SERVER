@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,7 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -77,6 +79,31 @@ class UserServiceTest {
         getTags(result, TagType.INTEREST).get(0),
         getTags(result, TagType.TRAVEL_STYLE).get(0)
     );
+  }
+
+  @DisplayName("타 유저 프로필 조회는 삭제된 사용자도 조회하고 삭제 여부를 결과에 포함한다")
+  @Test
+  void getPublicProfile_deletedUser_returnsDeletedUser() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId, false, false);
+    ReflectionTestUtils.setField(user, "deletedAt", LocalDateTime.of(2026, 7, 10, 12, 0));
+    List<UserTagRepository.UserTagProjection> userTags = List.of(
+        new TestUserTagProjection(TagType.ACTIVITY, "액티비티"),
+        new TestUserTagProjection(TagType.INTEREST, "문화생활"),
+        new TestUserTagProjection(TagType.TRAVEL_STYLE, "활발한")
+    );
+
+    given(userRepository.findById(userId)).willReturn(Optional.of(user));
+    given(userTagRepository.findTagsByUserId(userId)).willReturn(userTags);
+
+    // when
+    UserProfileResult result = userService.getPublicProfile(userId);
+
+    // then
+    assertThat(result.user().getDeletedAt()).isNotNull();
+    assertThat(result.representativeTags()).containsExactlyInAnyOrder("액티비티", "문화생활", "활발한");
+    assertThat(result.allTags()).isEmpty();
   }
 
   @DisplayName("성별이 없으면 온보딩이 완료되지 않은 것으로 판단한다")

@@ -54,10 +54,26 @@ public class UserService {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
+    return getProfileResult(user, true);
+  }
+
+  public UserProfileResult getPublicProfile(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    return getProfileResult(user, false);
+  }
+
+  private UserProfileResult getProfileResult(
+      User user,
+      boolean includeAllTags
+  ) {
+
+    Long userId = user.getId();
     List<UserTagRepository.UserTagProjection> userTags = userTagRepository.findTagsByUserId(userId);
     Map<TagType, List<String>> tagsByType = shuffleTagsByType(groupTagsByType(userTags));
     List<String> representativeTags = getFirstTagsByType(tagsByType);
-    List<TagGroupResult> allTags = toTagGroupResponses(tagsByType);
+    List<TagGroupResult> allTags = includeAllTags ? toTagGroupResponses(tagsByType) : List.of();
 
     return new UserProfileResult(user, representativeTags, allTags);
   }

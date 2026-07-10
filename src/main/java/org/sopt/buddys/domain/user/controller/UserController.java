@@ -77,7 +77,7 @@ public class UserController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        UserPublicProfileResponse.from(userService.getProfile(userId))
+        UserPublicProfileResponse.from(userService.getPublicProfile(userId))
     );
   }
 
