@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CountryRepository extends JpaRepository<Country, Long> {
   Slice<Country> findByNameContainingIgnoreCaseOrderByNameAsc(String keyword, Pageable pageable);
+
+  Slice<Country> findAllByOrderByNameAsc(Pageable pageable);
 }
