@@ -59,7 +59,8 @@ public class PostController {
   ) {
     return BaseResponse.success(
         PostSuccessCode.POST_LIST_FOUND,
-        PostListResponse.from(postService.getPosts(userId, request.toCondition(), request.getPage(), request.getSize()))
+        PostListResponse.from(
+            postService.getPosts(userId, request.toCondition(), request.pageOrDefault(), request.sizeOrDefault()))
     );
   }
 
