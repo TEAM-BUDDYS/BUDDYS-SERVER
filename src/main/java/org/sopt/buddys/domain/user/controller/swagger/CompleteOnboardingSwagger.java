@@ -96,6 +96,17 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                           "data": null
                         }
                         """
+                ),
+                @ExampleObject(
+                    name = "이미 온보딩 완료",
+                    value = """
+                        {
+                          "success": false,
+                          "code": "USER-E005",
+                          "message": "이미 온보딩을 완료한 사용자입니다.",
+                          "data": null
+                        }
+                        """
                 )
             }
         )

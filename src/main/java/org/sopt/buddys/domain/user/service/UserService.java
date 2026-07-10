@@ -42,11 +42,12 @@ public class UserService {
   private final PostImageRepository postImageRepository;
 
   public boolean isOnboardingCompleted(User user) {
+    return isOnboardingCompleted(user, userTagRepository.countByUserId(user.getId()));
+  }
+
+  public boolean isOnboardingCompleted(User user, long tagCount) {
     boolean hasRequiredProfile = user.getGender() != null && user.getBirthDate() != null;
-    if (!hasRequiredProfile) {
-      return false;
-    }
-    return userTagRepository.countByUserId(user.getId()) >= REQUIRED_ONBOARDING_TAG_COUNT;
+    return hasRequiredProfile && tagCount >= REQUIRED_ONBOARDING_TAG_COUNT;
   }
 
   public UserProfileResult getProfile(Long userId) {
