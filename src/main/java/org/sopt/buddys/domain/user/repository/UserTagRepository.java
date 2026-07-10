@@ -26,7 +26,9 @@ public interface UserTagRepository extends JpaRepository<UserTag, UserTagId> {
   long countByUserId(Long userId);
 
   @Query("""
-      select ut.user.id as userId, t.id as tagId, t.tagType as tagType
+      select ut.user.id as userId,
+             t.id as tagId,
+             t.tagType as tagType
       from UserTag ut
       join ut.tag t
       where ut.user.id in :userIds

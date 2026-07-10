@@ -7,4 +7,9 @@ public record RecommendedUserResult(
     double totalSimilarity,
     double activitySimilarity,
     long postCount
-) {}
+) {
+
+  public RecommendedUserResult(User user, double totalSimilarity, double activitySimilarity) {
+    this(user, totalSimilarity, activitySimilarity, 0L);
+  }
+}
