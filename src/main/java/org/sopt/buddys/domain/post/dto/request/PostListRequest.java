@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.post.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.LocalDate;
 import java.util.List;
@@ -46,7 +47,8 @@ public class PostListRequest {
   @Min(0)
   private int page = 0;
 
-  @Schema(description = "페이지 크기. 1 이상입니다.", example = "20")
+  @Schema(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+  @Max(100)
   @Min(1)
   private int size = 20;
 
