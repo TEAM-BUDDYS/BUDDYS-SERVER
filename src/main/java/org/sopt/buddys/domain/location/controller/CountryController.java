@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/countries")
 @Tag(name = "Country", description = "국가 검색 API")
 public class CountryController {
+  private static final int MAX_SIZE = 100;
   private final CountryService countryService;
 
   @Operation(summary = "국가 검색", description = "검색 키워드에 해당하는 국가를 검색합니다.")
@@ -41,12 +42,29 @@ public class CountryController {
       @RequestParam @NotBlank String keyword,
       @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
       @RequestParam(defaultValue = "0") @Min(0) int page,
-      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
-      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+      @Parameter(description = "페이지 크기. 1 이상 "+ MAX_SIZE + "이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_SIZE) int size
   ) {
     return BaseResponse.success(GlobalSuccessCode.OK,
         CountryListResponse.from(countryService.searchCountries(keyword, page, size))
     );
   }
 
+  @Operation(summary = "국가 목록 조회", description = "전체 국가 목록을 ㄱㄴㄷ순으로 무한 스크롤 조회합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @GetMapping
+  public BaseResponse<CountryListResponse> getCountries(
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 " + MAX_SIZE + "이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_SIZE) int size
+  ) {
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        CountryListResponse.from(countryService.getCountries(page, size))
+    );
+  }
 }

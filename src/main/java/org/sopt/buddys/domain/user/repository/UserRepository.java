@@ -36,4 +36,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
       @Param("exchangeCountryId") Long exchangeCountryId,
       @Param("excludeUserId") Long excludeUserId
   );
+
+  List<User> findByInterestCountryIdAndIdNotAndDeletedAtIsNull(Long interestCountryId, Long excludeUserId);
 }

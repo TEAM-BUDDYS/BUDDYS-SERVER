@@ -5,6 +5,11 @@ import org.sopt.buddys.domain.user.entity.User;
 public record RecommendedUserResult(
     User user,
     double totalSimilarity,
-    double activitySimilarity
+    double activitySimilarity,
+    long postCount
 ) {
+
+  public RecommendedUserResult(User user, double totalSimilarity, double activitySimilarity) {
+    this(user, totalSimilarity, activitySimilarity, 0L);
+  }
 }

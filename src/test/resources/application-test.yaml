@@ -12,3 +12,9 @@ spring:
       redirect-url: http://localhost:8080/test
       token-url: https://kauth.kakao.com/oauth/token
       user-info-url: https://kapi.kakao.com/v2/user/me
+
+cloud:
+  aws:
+    s3:
+      bucket: buddys-test-bucket
+      region: ap-northeast-2

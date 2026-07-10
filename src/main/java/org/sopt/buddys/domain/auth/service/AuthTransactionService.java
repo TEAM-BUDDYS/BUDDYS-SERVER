@@ -8,6 +8,7 @@ import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthTransactionService {
 
   private final UserRepository userRepository;
+  private final UserService userService;
   private final JwtProvider jwtProvider;
   private final RefreshTokenRepository refreshTokenRepository;
   private final JwtProperties jwtProperties;
@@ -38,7 +40,7 @@ public class AuthTransactionService {
         RefreshToken.of(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration())
     );
 
-    return new AuthTokens(jwt, refreshToken);
+    return new AuthTokens(jwt, refreshToken, userService.isOnboardingCompleted(user));
   }
 
   private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {
