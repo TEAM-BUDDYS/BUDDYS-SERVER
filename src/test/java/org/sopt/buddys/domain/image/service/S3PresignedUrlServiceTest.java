@@ -39,9 +39,9 @@ class S3PresignedUrlServiceTest {
   @DisplayName("지원하는 Content-Type이면 도메인 폴더/UUID/확장자로 구성된 key로 presigned URL을 발급한다")
   @ParameterizedTest
   @CsvSource({
-      "image/jpeg, jpg",
-      "image/png, png",
-      "image/webp, webp"
+      "image/jpeg, \\.jpg",
+      "image/png, \\.png",
+      "image/webp, \\.webp"
   })
   void createUploadUrl_supportedContentType_generatesKeyWithDomainFolderAndExtension(
       String contentType,

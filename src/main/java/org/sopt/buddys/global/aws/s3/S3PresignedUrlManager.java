@@ -25,7 +25,6 @@ public class S3PresignedUrlManager {
         .bucket(s3Properties.getBucket())
         .key(key)
         .contentType(contentType)
-        .contentLength(fileSize)
         .build();
 
     PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(

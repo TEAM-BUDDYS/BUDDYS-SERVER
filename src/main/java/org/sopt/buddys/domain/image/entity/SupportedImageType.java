@@ -7,9 +7,9 @@ import lombok.Getter;
 
 @Getter
 public enum SupportedImageType {
-  JPEG("image/jpeg", "jpg"),
-  PNG("image/png", "png"),
-  WEBP("image/webp", "webp");
+  JPEG("image/jpeg", ".jpg"),
+  PNG("image/png", ".png"),
+  WEBP("image/webp", ".webp");
 
   private final String contentType;
   private final String extension;

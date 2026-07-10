@@ -44,14 +44,14 @@ class SupportedImageTypeTest {
     assertThat(result).isEmpty();
   }
 
-  @DisplayName("각 타입의 확장자는 점(.) 없는 순수 확장자 형태다")
+  @DisplayName("각 타입의 확장자는 점(.)을 포함한 형태다")
   @ParameterizedTest
   @CsvSource({
-      "JPEG, jpg",
-      "PNG, png",
-      "WEBP, webp"
+      "JPEG, .jpg",
+      "PNG, .png",
+      "WEBP, .webp"
   })
-  void extension_isPlainExtensionWithoutDot(String name, String expectedExtension) {
+  void extension_includesDot(String name, String expectedExtension) {
     // given
     SupportedImageType type = SupportedImageType.valueOf(name);
 
