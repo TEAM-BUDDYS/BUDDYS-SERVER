@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.post.code.PostSuccessCode;
 import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
@@ -72,7 +73,7 @@ public class PostController {
       @Parameter(hidden = true)
       @LoginUser Long userId,
       @Parameter(description = "조회할 게시글 ID", example = "1")
-      @PathVariable Long postId
+      @PathVariable @Positive Long postId
   ) {
     return BaseResponse.success(
         PostSuccessCode.POST_DETAIL_FOUND,

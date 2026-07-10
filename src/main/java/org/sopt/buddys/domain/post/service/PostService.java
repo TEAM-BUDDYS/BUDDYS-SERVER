@@ -92,10 +92,12 @@ public class PostService {
 
   @Transactional
   public PostDetailResult getPostDetail(Long userId, Long postId) {
+    if (postRepository.increaseViewCount(postId) == 0) {
+      throw new BaseException(PostErrorCode.POST_NOT_FOUND);
+    }
+
     Post post = postRepository.findDetailById(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-
-    post.increaseViewCount();
 
     return toPostDetailResult(userId, post);
   }
@@ -158,8 +160,15 @@ public class PostService {
     return new PostDetailResult.CityResult(
         city.getId(),
         city.getName(),
-        city.getKoreanName()
+        getCityKoreanName(city)
     );
+  }
+
+  private String getCityKoreanName(City city) {
+    if (city.getKoreanName() == null || city.getKoreanName().isBlank()) {
+      return city.getName();
+    }
+    return city.getKoreanName();
   }
 
   private PostDetailResult.CountryResult toCountryResult(Country country) {

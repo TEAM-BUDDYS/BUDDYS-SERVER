@@ -152,6 +152,52 @@ class CountryServiceTest {
     assertThat(secondPage.hasNext()).isFalse();
   }
 
+  @DisplayName("전체 국가 목록을 이름의 ㄱㄴㄷ순으로 조회한다")
+  @Test
+  void getCountries_returnsAllCountriesOrderedByNameAsc() {
+    // given
+    insertCountry("일본", "JP");
+    insertCountry("대한민국", "KR");
+    insertCountry("가나", "GH");
+
+    // when
+    Slice<Country> result = countryService.getCountries(0, 20);
+
+    // then
+    assertThat(result.getContent())
+        .extracting(Country::getName)
+        .containsExactly("가나", "대한민국", "일본");
+  }
+
+  @DisplayName("size만큼 페이지가 채워지면 hasNext는 true, 마지막 페이지는 false다")
+  @Test
+  void getCountries_hasNextReflectsRemainingPages() {
+    // given
+    insertCountry("가나", "GH");
+    insertCountry("가봉", "GA");
+    insertCountry("가이아나", "GY");
+
+    // when
+    Slice<Country> firstPage = countryService.getCountries(0, 2);
+    Slice<Country> secondPage = countryService.getCountries(1, 2);
+
+    // then
+    assertThat(firstPage.getContent()).hasSize(2);
+    assertThat(firstPage.hasNext()).isTrue();
+    assertThat(secondPage.getContent()).hasSize(1);
+    assertThat(secondPage.hasNext()).isFalse();
+  }
+
+  @DisplayName("page가 음수이면 예외가 발생한다")
+  @Test
+  void getCountries_negativePage_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> countryService.getCountries(-1, 20))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+  }
+
   private void insertCountry(String name, String isoCode) {
     jdbcTemplate.update("INSERT INTO country (name, iso_code) VALUES (?, ?)", name, isoCode);
   }
