@@ -26,6 +26,7 @@ import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.core.MethodParameter;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -72,11 +73,14 @@ class ChatRoomControllerTest {
         true
     ));
 
-    // when & then
-    mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId)
-            .param("cursorSentAt", "2026-07-07T14:30:00Z")
-            .param("cursorMessageId", cursorMessageId.toString())
-            .param("size", "30"))
+    // when
+    ResultActions result = mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId)
+        .param("cursorSentAt", "2026-07-07T14:30:00Z")
+        .param("cursorMessageId", cursorMessageId.toString())
+        .param("size", "30"));
+
+    // then
+    result
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.messages[0].sentAt").value("2026-07-07T14:30:00Z"))
         .andExpect(jsonPath("$.data.nextCursorSentAt").value("2026-07-07T14:30:00Z"));
@@ -109,11 +113,15 @@ class ChatRoomControllerTest {
         false
     ));
 
-    // when & then
-    mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId)
-            .param("size", "30"))
+    // when
+    ResultActions result = mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId)
+        .param("size", "30"));
+
+    // then
+    result
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.messages").isArray())
+        .andExpect(jsonPath("$.data.messages.length()").value(0))
         .andExpect(jsonPath("$.data.hasNext").value(false));
 
     verify(chatMessageService).getMessages(
