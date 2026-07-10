@@ -393,6 +393,102 @@ class PostServiceTest {
         );
   }
 
+  @DisplayName("게시글 작성자는 모집 상태를 모집 완료로 변경할 수 있다")
+  @Test
+  void updatePostStatus_authorCanUpdateToCompleted() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(author.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+
+    // when
+    Post updatedPost = postService.updatePostStatus(author.getId(), post.getId(), PostStatus.COMPLETED);
+
+    // then
+    assertThat(updatedPost.getStatus()).isEqualTo(PostStatus.COMPLETED);
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getStatus())
+        .isEqualTo(PostStatus.COMPLETED);
+  }
+
+  @DisplayName("게시글 작성자는 모집 상태를 모집 중으로 변경할 수 있다")
+  @Test
+  void updatePostStatus_authorCanUpdateToRecruiting() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(author.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+    post.updateStatus(PostStatus.COMPLETED);
+    postRepository.saveAndFlush(post);
+
+    // when
+    Post updatedPost = postService.updatePostStatus(author.getId(), post.getId(), PostStatus.RECRUITING);
+
+    // then
+    assertThat(updatedPost.getStatus()).isEqualTo(PostStatus.RECRUITING);
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getStatus())
+        .isEqualTo(PostStatus.RECRUITING);
+  }
+
+  @DisplayName("모집 상태 변경 후 게시글 상세 조회에서 변경된 상태가 반환된다")
+  @Test
+  void updatePostStatus_postDetailReturnsUpdatedStatus() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(author.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+
+    // when
+    postService.updatePostStatus(author.getId(), post.getId(), PostStatus.COMPLETED);
+    PostDetailResult result = postService.getPostDetail(author.getId(), post.getId());
+
+    // then
+    assertThat(result.recruitmentStatus()).isEqualTo(PostStatus.COMPLETED);
+  }
+
+  @DisplayName("존재하지 않는 게시글 모집 상태 변경 시 예외가 발생한다")
+  @Test
+  void updatePostStatus_postNotFound_throwsException() {
+    assertThatThrownBy(() -> postService.updatePostStatus(1L, 999L, PostStatus.COMPLETED))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("게시글 작성자가 아니면 모집 상태 변경 시 예외가 발생한다")
+  @Test
+  void updatePostStatus_notAuthor_throwsForbidden() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User otherUser = userRepository.save(createUser("other@test.com", "provider-other", "다른사용자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(author.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+
+    // when, then
+    assertThatThrownBy(() -> postService.updatePostStatus(otherUser.getId(), post.getId(), PostStatus.COMPLETED))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.FORBIDDEN)
+        );
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getStatus())
+        .isEqualTo(PostStatus.RECRUITING);
+  }
+
+  @DisplayName("모집 상태가 null이면 예외가 발생한다")
+  @Test
+  void updatePostStatus_nullStatus_throwsInvalidRequest() {
+    assertThatThrownBy(() -> postService.updatePostStatus(1L, 1L, null))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
+        );
+  }
+
   private CreatePostCommand createDefaultCommand(Long countryId, Long cityId) {
     return createDefaultCommand(countryId, cityId, List.of(1L));
   }
