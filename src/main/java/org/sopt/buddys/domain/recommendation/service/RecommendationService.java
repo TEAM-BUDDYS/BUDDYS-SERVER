@@ -32,14 +32,14 @@ public class RecommendationService {
   private final UserTagRepository userTagRepository;
 
   public List<RecommendedUserResult> getExchangeCountryRecommendedUsers(Long userId, int size) {
-    User me = userRepository.findByIdAndDeletedAtIsNull(userId)
+    User me = userRepository.findByIdWithExchangeCountry(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     if (me.getExchangeCountry() == null) {
       throw new BaseException(RecommendationErrorCode.EXCHANGE_COUNTRY_NOT_SET);
     }
 
-    List<User> candidates = userRepository.findByExchangeCountryIdAndIdNotAndDeletedAtIsNull(
+    List<User> candidates = userRepository.findByExchangeCountryIdWithExchangeCountry(
         me.getExchangeCountry().getId(),
         userId
     );

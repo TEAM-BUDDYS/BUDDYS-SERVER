@@ -46,8 +46,8 @@ class RecommendationServiceTest {
     User highMatch = createUser(2L, "높은일치", france);
     User lowMatch = createUser(3L, "낮은일치", france);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(me));
-    given(userRepository.findByExchangeCountryIdAndIdNotAndDeletedAtIsNull(10L, userId))
+    given(userRepository.findByIdWithExchangeCountry(userId)).willReturn(Optional.of(me));
+    given(userRepository.findByExchangeCountryIdWithExchangeCountry(10L, userId))
         .willReturn(List.of(lowMatch, highMatch));
     given(userTagRepository.findAllByUserIdIn(List.of(3L, 2L, 1L))).willReturn(List.of(
         new TestUserTagBulkProjection(1L, 1L, TagType.ACTIVITY),
@@ -80,8 +80,8 @@ class RecommendationServiceTest {
     User first = createUser(2L, "첫번째", france);
     User second = createUser(3L, "두번째", france);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(me));
-    given(userRepository.findByExchangeCountryIdAndIdNotAndDeletedAtIsNull(10L, userId))
+    given(userRepository.findByIdWithExchangeCountry(userId)).willReturn(Optional.of(me));
+    given(userRepository.findByExchangeCountryIdWithExchangeCountry(10L, userId))
         .willReturn(List.of(first, second));
     given(userTagRepository.findAllByUserIdIn(List.of(2L, 3L, 1L))).willReturn(List.of());
 
@@ -99,7 +99,7 @@ class RecommendationServiceTest {
     Long userId = 1L;
     User me = createUser(userId, "나", null);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(me));
+    given(userRepository.findByIdWithExchangeCountry(userId)).willReturn(Optional.of(me));
 
     // when, then
     assertThatThrownBy(() -> recommendationService.getExchangeCountryRecommendedUsers(userId, 5))
