@@ -6,15 +6,29 @@ import java.util.List;
 
 public record CommentListResponse(
     @Schema(description = "댓글 목록")
-    List<CommentResponse> comments
+    List<CommentResponse> comments,
+
+    @Schema(description = "현재 페이지 번호. 0부터 시작합니다.", example = "0")
+    int page,
+
+    @Schema(description = "페이지 크기", example = "20")
+    int size,
+
+    @Schema(description = "다음 페이지 존재 여부", example = "true")
+    boolean hasNext
 ) {
 
   public CommentListResponse {
     comments = List.copyOf(comments);
   }
 
-  public static CommentListResponse of(List<CommentResponse> comments) {
-    return new CommentListResponse(comments);
+  public static CommentListResponse of(
+      List<CommentResponse> comments,
+      int page,
+      int size,
+      boolean hasNext
+  ) {
+    return new CommentListResponse(comments, page, size, hasNext);
   }
 
   public record CommentResponse(

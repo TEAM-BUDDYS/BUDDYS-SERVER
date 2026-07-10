@@ -140,6 +140,9 @@ class CommentControllerTest {
         .andExpect(jsonPath("$.message").value("댓글 목록 조회에 성공했습니다."))
         .andExpect(jsonPath("$.data.comments").isArray())
         .andExpect(jsonPath("$.data.comments.length()").value(2))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(20))
+        .andExpect(jsonPath("$.data.hasNext").value(false))
         .andExpect(jsonPath("$.data.comments[0].commentId").value(oldComment.getId()))
         .andExpect(jsonPath("$.data.comments[0].writerName").value("댓글작성자"))
         .andExpect(jsonPath("$.data.comments[0].content").value("오래된 댓글"))
@@ -150,6 +153,43 @@ class CommentControllerTest {
         .andExpect(jsonPath("$.data.comments[1].content").value("최신 댓글"))
         .andExpect(jsonPath("$.data.comments[1].createdAt").exists())
         .andExpect(jsonPath("$.data.comments[1].timeAgo").value("3분 전"));
+  }
+
+  @DisplayName("댓글 목록은 페이지와 크기에 맞게 무한스크롤용 페이지네이션 정보를 반환한다")
+  @Test
+  void getComments_returnsPaginationForInfiniteScroll() throws Exception {
+    // given
+    User postAuthor = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User commentAuthor = userRepository.save(createUser("commenter@test.com", "provider-commenter", "댓글작성자"));
+    Post post = createPost(postAuthor);
+
+    saveComment(post, commentAuthor, "첫 번째 댓글", LocalDateTime.now().minusHours(3));
+    saveComment(post, commentAuthor, "두 번째 댓글", LocalDateTime.now().minusHours(2));
+    saveComment(post, commentAuthor, "세 번째 댓글", LocalDateTime.now().minusHours(1));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .queryParam("page", "0")
+            .queryParam("size", "2")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments.length()").value(2))
+        .andExpect(jsonPath("$.data.comments[0].content").value("첫 번째 댓글"))
+        .andExpect(jsonPath("$.data.comments[1].content").value("두 번째 댓글"))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(2))
+        .andExpect(jsonPath("$.data.hasNext").value(true));
+
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .queryParam("page", "1")
+            .queryParam("size", "2")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments.length()").value(1))
+        .andExpect(jsonPath("$.data.comments[0].content").value("세 번째 댓글"))
+        .andExpect(jsonPath("$.data.page").value(1))
+        .andExpect(jsonPath("$.data.size").value(2))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
   }
 
   @DisplayName("댓글 목록 조회 시 30일 이상은 월 단위, 1년 이상은 년 단위로 상대 시간을 반환한다")
@@ -186,7 +226,10 @@ class CommentControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.data.comments").isArray())
-        .andExpect(jsonPath("$.data.comments.length()").value(0));
+        .andExpect(jsonPath("$.data.comments.length()").value(0))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(20))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
   }
 
   @DisplayName("존재하지 않는 게시글의 댓글 목록을 조회하면 예외가 발생한다")
@@ -201,6 +244,23 @@ class CommentControllerTest {
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("POST-E006"));
+  }
+
+  @DisplayName("댓글 목록 조회 페이지 요청값이 잘못되면 예외가 발생한다")
+  @Test
+  void getComments_invalidPageRequest_returnsBadRequest() throws Exception {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .queryParam("page", "-1")
+            .queryParam("size", "20")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   @DisplayName("로그인하지 않은 사용자는 댓글 목록을 조회할 수 없다")

@@ -14,7 +14,10 @@ import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,17 +26,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CommentService {
 
+  private static final int MAX_PAGE_SIZE = 100;
+
   private final CommentRepository commentRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
 
-  public CommentListResponse getComments(Long postId) {
+  public CommentListResponse getComments(Long postId, int page, int size) {
+    validatePageRequest(page, size);
     if (!postRepository.existsById(postId)) {
       throw new BaseException(PostErrorCode.POST_NOT_FOUND);
     }
 
     LocalDateTime now = LocalDateTime.now();
-    List<CommentResponse> comments = commentRepository.findAllByPostIdWithAuthorOrderByCreatedAtAsc(postId)
+    Slice<Comment> commentSlice = commentRepository.findAllByPostIdWithAuthorOrderByCreatedAtAsc(
+        postId,
+        PageRequest.of(page, size)
+    );
+    List<CommentResponse> comments = commentSlice.getContent()
         .stream()
         .map(comment -> new CommentResponse(
             comment.getId(),
@@ -44,7 +54,12 @@ public class CommentService {
         ))
         .toList();
 
-    return CommentListResponse.of(comments);
+    return CommentListResponse.of(
+        comments,
+        commentSlice.getNumber(),
+        commentSlice.getSize(),
+        commentSlice.hasNext()
+    );
   }
 
   @Transactional
@@ -65,6 +80,12 @@ public class CommentService {
     ));
     postRepository.increaseCommentCount(postId);
     return comment;
+  }
+
+  private void validatePageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
   }
 
   private String toTimeAgo(LocalDateTime createdAt, LocalDateTime now) {
