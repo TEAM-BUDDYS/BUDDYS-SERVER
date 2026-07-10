@@ -4,10 +4,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.sopt.buddys.domain.comment.dto.response.CommentListResponse;
-import org.sopt.buddys.domain.comment.dto.response.CommentListResponse.CommentResponse;
 import org.sopt.buddys.domain.comment.entity.Comment;
 import org.sopt.buddys.domain.comment.repository.CommentRepository;
+import org.sopt.buddys.domain.comment.service.result.CommentListResult;
+import org.sopt.buddys.domain.comment.service.result.CommentListResult.CommentResult;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostRepository;
@@ -21,18 +21,18 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CommentService {
 
-  private static final int MAX_PAGE_SIZE = 100;
-
   private final CommentRepository commentRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
 
-  public CommentListResponse getComments(Long postId, int page, int size) {
+  public CommentListResult getComments(Long postId, int page, int size) {
     validatePageRequest(page, size);
     if (!postRepository.existsById(postId)) {
       throw new BaseException(PostErrorCode.POST_NOT_FOUND);
@@ -43,9 +43,9 @@ public class CommentService {
         postId,
         PageRequest.of(page, size)
     );
-    List<CommentResponse> comments = commentSlice.getContent()
+    List<CommentResult> comments = commentSlice.getContent()
         .stream()
-        .map(comment -> new CommentResponse(
+        .map(comment -> new CommentResult(
             comment.getId(),
             comment.getAuthor().getNickname(),
             comment.getContent(),
@@ -54,7 +54,7 @@ public class CommentService {
         ))
         .toList();
 
-    return CommentListResponse.of(
+    return new CommentListResult(
         comments,
         commentSlice.getNumber(),
         commentSlice.getSize(),

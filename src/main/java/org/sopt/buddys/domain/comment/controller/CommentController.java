@@ -28,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
+
 @RestController
 @Validated
 @RequiredArgsConstructor
@@ -43,6 +45,7 @@ public class CommentController {
       @ApiResponse(responseCode = "401", description = "인증 필요"),
       @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
   })
+  @InvalidRequestResponse
   @CommonErrorResponses
   @GetMapping
   public BaseResponse<CommentListResponse> getComments(
@@ -51,11 +54,11 @@ public class CommentController {
       @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
       @RequestParam(defaultValue = "0") @Min(0) int page,
       @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
-      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
   ) {
     return BaseResponse.success(
         CommentSuccessCode.COMMENT_LIST_FOUND,
-        commentService.getComments(postId, page, size)
+        CommentListResponse.from(commentService.getComments(postId, page, size))
     );
   }
 

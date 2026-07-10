@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.comment.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.sopt.buddys.domain.comment.service.result.CommentListResult;
 
 public record CommentListResponse(
     @Schema(description = "댓글 목록")
@@ -31,6 +32,18 @@ public record CommentListResponse(
     return new CommentListResponse(comments, page, size, hasNext);
   }
 
+  public static CommentListResponse from(CommentListResult result) {
+    return new CommentListResponse(
+        result.comments()
+            .stream()
+            .map(CommentResponse::from)
+            .toList(),
+        result.page(),
+        result.size(),
+        result.hasNext()
+    );
+  }
+
   public record CommentResponse(
       @Schema(description = "댓글 ID", example = "1")
       Long commentId,
@@ -47,5 +60,15 @@ public record CommentListResponse(
       @Schema(description = "상대 작성 시간", example = "1시간 전")
       String timeAgo
   ) {
+
+    private static CommentResponse from(CommentListResult.CommentResult result) {
+      return new CommentResponse(
+          result.commentId(),
+          result.writerName(),
+          result.content(),
+          result.createdAt(),
+          result.timeAgo()
+      );
+    }
   }
 }
