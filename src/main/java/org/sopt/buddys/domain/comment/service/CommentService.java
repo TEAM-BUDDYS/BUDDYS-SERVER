@@ -33,12 +33,12 @@ public class CommentService {
     Post post = postRepository.findById(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
-    post.increaseCommentCount();
-
-    return commentRepository.save(new Comment(
+    Comment comment = commentRepository.save(new Comment(
         post,
         author,
         content.trim()
     ));
+    postRepository.increaseCommentCount(postId);
+    return comment;
   }
 }
