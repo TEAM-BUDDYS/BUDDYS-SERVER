@@ -40,14 +40,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
       """)
   int increaseViewCount(@Param("postId") Long postId);
 
-  @Modifying(flushAutomatically = true)
-  @Query("""
-      update Post p
-      set p.commentCount = p.commentCount + 1
-      where p.id = :postId
-      """)
-  int increaseCommentCount(@Param("postId") Long postId);
-
   interface AuthorPostCountProjection {
     Long getAuthorId();
     Long getPostCount();
