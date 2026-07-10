@@ -65,7 +65,7 @@ public class UserController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        UserPostsResponse.from(userService.getPublicPosts(userId, page, size))
+        UserPostsResponse.from(userService.getPosts(userId, page, size))
     );
   }
 
@@ -93,7 +93,7 @@ public class UserController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        UserPostsResponse.from(userService.getPosts(userId, page, size))
+        UserPostsResponse.from(userService.getPublicPosts(userId, page, size))
     );
   }
 
