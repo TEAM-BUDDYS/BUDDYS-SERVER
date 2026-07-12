@@ -10,6 +10,7 @@ Client -> HTTPS -> Nginx(80/443) -> Spring Boot(8080) -> RDS MySQL
 - 환경변수 파일: `/home/ubuntu/BUDDYS-SERVER/.env`
 - 실행 JAR: `/home/ubuntu/BUDDYS-SERVER/app.jar`
 - Nginx 설정: `/etc/nginx/sites-available/buddys`
+- Nginx 보안 헤더 snippet: `/etc/nginx/snippets/buddys-security-headers.conf`
 - systemd 서비스: `/etc/systemd/system/buddys.service`
 
 ## 배포 명령어
