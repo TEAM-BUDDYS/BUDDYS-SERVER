@@ -73,4 +73,3 @@ sudo certbot --nginx -d YOUR_DOMAIN_OR_PUNYCODE_DOMAIN
 - `.pem` 키 파일은 절대 커밋하지 않는다.
 - 외부 인바운드 포트는 22, 80, 443만 열어둔다.
 - 8080은 Nginx가 내부에서만 접근한다.
-```
