@@ -31,6 +31,19 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       @Param("excludeAuthorId") Long excludeAuthorId
   );
 
+  @Query("""
+      select p from Post p
+      where p.country.id = :countryId
+        and p.status = :status
+        and p.author.id <> :excludeAuthorId
+        and exists (select 1 from PostImage pi where pi.post = p)
+      """)
+  List<Post> findByCountryIdAndStatusAndAuthorIdNotAndHasImage(
+      @Param("countryId") Long countryId,
+      @Param("status") PostStatus status,
+      @Param("excludeAuthorId") Long excludeAuthorId
+  );
+
   @Query("select p.author.id as authorId, count(p) as postCount from Post p where p.author.id in :authorIds group by p.author.id")
   List<AuthorPostCountProjection> countByAuthorIdIn(@Param("authorIds") Collection<Long> authorIds);
 
