@@ -45,7 +45,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers("/api/v1/auth/login", "/api/v1/auth/reissue", "/api/v1/auth/signup", "/api/v1/auth/kakao").permitAll()
             .requestMatchers("/api/v1/tags/**").permitAll()
-            .requestMatchers("/actuator/health").permitAll()
+            .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
             .requestMatchers("/ws", "/ws/**").permitAll()
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
             .anyRequest().authenticated()
