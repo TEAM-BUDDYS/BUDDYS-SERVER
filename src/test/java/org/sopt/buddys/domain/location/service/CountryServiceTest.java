@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
+import org.sopt.buddys.domain.location.repository.UniversityRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,9 @@ class CountryServiceTest {
 
   @Autowired
   private CityRepository cityRepository;
+
+  @Autowired
+  private UniversityRepository universityRepository;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -203,6 +207,7 @@ class CountryServiceTest {
   }
 
   private void cleanUp() {
+    universityRepository.deleteAllInBatch();
     cityRepository.deleteAllInBatch();
     countryRepository.deleteAllInBatch();
   }

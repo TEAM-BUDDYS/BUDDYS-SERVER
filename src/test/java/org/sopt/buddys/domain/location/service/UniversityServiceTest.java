@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
-import org.sopt.buddys.domain.location.entity.City;
+import org.sopt.buddys.domain.location.entity.University;
 import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.location.repository.UniversityRepository;
@@ -30,26 +30,26 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers
-class CityServiceTest {
+class UniversityServiceTest {
 
   @Container
   @ServiceConnection
   static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
 
   @Autowired
-  private CityService cityService;
+  private UniversityService universityService;
 
   @Autowired
-  private CityRepository cityRepository;
+  private UniversityRepository universityRepository;
 
   @Autowired
   private CountryRepository countryRepository;
 
   @Autowired
-  private JdbcTemplate jdbcTemplate;
+  private CityRepository cityRepository;
 
   @Autowired
-  private UniversityRepository universityRepository;
+  private JdbcTemplate jdbcTemplate;
 
   @BeforeEach
   void setUp() {
@@ -61,94 +61,93 @@ class CityServiceTest {
     cleanUp();
   }
 
-  @DisplayName("영문 키워드와 부분 일치하는 도시만 검색된다")
+  @DisplayName("키워드와 부분 일치하는 대학교만 대소문자 구분 없이 검색된다")
   @Test
-  void searchCities_partialMatchByName() {
+  void searchUniversities_partialMatchIgnoreCase() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
-    insertCity(koreaId, "Seoul", "서울특별시", 10_000_000L);
-    insertCity(koreaId, "Suwon-si", "수원시", 1_200_000L);
+    insertUniversity(koreaId, "Yonsei University", "yonsei.ac.kr");
+    insertUniversity(koreaId, "Korea University", "korea.ac.kr");
 
     // when
-    Slice<City> result = cityService.searchCities(koreaId, "Seo", 0, 20);
+    Slice<University> result = universityService.searchUniversities(koreaId, "yonsei", 0, 20);
 
     // then
     assertThat(result.getContent())
-        .extracting(City::getName)
-        .containsExactly("Seoul");
+        .extracting(University::getName)
+        .containsExactly("Yonsei University");
   }
 
-  @DisplayName("한글 키워드는 koreanName 기준으로 검색된다")
+  @DisplayName("키워드가 없으면 빈 결과를 반환한다")
   @Test
-  void searchCities_partialMatchByKoreanName() {
+  void searchUniversities_nullKeyword_returnsEmpty() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
-    insertCity(koreaId, "Seoul", "서울특별시", 10_000_000L);
-    insertCity(koreaId, "Busan", "부산광역시", 3_000_000L);
+    insertUniversity(koreaId, "Yonsei University", "yonsei.ac.kr");
+    insertUniversity(koreaId, "Korea University", "korea.ac.kr");
 
     // when
-    Slice<City> result = cityService.searchCities(koreaId, "서울", 0, 20);
+    Slice<University> result = universityService.searchUniversities(koreaId, null, 0, 20);
 
     // then
-    assertThat(result.getContent())
-        .extracting(City::getName)
-        .containsExactly("Seoul");
+    assertThat(result.getContent()).isEmpty();
+    assertThat(result.hasNext()).isFalse();
   }
 
-  @DisplayName("koreanName이 없는 도시는 한글 키워드 검색에서 제외된다")
+  @DisplayName("키워드가 공백 문자만으로 이루어지면 빈 결과를 반환한다")
   @Test
-  void searchCities_koreanNameNull_excludedFromKoreanSearch() {
+  void searchUniversities_blankKeyword_returnsEmpty() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
-    insertCity(koreaId, "Sejong-si", null, 300_000L);
+    insertUniversity(koreaId, "Yonsei University", "yonsei.ac.kr");
 
     // when
-    Slice<City> result = cityService.searchCities(koreaId, "세종", 0, 20);
+    Slice<University> result = universityService.searchUniversities(koreaId, "   ", 0, 20);
 
     // then
     assertThat(result.getContent()).isEmpty();
   }
 
-  @DisplayName("다른 국가에 있는 동명 도시는 결과에 섞이지 않는다")
+  @DisplayName("다른 국가에 있는 동명 대학교는 결과에 섞이지 않는다")
   @Test
-  void searchCities_scopedByCountryId() {
+  void searchUniversities_scopedByCountryId() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
     Long usId = insertCountry("미국", "US");
-    insertCity(koreaId, "Seoul", "서울특별시", 10_000_000L);
-    insertCity(usId, "Seoul", null, 1_000L);
+    insertUniversity(koreaId, "Some University", "some.ac.kr");
+    insertUniversity(usId, "Some University", "some.edu");
 
     // when
-    Slice<City> result = cityService.searchCities(koreaId, "Seoul", 0, 20);
+    Slice<University> result = universityService.searchUniversities(koreaId, "Some", 0, 20);
 
     // then
     assertThat(result.getContent()).hasSize(1);
     assertThat(result.getContent().get(0).getCountry().getId()).isEqualTo(koreaId);
   }
 
-  @DisplayName("검색 결과는 인구순으로 내림차순 정렬된다")
+  @DisplayName("검색 결과는 이름순으로 오름차순 정렬된다")
   @Test
-  void searchCities_ordersByPopulationDesc() {
+  void searchUniversities_ordersByNameAsc() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
-    insertCity(koreaId, "Suwon-si", "수원시", 1_200_000L);
-    insertCity(koreaId, "Seoul", "서울특별시", 10_000_000L);
-    insertCity(koreaId, "Sejong-si", "세종특별자치시", 300_000L);
+    insertUniversity(koreaId, "Yonsei University", "yonsei.ac.kr");
+    insertUniversity(koreaId, "Ajou University", "ajou.ac.kr");
+    insertUniversity(koreaId, "Korea University", "korea.ac.kr");
 
     // when
-    Slice<City> result = cityService.searchCities(koreaId, "s", 0, 20);
+    Slice<University> result = universityService.searchUniversities(koreaId, "University", 0, 20);
 
     // then
     assertThat(result.getContent())
-        .extracting(City::getName)
-        .containsExactly("Seoul", "Suwon-si", "Sejong-si");
+        .extracting(University::getName)
+        .containsExactly("Ajou University", "Korea University", "Yonsei University");
   }
 
   @DisplayName("존재하지 않는 국가로 조회하면 예외가 발생한다")
   @Test
-  void searchCities_countryNotFound_throwsException() {
+  void searchUniversities_countryNotFound_throwsException() {
     // when, then
-    assertThatThrownBy(() -> cityService.searchCities(999_999L, "Seoul", 0, 20))
+    assertThatThrownBy(() -> universityService.searchUniversities(999_999L, "Yonsei", 0, 20))
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(LocationErrorCode.COUNTRY_NOT_FOUND);
@@ -156,12 +155,12 @@ class CityServiceTest {
 
   @DisplayName("page가 음수이면 예외가 발생한다")
   @Test
-  void searchCities_negativePage_throwsException() {
+  void searchUniversities_negativePage_throwsException() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
 
     // when, then
-    assertThatThrownBy(() -> cityService.searchCities(koreaId, "Seoul", -1, 20))
+    assertThatThrownBy(() -> universityService.searchUniversities(koreaId, "Yonsei", -1, 20))
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
@@ -169,12 +168,12 @@ class CityServiceTest {
 
   @DisplayName("size가 0 이하이면 예외가 발생한다")
   @Test
-  void searchCities_zeroSize_throwsException() {
+  void searchUniversities_zeroSize_throwsException() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
 
     // when, then
-    assertThatThrownBy(() -> cityService.searchCities(koreaId, "Seoul", 0, 0))
+    assertThatThrownBy(() -> universityService.searchUniversities(koreaId, "Yonsei", 0, 0))
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
@@ -182,12 +181,12 @@ class CityServiceTest {
 
   @DisplayName("size가 최대 허용치를 초과하면 예외가 발생한다")
   @Test
-  void searchCities_sizeExceedsMax_throwsException() {
+  void searchUniversities_sizeExceedsMax_throwsException() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
 
     // when, then
-    assertThatThrownBy(() -> cityService.searchCities(koreaId, "Seoul", 0, 101))
+    assertThatThrownBy(() -> universityService.searchUniversities(koreaId, "Yonsei", 0, 101))
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
@@ -195,16 +194,16 @@ class CityServiceTest {
 
   @DisplayName("size만큼 페이지가 채워지면 hasNext는 true, 마지막 페이지는 false다")
   @Test
-  void searchCities_hasNextReflectsRemainingPages() {
+  void searchUniversities_hasNextReflectsRemainingPages() {
     // given
     Long koreaId = insertCountry("대한민국", "KR");
-    insertCity(koreaId, "Seoul", "서울특별시", 10_000_000L);
-    insertCity(koreaId, "Suwon-si", "수원시", 1_200_000L);
-    insertCity(koreaId, "Sejong-si", "세종특별자치시", 300_000L);
+    insertUniversity(koreaId, "Ajou University", "ajou.ac.kr");
+    insertUniversity(koreaId, "Korea University", "korea.ac.kr");
+    insertUniversity(koreaId, "Yonsei University", "yonsei.ac.kr");
 
     // when
-    Slice<City> firstPage = cityService.searchCities(koreaId, "s", 0, 2);
-    Slice<City> secondPage = cityService.searchCities(koreaId, "s", 1, 2);
+    Slice<University> firstPage = universityService.searchUniversities(koreaId, "University", 0, 2);
+    Slice<University> secondPage = universityService.searchUniversities(koreaId, "University", 1, 2);
 
     // then
     assertThat(firstPage.getContent()).hasSize(2);
@@ -229,10 +228,10 @@ class CityServiceTest {
     return keyHolder.getKey().longValue();
   }
 
-  private void insertCity(Long countryId, String name, String koreanName, Long population) {
+  private void insertUniversity(Long countryId, String name, String domain) {
     jdbcTemplate.update(
-        "INSERT INTO city (country_id, name, korean_name, population) VALUES (?, ?, ?, ?)",
-        countryId, name, koreanName, population
+        "INSERT INTO university (country_id, name, domain) VALUES (?, ?, ?)",
+        countryId, name, domain
     );
   }
 
