@@ -103,12 +103,20 @@ public class ChatMessageWebSocketController {
           CHAT_ROOM_LIST_USER_DESTINATION,
           ChatRoomListEventResponse.from(chatRoom)
       );
-    } catch (Exception e) {
+    } catch (BaseException e) {
       log.warn(
-          "[ChatRoomListUpdateFailed] userId={}, chatRoomId={}, message={}",
+          "[ChatRoomListUpdateFailed] userId={}, chatRoomId={}, code={}, message={}",
           userId,
           chatRoomId,
+          e.getErrorCode().getCode(),
           e.getMessage()
+      );
+    } catch (Exception e) {
+      log.error(
+          "[ChatRoomListUpdateUnexpectedError] userId={}, chatRoomId={}",
+          userId,
+          chatRoomId,
+          e
       );
     }
   }
