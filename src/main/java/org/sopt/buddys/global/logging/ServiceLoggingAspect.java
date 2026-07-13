@@ -13,11 +13,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class ServiceLoggingAspect {
 
+  private static final String SENSITIVE_PACKAGE_PREFIX = "org.sopt.buddys.domain.auth.service";
+
   @Around("@within(org.springframework.stereotype.Service)")
   public Object logServiceCall(ProceedingJoinPoint joinPoint) throws Throwable {
     String signature = joinPoint.getSignature().toShortString();
     long start = System.currentTimeMillis();
-    log.debug("[{}] 호출 args={}", signature, Arrays.toString(joinPoint.getArgs()));
+
+    if (isSensitive(joinPoint)) {
+      log.debug("[{}] 호출", signature);
+    } else {
+      log.debug("[{}] 호출 args={}", signature, Arrays.toString(joinPoint.getArgs()));
+    }
 
     try {
       Object result = joinPoint.proceed();
@@ -30,6 +37,10 @@ public class ServiceLoggingAspect {
       log.error("[{}] 예상치 못한 예외 ({}ms)", signature, System.currentTimeMillis() - start, e);
       throw e;
     }
+  }
+
+  private boolean isSensitive(ProceedingJoinPoint joinPoint) {
+    return joinPoint.getSignature().getDeclaringTypeName().startsWith(SENSITIVE_PACKAGE_PREFIX);
   }
 
 }

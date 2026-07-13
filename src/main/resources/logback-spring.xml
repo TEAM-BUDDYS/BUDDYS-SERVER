@@ -1,29 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-  <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"/>
-
-  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-    <encoder>
-      <pattern>${LOG_PATTERN}</pattern>
-    </encoder>
-  </appender>
+  <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId}] [%thread] %logger{36} - %msg%n"/>
 
   <springProfile name="local">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>${LOG_PATTERN}</pattern>
+      </encoder>
+    </appender>
     <root level="DEBUG">
       <appender-ref ref="CONSOLE"/>
     </root>
   </springProfile>
 
   <springProfile name="prod">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <fieldNames>
+          <timestamp>timestamp</timestamp>
+          <logger>logger</logger>
+        </fieldNames>
+      </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>logs/app.log</file>
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <fieldNames>
+          <timestamp>timestamp</timestamp>
+          <logger>logger</logger>
+        </fieldNames>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>logs/app-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+        <maxFileSize>10MB</maxFileSize>
+        <maxHistory>30</maxHistory>
+      </rollingPolicy>
+    </appender>
+
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
+      <appender-ref ref="FILE"/>
     </root>
     <logger name="org.hibernate" level="WARN"/>
     <logger name="org.springframework" level="WARN"/>
   </springProfile>
 
   <springProfile name="!local &amp; !prod">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>${LOG_PATTERN}</pattern>
+      </encoder>
+    </appender>
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
     </root>
