@@ -72,7 +72,7 @@ healthcheck() {
 
   for attempt in $(seq 1 "$HEALTH_RETRIES"); do
     local status="000"
-    status="$(curl -sS -o "$body_file" -w '%{http_code}' "$url" 2>/dev/null || printf '000')"
+    status="$(curl --max-time 5 -sS -o "$body_file" -w '%{http_code}' "$url" 2>/dev/null || printf '000')"
 
     if [ "$status" = "200" ] && grep -q '"status":"UP"' "$body_file"; then
       rm -f "$body_file"

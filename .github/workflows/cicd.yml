@@ -94,7 +94,7 @@ jobs:
           printf 'DOCKER_IMAGE=%s/buddys-server:%s\n' "$DOCKER_USERNAME" "$IMAGE_TAG" >> .env
 
       - name: Prepare EC2 Docker Directory
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -103,7 +103,7 @@ jobs:
             mkdir -p /home/ubuntu/BUDDYS-SERVER/docker
 
       - name: Copy .env
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -112,7 +112,7 @@ jobs:
           target: "/home/ubuntu/BUDDYS-SERVER/docker/"
 
       - name: Copy docker-compose.yml
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -122,7 +122,7 @@ jobs:
           strip_components: 1
 
       - name: Copy blue-green deploy script
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -132,7 +132,7 @@ jobs:
           strip_components: 1
 
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}

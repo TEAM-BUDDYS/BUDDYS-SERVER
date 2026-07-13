@@ -15,7 +15,18 @@ Client -> HTTPS -> Nginx(80/443) -> Spring Boot Blue/Green(127.0.0.1:8081 or 127
 
 ## First-Time EC2 Setup
 
-Create the backend snippet.
+Start the first Blue container on port 8081 while the old 8080 container remains running.
+
+```bash
+cd /home/ubuntu/BUDDYS-SERVER/docker
+sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
+  docker compose --env-file .env -p buddys-blue -f docker-compose.yml pull app
+sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
+  docker compose --env-file .env -p buddys-blue -f docker-compose.yml up -d app
+curl -sS http://127.0.0.1:8081/actuator/health
+```
+
+Create the backend snippet only after Blue is healthy.
 
 ```bash
 sudo mkdir -p /etc/nginx/snippets
@@ -41,26 +52,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Start the first Blue container on port 8081.
-
-```bash
-cd /home/ubuntu/BUDDYS-SERVER/docker
-sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
-  docker compose --env-file .env -p buddys-blue -f docker-compose.yml pull app
-sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
-  docker compose --env-file .env -p buddys-blue -f docker-compose.yml up -d app
-curl -sS http://127.0.0.1:8081/actuator/health
-```
-
-After Blue is healthy, keep Nginx pointed at 8081.
-
-```bash
-printf 'proxy_pass http://127.0.0.1:8081;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-The old 8080 container should be stopped only after 8081 is healthy and Nginx has reloaded successfully.
+The old 8080 container must remain running until 8081 is healthy and Nginx has switched successfully.
 
 ## Automatic Deployment
 
@@ -83,19 +75,26 @@ chmod +x ./deploy-blue-green.sh
 
 ## Manual Rollback
 
-Check the current backend.
+Check the current backend and verify the rollback target is healthy before switching.
 
 ```bash
 cat /etc/nginx/snippets/buddys-backend.conf
+curl -sS http://127.0.0.1:8081/actuator/health
+curl -sS http://127.0.0.1:8082/actuator/health
 ```
 
-Switch to the previous healthy port.
+If 8081 returns `"status":"UP"`, switch to 8081.
 
 ```bash
 printf 'proxy_pass http://127.0.0.1:8081;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
-# or
-printf 'proxy_pass http://127.0.0.1:8082;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
 
+If 8082 returns `"status":"UP"`, switch to 8082.
+
+```bash
+printf 'proxy_pass http://127.0.0.1:8082;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
 sudo nginx -t
 sudo systemctl reload nginx
 ```
