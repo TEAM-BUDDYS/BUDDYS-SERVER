@@ -15,22 +15,11 @@ Client -> HTTPS -> Nginx(80/443) -> Spring Boot Blue/Green(127.0.0.1:8081 or 127
 
 ## First-Time EC2 Setup
 
-Start the first Blue container on port 8081 while the old 8080 container remains running.
-
-```bash
-cd /home/ubuntu/BUDDYS-SERVER/docker
-sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
-  docker compose --env-file .env -p buddys-blue -f docker-compose.yml pull app
-sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
-  docker compose --env-file .env -p buddys-blue -f docker-compose.yml up -d app
-curl -sS http://127.0.0.1:8081/actuator/health
-```
-
-Create the backend snippet only after Blue is healthy.
+Create the backend snippet with the current legacy 8080 backend first. This lets the deploy script detect the initial legacy state and move traffic to Blue on 8081 only after the new container is healthy.
 
 ```bash
 sudo mkdir -p /etc/nginx/snippets
-printf 'proxy_pass http://127.0.0.1:8081;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
+printf 'proxy_pass http://127.0.0.1:8080;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
 ```
 
 In `/etc/nginx/sites-available/buddys`, replace the old backend line:
@@ -45,14 +34,29 @@ with:
 include /etc/nginx/snippets/buddys-backend.conf;
 ```
 
-Then validate and reload Nginx.
+Validate and reload Nginx while it still points to the old 8080 container.
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-The old 8080 container must remain running until 8081 is healthy and Nginx has switched successfully. After the switch succeeds and production traffic is healthy on 8081, stop and remove the legacy 8080 container so it does not keep consuming memory.
+Run the deploy script with the Docker image to start Blue on 8081, check `/actuator/health`, and switch Nginx to 8081 automatically.
+
+```bash
+cd /home/ubuntu/BUDDYS-SERVER/docker
+chmod +x ./deploy-blue-green.sh
+./deploy-blue-green.sh YOUR_DOCKER_IMAGE
+```
+
+Verify that Nginx now points to 8081 and Blue is healthy.
+
+```bash
+cat /etc/nginx/snippets/buddys-backend.conf
+curl -sS http://127.0.0.1:8081/actuator/health
+```
+
+The old 8080 container must remain running until the script switches Nginx to 8081 successfully and production traffic is healthy. After that, stop and remove the legacy 8080 container so it does not keep consuming memory.
 
 ```bash
 sudo docker ps --filter name=buddys-server-app

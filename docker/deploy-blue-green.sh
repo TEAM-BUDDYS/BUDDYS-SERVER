@@ -36,7 +36,9 @@ detect_current_port() {
   fi
 
   local port
-  port="$(sudo sed -nE 's/.*127\.0\.0\.1:(8080|8081|8082).*/\1/p' "$BACKEND_SNIPPET" | tail -n 1)"
+  local port_pattern
+  port_pattern="${LEGACY_PORT}|${BLUE_PORT}|${GREEN_PORT}"
+  port="$(sudo sed -nE "s/.*127\\.0\\.0\\.1:(${port_pattern}).*/\\1/p" "$BACKEND_SNIPPET" | tail -n 1)"
 
   case "$port" in
     "$LEGACY_PORT"|"$BLUE_PORT"|"$GREEN_PORT")
