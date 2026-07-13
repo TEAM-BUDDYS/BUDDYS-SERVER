@@ -52,7 +52,13 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-The old 8080 container must remain running until 8081 is healthy and Nginx has switched successfully.
+The old 8080 container must remain running until 8081 is healthy and Nginx has switched successfully. After the switch succeeds and production traffic is healthy on 8081, stop and remove the legacy 8080 container so it does not keep consuming memory.
+
+```bash
+sudo docker ps --filter name=buddys-server-app
+sudo docker stop buddys-server-app
+sudo docker rm buddys-server-app
+```
 
 ## Automatic Deployment
 
