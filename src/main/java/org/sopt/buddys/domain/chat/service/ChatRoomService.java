@@ -74,15 +74,7 @@ public class ChatRoomService {
 
     List<ChatRoomListItemResult> chatRoomResults = chatRooms.getContent()
         .stream()
-        .map(chatRoom -> new ChatRoomListItemResult(
-            chatRoom.getChatRoomId(),
-            chatRoom.getParticipantUserId(),
-            chatRoom.getParticipantNickname(),
-            chatRoom.getParticipantProfileImageUrl(),
-            chatRoom.getLastMessage(),
-            chatRoom.getLastMessageSentAt(),
-            chatRoom.getUnreadMessageCount()
-        ))
+        .map(this::toChatRoomListItemResult)
         .toList();
 
     return new ChatRoomListResult(
@@ -91,6 +83,29 @@ public class ChatRoomService {
         chatRooms.getSize(),
         chatRooms.hasNext()
     );
+  }
+
+  public ChatRoomListItemResult getChatRoomListItem(
+      Long userId,
+      Long chatRoomId
+  ) {
+
+    validateUserExists(userId);
+
+    ChatRoomMemberRepository.ChatRoomListProjection chatRoom =
+        chatRoomMemberRepository.findChatRoomListItemByUserIdAndChatRoomId(userId, chatRoomId)
+            .orElseThrow(() -> {
+              if (!chatRoomRepository.existsById(chatRoomId)) {
+                return new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
+              }
+              return new BaseException(GlobalErrorCode.FORBIDDEN);
+            });
+
+    return toChatRoomListItemResult(chatRoom);
+  }
+
+  public List<Long> getChatRoomMemberIds(Long chatRoomId) {
+    return chatRoomMemberRepository.findActiveUserIdsByChatRoomId(chatRoomId);
   }
 
   public ChatRoomResult getChatRoom(
@@ -130,6 +145,21 @@ public class ChatRoomService {
   private User getActiveUser(Long userId) {
     return userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+  }
+
+  private ChatRoomListItemResult toChatRoomListItemResult(
+      ChatRoomMemberRepository.ChatRoomListProjection chatRoom
+  ) {
+
+    return new ChatRoomListItemResult(
+        chatRoom.getChatRoomId(),
+        chatRoom.getParticipantUserId(),
+        chatRoom.getParticipantNickname(),
+        chatRoom.getParticipantProfileImageUrl(),
+        chatRoom.getLastMessage(),
+        chatRoom.getLastMessageSentAt(),
+        chatRoom.getUnreadMessageCount()
+    );
   }
 
   private ChatRoom createChatRoom(
