@@ -41,6 +41,13 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+## WebSocket 연결
+
+운영 환경에서는 클라이언트가 `wss://YOUR_DOMAIN/ws`로 연결한다.
+Nginx는 HTTPS/WSS 요청을 받고, 내부 Spring Boot `http://127.0.0.1:8080/ws`로 WebSocket upgrade 프록시한다.
+
+STOMP publish/subscribe destination인 `/pub/**`, `/sub/**`는 WebSocket 연결 URL이 아니므로 Nginx location을 따로 만들지 않는다.
+
 ## HTTPS 인증서 발급
 
 도메인의 DNS A 레코드가 EC2 탄력적 IP를 바라보는 상태에서 실행한다.
@@ -65,4 +72,3 @@ sudo certbot --nginx -d YOUR_DOMAIN_OR_PUNYCODE_DOMAIN
 - `.pem` 키 파일은 절대 커밋하지 않는다.
 - 외부 인바운드 포트는 22, 80, 443만 열어둔다.
 - 8080은 Nginx가 내부에서만 접근한다.
-```
