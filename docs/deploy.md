@@ -1,74 +1,126 @@
 # BUDDYS Server Deployment Guide
 
-## 서버 구조
+## Server Structure
 
-Client -> HTTPS -> Nginx(80/443) -> Spring Boot(8080) -> RDS MySQL
+Client -> HTTPS -> Nginx(80/443) -> Spring Boot Blue/Green(127.0.0.1:8081 or 127.0.0.1:8082) -> RDS MySQL
 
-## EC2 경로
+## EC2 Paths
 
-- 프로젝트 경로: `/home/ubuntu/BUDDYS-SERVER`
-- 환경변수 파일: `/home/ubuntu/BUDDYS-SERVER/.env`
-- 실행 JAR: `/home/ubuntu/BUDDYS-SERVER/app.jar`
-- Nginx 설정: `/etc/nginx/sites-available/buddys`
-- systemd 서비스: `/etc/systemd/system/buddys.service`
+- Docker directory: `/home/ubuntu/BUDDYS-SERVER/docker`
+- Compose file: `/home/ubuntu/BUDDYS-SERVER/docker/docker-compose.yml`
+- Environment file: `/home/ubuntu/BUDDYS-SERVER/docker/.env`
+- Deploy script: `/home/ubuntu/BUDDYS-SERVER/docker/deploy-blue-green.sh`
+- Nginx site config: `/etc/nginx/sites-available/buddys`
+- Nginx backend snippet: `/etc/nginx/snippets/buddys-backend.conf`
 
-## 배포 명령어
+## First-Time EC2 Setup
 
-```bash
-cd ~/BUDDYS-SERVER
-git pull origin main
-
-source .env
-./gradlew clean bootJar -x test
-
-JAR=$(ls build/libs/*.jar | grep -v plain | head -n 1)
-cp "$JAR" app.jar
-
-sudo systemctl restart buddys
-sudo systemctl status buddys
-```
-
-## 로그 확인
+Start the first Blue container on port 8081 while the old 8080 container remains running.
 
 ```bash
-journalctl -u buddys -f
+cd /home/ubuntu/BUDDYS-SERVER/docker
+sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
+  docker compose --env-file .env -p buddys-blue -f docker-compose.yml pull app
+sudo env DOCKER_IMAGE=YOUR_DOCKER_IMAGE APP_PORT=8081 \
+  docker compose --env-file .env -p buddys-blue -f docker-compose.yml up -d app
+curl -sS http://127.0.0.1:8081/actuator/health
 ```
 
-## Nginx 설정 확인
+Create the backend snippet only after Blue is healthy.
+
+```bash
+sudo mkdir -p /etc/nginx/snippets
+printf 'proxy_pass http://127.0.0.1:8081;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
+```
+
+In `/etc/nginx/sites-available/buddys`, replace the old backend line:
+
+```nginx
+proxy_pass http://127.0.0.1:8080;
+```
+
+with:
+
+```nginx
+include /etc/nginx/snippets/buddys-backend.conf;
+```
+
+Then validate and reload Nginx.
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## WebSocket 연결
-
-운영 환경에서는 클라이언트가 `wss://YOUR_DOMAIN/ws`로 연결한다.
-Nginx는 HTTPS/WSS 요청을 받고, 내부 Spring Boot `http://127.0.0.1:8080/ws`로 WebSocket upgrade 프록시한다.
-
-STOMP publish/subscribe destination인 `/pub/**`, `/sub/**`는 WebSocket 연결 URL이 아니므로 Nginx location을 따로 만들지 않는다.
-
-## HTTPS 인증서 발급
-
-도메인의 DNS A 레코드가 EC2 탄력적 IP를 바라보는 상태에서 실행한다.
+The old 8080 container must remain running until 8081 is healthy and Nginx has switched successfully. After the switch succeeds and production traffic is healthy on 8081, stop and remove the legacy 8080 container so it does not keep consuming memory.
 
 ```bash
-sudo certbot --nginx -d YOUR_DOMAIN_OR_PUNYCODE_DOMAIN
+sudo docker ps --filter name=buddys-server-app
+sudo docker stop buddys-server-app
+sudo docker rm buddys-server-app
 ```
 
-## 도메인 변경 시 수정할 것
+## Automatic Deployment
 
-- DNS A 레코드
-- `/etc/nginx/sites-available/buddys`의 `server_name`
-- Certbot 인증서 도메인
-- EC2 `.env`의 `KAKAO_REDIRECT_URL`
-- 카카오 디벨로퍼스 Redirect URI
-- 프론트 API Base URL
-- `CORS_ALLOWED_ORIGINS`
+On `develop` push, GitHub Actions:
 
-## 주의사항
+1. Builds the Spring Boot app.
+2. Builds and pushes Docker images tagged with `latest` and `${{ github.sha }}`.
+3. Copies `.env`, `docker-compose.yml`, and `deploy-blue-green.sh` to EC2.
+4. Runs `deploy-blue-green.sh DOCKER_USERNAME/buddys-server:${{ github.sha }}`.
 
-- `.env`는 절대 커밋하지 않는다.
-- `.pem` 키 파일은 절대 커밋하지 않는다.
-- 외부 인바운드 포트는 22, 80, 443만 열어둔다.
-- 8080은 Nginx가 내부에서만 접근한다.
+The deploy script starts the inactive color, checks `/actuator/health`, switches Nginx only after success, and keeps the previous color running for rollback.
+
+## Manual Deploy
+
+```bash
+cd /home/ubuntu/BUDDYS-SERVER/docker
+chmod +x ./deploy-blue-green.sh
+./deploy-blue-green.sh DOCKER_USERNAME/buddys-server:IMAGE_TAG
+```
+
+## Manual Rollback
+
+Check the current backend and verify the rollback target is healthy before switching.
+
+```bash
+cat /etc/nginx/snippets/buddys-backend.conf
+curl -sS http://127.0.0.1:8081/actuator/health
+curl -sS http://127.0.0.1:8082/actuator/health
+```
+
+If 8081 returns `"status":"UP"`, switch to 8081.
+
+```bash
+printf 'proxy_pass http://127.0.0.1:8081;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+If 8082 returns `"status":"UP"`, switch to 8082.
+
+```bash
+printf 'proxy_pass http://127.0.0.1:8082;\n' | sudo tee /etc/nginx/snippets/buddys-backend.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## Status Checks
+
+```bash
+sudo docker ps
+sudo docker compose -p buddys-blue -f /home/ubuntu/BUDDYS-SERVER/docker/docker-compose.yml ps
+sudo docker compose -p buddys-green -f /home/ubuntu/BUDDYS-SERVER/docker/docker-compose.yml ps
+curl -sS http://127.0.0.1:8081/actuator/health
+curl -sS http://127.0.0.1:8082/actuator/health
+cat /etc/nginx/snippets/buddys-backend.conf
+sudo nginx -t
+```
+
+## Operational Notes
+
+- Do not open 8081 or 8082 in the security group. They are bound to `127.0.0.1` and should only be reachable through Nginx.
+- Keep inbound ports limited to 22, 80, and 443 unless there is a separate operational reason.
+- Blue and Green run at the same time during deployment, so check EC2 memory and disk usage before enabling this flow.
+- Flyway migrations must remain backward compatible with the previous running version until rollback is no longer needed.
+- This single-EC2 Blue-Green setup reduces deploy downtime, but it does not protect against EC2 instance failure.

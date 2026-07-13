@@ -39,3 +39,12 @@ cloud:
     s3:
       bucket: ${AWS_S3_BUCKET}
       region: ${AWS_S3_REGION}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
