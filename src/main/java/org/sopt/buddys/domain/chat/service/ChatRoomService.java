@@ -92,6 +92,22 @@ public class ChatRoomService {
 
     validateUserExists(userId);
 
+    return getChatRoomListItemResult(userId, chatRoomId);
+  }
+
+  public ChatRoomListItemResult getChatRoomListItemForNotification(
+      Long userId,
+      Long chatRoomId
+  ) {
+
+    return getChatRoomListItemResult(userId, chatRoomId);
+  }
+
+  private ChatRoomListItemResult getChatRoomListItemResult(
+      Long userId,
+      Long chatRoomId
+  ) {
+
     ChatRoomMemberRepository.ChatRoomListProjection chatRoom =
         chatRoomMemberRepository.findChatRoomListItemByUserIdAndChatRoomId(userId, chatRoomId)
             .orElseThrow(() -> {

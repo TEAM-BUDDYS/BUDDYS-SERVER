@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.chat.controller;
 
 import jakarta.validation.Valid;
 import java.security.Principal;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.dto.request.ChatMessageSendRequest;
 import org.sopt.buddys.domain.chat.dto.request.ChatReadRequest;
@@ -25,6 +26,7 @@ import org.springframework.validation.annotation.Validated;
 
 @Controller
 @Validated
+@Slf4j
 @RequiredArgsConstructor
 public class ChatMessageWebSocketController {
 
@@ -90,13 +92,25 @@ public class ChatMessageWebSocketController {
       Long chatRoomId
   ) {
 
-    ChatRoomListItemResult chatRoom = chatRoomService.getChatRoomListItem(userId, chatRoomId);
+    try {
+      ChatRoomListItemResult chatRoom = chatRoomService.getChatRoomListItemForNotification(
+          userId,
+          chatRoomId
+      );
 
-    messagingTemplate.convertAndSendToUser(
-        userId.toString(),
-        CHAT_ROOM_LIST_USER_DESTINATION,
-        ChatRoomListEventResponse.from(chatRoom)
-    );
+      messagingTemplate.convertAndSendToUser(
+          userId.toString(),
+          CHAT_ROOM_LIST_USER_DESTINATION,
+          ChatRoomListEventResponse.from(chatRoom)
+      );
+    } catch (Exception e) {
+      log.warn(
+          "[ChatRoomListUpdateFailed] userId={}, chatRoomId={}, message={}",
+          userId,
+          chatRoomId,
+          e.getMessage()
+      );
+    }
   }
 
   private Long getUserId(
