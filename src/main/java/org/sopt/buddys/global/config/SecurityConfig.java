@@ -7,7 +7,9 @@ import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -31,6 +33,7 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
         .csrf(csrf -> csrf.disable())
+        .cors(Customizer.withDefaults())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(exception -> exception
             .authenticationEntryPoint((request, response, authException) ->
@@ -39,6 +42,7 @@ public class SecurityConfig {
                 writeErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, GlobalErrorCode.FORBIDDEN))
         )
         .authorizeHttpRequests(auth -> auth
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers("/api/v1/auth/login", "/api/v1/auth/reissue", "/api/v1/auth/signup", "/api/v1/auth/kakao").permitAll()
             .requestMatchers("/api/v1/tags/**").permitAll()
             .requestMatchers("/actuator/health").permitAll()
