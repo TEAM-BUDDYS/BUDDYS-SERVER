@@ -85,16 +85,6 @@ public class ChatRoomService {
     );
   }
 
-  public ChatRoomListItemResult getChatRoomListItem(
-      Long userId,
-      Long chatRoomId
-  ) {
-
-    validateUserExists(userId);
-
-    return getChatRoomListItemResult(userId, chatRoomId);
-  }
-
   public ChatRoomListItemResult getChatRoomListItemForNotification(
       Long userId,
       Long chatRoomId
