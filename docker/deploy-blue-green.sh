@@ -4,6 +4,7 @@ set -Eeuo pipefail
 readonly BACKEND_SNIPPET="/etc/nginx/snippets/buddys-backend.conf"
 readonly COMPOSE_FILE="docker-compose.yml"
 readonly ENV_FILE=".env"
+readonly LEGACY_PORT="8080"
 readonly BLUE_PORT="8081"
 readonly GREEN_PORT="8082"
 readonly HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
@@ -35,10 +36,12 @@ detect_current_port() {
   fi
 
   local port
-  port="$(sudo sed -nE 's/.*127\.0\.0\.1:(8081|8082).*/\1/p' "$BACKEND_SNIPPET" | tail -n 1)"
+  local port_pattern
+  port_pattern="${LEGACY_PORT}|${BLUE_PORT}|${GREEN_PORT}"
+  port="$(sudo sed -nE "s/.*127\\.0\\.0\\.1:(${port_pattern}).*/\\1/p" "$BACKEND_SNIPPET" | tail -n 1)"
 
   case "$port" in
-    "$BLUE_PORT"|"$GREEN_PORT")
+    "$LEGACY_PORT"|"$BLUE_PORT"|"$GREEN_PORT")
       printf '%s\n' "$port"
       ;;
     *)
@@ -49,6 +52,7 @@ detect_current_port() {
 
 color_for_port() {
   case "$1" in
+    "$LEGACY_PORT") printf 'legacy\n' ;;
     "$BLUE_PORT") printf 'blue\n' ;;
     "$GREEN_PORT") printf 'green\n' ;;
     *) fail "Unknown port: $1" ;;
@@ -106,7 +110,9 @@ fi
 CURRENT_PORT="$(detect_current_port)"
 CURRENT_COLOR="$(color_for_port "$CURRENT_PORT")"
 
-if [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
+if [ "$CURRENT_PORT" = "$LEGACY_PORT" ]; then
+  TARGET_PORT="$BLUE_PORT"
+elif [ "$CURRENT_PORT" = "$BLUE_PORT" ]; then
   TARGET_PORT="$GREEN_PORT"
 else
   TARGET_PORT="$BLUE_PORT"
@@ -121,7 +127,11 @@ log "Current active port: $CURRENT_PORT"
 log "Target color: $TARGET_COLOR"
 log "Target port: $TARGET_PORT"
 log "Docker image: $DOCKER_IMAGE"
-log "Current compose project kept for rollback: $CURRENT_PROJECT"
+if [ "$CURRENT_PORT" = "$LEGACY_PORT" ]; then
+  log "Legacy 8080 backend detected. Initial blue deployment will target ${TARGET_PORT}."
+else
+  log "Current compose project kept for rollback: $CURRENT_PROJECT"
+fi
 log "Target compose project: $TARGET_PROJECT"
 
 log "Pulling target image"
@@ -159,4 +169,8 @@ fi
 log "Deployment succeeded"
 log "Active color: $TARGET_COLOR"
 log "Active port: $TARGET_PORT"
-log "Previous container kept for rollback: ${CURRENT_COLOR}:${CURRENT_PORT}"
+if [ "$CURRENT_PORT" = "$LEGACY_PORT" ]; then
+  log "Legacy 8080 container should be removed manually after production traffic is verified."
+else
+  log "Previous container kept for rollback: ${CURRENT_COLOR}:${CURRENT_PORT}"
+fi
