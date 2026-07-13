@@ -69,7 +69,7 @@ On `develop` push, GitHub Actions:
 3. Copies `.env`, `docker-compose.yml`, and `deploy-blue-green.sh` to EC2.
 4. Runs `deploy-blue-green.sh DOCKER_USERNAME/buddys-server:${{ github.sha }}`.
 
-The deploy script starts the inactive color, checks `/actuator/health`, switches Nginx only after success, and keeps the previous color running for rollback.
+The deploy script starts the inactive color, checks `/actuator/health`, switches Nginx only after success, and keeps the previous color running for rollback. If the current backend is the legacy 8080 container, the first Blue-Green deployment targets 8081 and leaves the 8080 container for manual cleanup after traffic is verified.
 
 ## Manual Deploy
 
