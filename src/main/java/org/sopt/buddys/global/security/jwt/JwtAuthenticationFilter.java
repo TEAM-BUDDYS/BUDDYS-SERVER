@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
@@ -46,7 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
     String path = request.getServletPath();
-    return PUBLIC_EXACT_PATHS.contains(path) || PUBLIC_PREFIX_PATHS.stream().anyMatch(path::startsWith);
+    return CorsUtils.isPreFlightRequest(request)
+        || PUBLIC_EXACT_PATHS.contains(path)
+        || PUBLIC_PREFIX_PATHS.stream().anyMatch(path::startsWith);
   }
 
   @Override
