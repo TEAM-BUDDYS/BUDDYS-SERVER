@@ -10,6 +10,11 @@ services:
       TZ: Asia/Seoul
     volumes:
       - app-logs:/app/logs
+    networks:
+      default: {}
+      monitoring:
+        aliases:
+          - app-${APP_PORT}
     logging:
       driver: "json-file"
       options:
@@ -22,8 +27,9 @@ services:
     restart: unless-stopped
     depends_on:
       - app
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks:
+      default: {}
+      monitoring: {}
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -63,3 +69,8 @@ volumes:
   prometheus-data:
   grafana-data:
   app-logs:
+
+networks:
+  monitoring:
+    name: buddys-monitoring
+    external: true
