@@ -97,7 +97,7 @@ jobs:
           printf 'DISCORD_WEBHOOK_URL=%s\n' "$DISCORD_WEBHOOK_URL" >> .env
 
       - name: Prepare EC2 Docker Directory
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -106,7 +106,7 @@ jobs:
             mkdir -p /home/ubuntu/BUDDYS-SERVER/docker
 
       - name: Copy .env
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -115,7 +115,7 @@ jobs:
           target: "/home/ubuntu/BUDDYS-SERVER/docker/"
 
       - name: Copy docker-compose.yml
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -144,16 +144,27 @@ jobs:
           target: "/home/ubuntu/BUDDYS-SERVER/docker/"
           strip_components: 1
 
+      - name: Copy blue-green deploy script
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker/deploy-blue-green.sh"
+          target: "/home/ubuntu/BUDDYS-SERVER/docker/"
+          strip_components: 1
+
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           IMAGE_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: DISCORD_WEBHOOK_URL,IMAGE_TAG
+          envs: DISCORD_WEBHOOK_URL,DOCKER_USERNAME,IMAGE_TAG
           script: |
             cd /home/ubuntu/BUDDYS-SERVER/docker
 
@@ -166,78 +177,19 @@ jobs:
             }
 
             if [ ! -f ".env" ]; then
-              echo "❌ .env 파일이 없습니다."
-              notify_discord "❌ BUDDYS-SERVER 배포 실패: EC2에 .env 파일이 없습니다. commit=$IMAGE_TAG"
+              echo ".env file is missing."
+              notify_discord "BUDDYS-SERVER blue-green deploy failed: .env file is missing. commit=$IMAGE_TAG"
               exit 1
             fi
 
-            PREVIOUS_IMAGE=$(sudo docker inspect buddys-server-app --format='{{.Config.Image}}' 2>/dev/null || true)
-            PREVIOUS_IMAGE_ID=$(sudo docker inspect buddys-server-app --format='{{.Image}}' 2>/dev/null || true)
-            ROLLBACK_IMAGE="${PREVIOUS_IMAGE_ID:-$PREVIOUS_IMAGE}"
+            chmod +x ./deploy-blue-green.sh
 
-            echo "최신 Docker 이미지 pull"
-            sudo docker compose --env-file .env pull
+            DOCKER_IMAGE="$DOCKER_USERNAME/buddys-server:$IMAGE_TAG"
+            echo "Starting blue-green deploy: image=$DOCKER_IMAGE"
 
-            echo "기존 systemd jar 서비스 중지"
-            sudo systemctl stop buddys || true
-            sudo systemctl disable buddys || true
-
-            echo "기존 Docker 컨테이너 정리"
-            sudo docker compose --env-file .env down --remove-orphans
-
-            echo "Docker 컨테이너 실행"
-            sudo docker compose --env-file .env up -d
-
-            echo "실행 중인 컨테이너 확인"
-            sudo docker ps
-
-            HEALTH_URL="http://127.0.0.1:8080/actuator/health"
-            STATUS="000"
-
-            for attempt in $(seq 1 30); do
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL") || STATUS="000"
-              if [ "$STATUS" = "200" ]; then
-                break
-              fi
-              echo "애플리케이션 준비 대기 중... attempt=$attempt status=$STATUS"
-              sleep 5
-            done
-
-            if [ "$STATUS" != "200" ]; then
-              echo "❌ 애플리케이션 응답 확인 실패. HTTP status: $STATUS"
-              sudo docker logs buddys-server-app || true
-              if [ -n "$ROLLBACK_IMAGE" ]; then
-                echo "직전 Docker 이미지로 롤백합니다: $ROLLBACK_IMAGE"
-                notify_discord "❌ BUDDYS-SERVER 배포 헬스체크 실패. 직전 이미지로 롤백을 시작합니다. status=$STATUS commit=$IMAGE_TAG"
-                sudo docker compose --env-file .env down --remove-orphans
-                sed -i.bak '/^DOCKER_IMAGE=/d' .env
-                printf 'DOCKER_IMAGE=%s\n' "$ROLLBACK_IMAGE" >> .env
-                sudo docker compose --env-file .env up -d
-
-                ROLLBACK_STATUS="000"
-                for attempt in $(seq 1 30); do
-                  ROLLBACK_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL") || ROLLBACK_STATUS="000"
-                  if [ "$ROLLBACK_STATUS" = "200" ]; then
-                    echo "✅ 롤백 완료. HTTP status: $ROLLBACK_STATUS"
-                    notify_discord "✅ BUDDYS-SERVER 롤백 완료. rollback_status=$ROLLBACK_STATUS failed_commit=$IMAGE_TAG"
-                    exit 1
-                  fi
-                  echo "롤백 애플리케이션 준비 대기 중... attempt=$attempt status=$ROLLBACK_STATUS"
-                  sleep 5
-                done
-
-                echo "❌ 롤백 후에도 애플리케이션 응답 확인 실패. HTTP status: $ROLLBACK_STATUS"
-                sudo docker logs buddys-server-app || true
-                notify_discord "🚨 BUDDYS-SERVER 롤백 실패. rollback_status=$ROLLBACK_STATUS failed_commit=$IMAGE_TAG"
-              else
-                echo "롤백할 직전 Docker 이미지가 없습니다."
-                notify_discord "🚨 BUDDYS-SERVER 배포 실패. 롤백할 직전 Docker 이미지가 없습니다. status=$STATUS commit=$IMAGE_TAG"
-              fi
+            if ./deploy-blue-green.sh "$DOCKER_IMAGE"; then
+              notify_discord "BUDDYS-SERVER blue-green deploy succeeded. image=$DOCKER_IMAGE commit=$IMAGE_TAG"
+            else
+              notify_discord "BUDDYS-SERVER blue-green deploy failed. image=$DOCKER_IMAGE commit=$IMAGE_TAG"
               exit 1
             fi
-
-            echo "✅ 배포 완료. HTTP status: $STATUS"
-            notify_discord "✅ BUDDYS-SERVER 배포 완료. status=$STATUS commit=$IMAGE_TAG"
-
-            echo "불필요한 dangling image 정리"
-            sudo docker image prune -f
