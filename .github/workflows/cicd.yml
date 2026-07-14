@@ -88,10 +88,13 @@ jobs:
           ENV_FILE_CONTENT: ${{ secrets.ENV }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           IMAGE_TAG: ${{ github.sha }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           printf '%s\n' "$ENV_FILE_CONTENT" > .env
           sed -i '/^DOCKER_IMAGE=/d' .env
           printf 'DOCKER_IMAGE=%s/buddys-server:%s\n' "$DOCKER_USERNAME" "$IMAGE_TAG" >> .env
+          sed -i '/^DISCORD_WEBHOOK_URL=/d' .env
+          printf 'DISCORD_WEBHOOK_URL=%s\n' "$DISCORD_WEBHOOK_URL" >> .env
 
       - name: Prepare EC2 Docker Directory
         uses: appleboy/ssh-action@v1.0.3
