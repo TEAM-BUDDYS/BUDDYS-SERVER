@@ -33,10 +33,10 @@ public record PostDetailResponse(
     List<String> imageUrls,
 
     @Schema(description = "동행 모집 국가")
-    CountryResponse country,
+    PostDetailCountryResponse country,
 
     @Schema(description = "동행 모집 도시")
-    CityResponse city,
+    PostDetailCityResponse city,
 
     @Schema(description = "동행 일정 시작일", example = "2026-07-20")
     LocalDate startDate,
@@ -75,8 +75,8 @@ public record PostDetailResponse(
         result.recruitmentStatus(),
         result.title(),
         result.imageUrls(),
-        CountryResponse.from(result.country()),
-        CityResponse.from(result.city()),
+        PostDetailCountryResponse.from(result.country()),
+        PostDetailCityResponse.from(result.city()),
         result.startDate(),
         result.endDate(),
         result.recruitmentCountType(),
@@ -124,7 +124,7 @@ public record PostDetailResponse(
     }
   }
 
-  public record CityResponse(
+  public record PostDetailCityResponse(
       @Schema(description = "도시 ID", example = "1")
       Long cityId,
 
@@ -135,12 +135,12 @@ public record PostDetailResponse(
       String koreanName
   ) {
 
-    private static CityResponse from(PostDetailResult.CityResult city) {
-      return new CityResponse(city.cityId(), city.name(), city.koreanName());
+    private static PostDetailCityResponse from(PostDetailResult.CityResult city) {
+      return new PostDetailCityResponse(city.cityId(), city.name(), city.koreanName());
     }
   }
 
-  public record CountryResponse(
+  public record PostDetailCountryResponse(
       @Schema(description = "국가 ID", example = "1")
       Long countryId,
 
@@ -148,8 +148,8 @@ public record PostDetailResponse(
       String name
   ) {
 
-    private static CountryResponse from(PostDetailResult.CountryResult country) {
-      return new CountryResponse(country.countryId(), country.name());
+    private static PostDetailCountryResponse from(PostDetailResult.CountryResult country) {
+      return new PostDetailCountryResponse(country.countryId(), country.name());
     }
   }
 
