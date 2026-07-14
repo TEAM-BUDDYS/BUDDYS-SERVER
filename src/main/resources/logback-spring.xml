@@ -38,6 +38,7 @@
         <fileNamePattern>logs/app-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
         <maxFileSize>10MB</maxFileSize>
         <maxHistory>30</maxHistory>
+        <totalSizeCap>1GB</totalSizeCap>
       </rollingPolicy>
     </appender>
 
