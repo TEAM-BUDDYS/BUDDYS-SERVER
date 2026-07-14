@@ -2,8 +2,6 @@ package org.sopt.buddys.domain.location.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
@@ -42,32 +40,7 @@ public class UniversityController {
           - 커서 없는 Slice 기반 페이지네이션을 사용하며, 다음 페이지 존재 여부는 응답의 hasNext로 확인합니다.
           """
   )
-  @ApiResponse(
-      responseCode = "200",
-      description = "검색 성공",
-      content = @Content(
-          mediaType = "application/json",
-          examples = @ExampleObject(value = """
-              {
-                "success": true,
-                "code": "GLB-S001",
-                "message": "요청이 성공했습니다.",
-                "data": {
-                  "universities": [
-                    {
-                      "id": 1,
-                      "name": "Yonsei University",
-                      "domain": "yonsei.ac.kr"
-                    }
-                  ],
-                  "page": 0,
-                  "size": 20,
-                  "hasNext": false
-                }
-              }
-              """)
-      )
-  )
+  @ApiResponse(responseCode = "200", description = "검색 성공")
   @InvalidRequestResponse
   @CountryNotFoundResponse
   @CommonErrorResponses
