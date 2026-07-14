@@ -12,7 +12,7 @@ public record RecommendedPostResponse(
     @Schema(description = "모집 기간") PeriodResponse period,
     @Schema(description = "썸네일 이미지 주소", nullable = true) String thumbnailUrl,
     @Schema(description = "작성자 프로필 이미지 URL", nullable = true) String authorProfileImageUrl,
-    @Schema(description = "게시글 국가") CountryResponse country,
+    @Schema(description = "게시글 국가") RecommendedPostCountryResponse country,
     @Schema(description = "조회수", example = "10") Long viewCount
 ) {
   public static RecommendedPostResponse from(RecommendedPostResult result) {
@@ -24,7 +24,7 @@ public record RecommendedPostResponse(
         new PeriodResponse(post.getStartDate(), post.getEndDate()),
         result.thumbnailUrl(),
         post.getAuthor().getProfileImageUrl(),
-        CountryResponse.from(post),
+        RecommendedPostCountryResponse.from(post),
         post.getViewCount()
     );
   }
@@ -34,13 +34,13 @@ public record RecommendedPostResponse(
       @Schema(description = "종료일", example = "2027-08-31") LocalDate endDate
   ) {}
 
-  public record CountryResponse(
+  public record RecommendedPostCountryResponse(
       @Schema(description = "국가 ID", example = "1") Long countryId,
       @Schema(description = "국가 이름", example = "France") String name
   ) {
 
-    private static CountryResponse from(Post post) {
-      return new CountryResponse(post.getCountry().getId(), post.getCountry().getName());
+    private static RecommendedPostCountryResponse from(Post post) {
+      return new RecommendedPostCountryResponse(post.getCountry().getId(), post.getCountry().getName());
     }
   }
 }

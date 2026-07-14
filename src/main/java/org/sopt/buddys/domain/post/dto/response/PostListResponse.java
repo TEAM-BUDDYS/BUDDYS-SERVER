@@ -48,7 +48,7 @@ public record PostListResponse(
       String content,
 
       @Schema(description = "국가")
-      CountryResponse country,
+      PostSummaryCountryResponse country,
 
       @Schema(description = "동행 시작일", example = "2026-07-23")
       LocalDate startDate,
@@ -72,7 +72,7 @@ public record PostListResponse(
           post.getId(),
           post.getTitle(),
           post.getContent(),
-          CountryResponse.from(post),
+          PostSummaryCountryResponse.from(post),
           post.getStartDate(),
           post.getEndDate(),
           toDurationDays(post.getStartDate(), post.getEndDate()),
@@ -86,7 +86,7 @@ public record PostListResponse(
     }
   }
 
-  public record CountryResponse(
+  public record PostSummaryCountryResponse(
       @Schema(description = "국가 ID", example = "1")
       Long countryId,
 
@@ -94,8 +94,8 @@ public record PostListResponse(
       String name
   ) {
 
-    private static CountryResponse from(Post post) {
-      return new CountryResponse(post.getCountry().getId(), post.getCountry().getName());
+    private static PostSummaryCountryResponse from(Post post) {
+      return new PostSummaryCountryResponse(post.getCountry().getId(), post.getCountry().getName());
     }
   }
 }
