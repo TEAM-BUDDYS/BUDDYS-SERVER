@@ -33,6 +33,8 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
 
   @Query("""
       select p from Post p
+      join fetch p.author
+      join fetch p.country
       where p.country.id = :countryId
         and p.status = :status
         and p.author.id <> :excludeAuthorId
