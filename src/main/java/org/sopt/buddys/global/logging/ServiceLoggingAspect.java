@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ServiceLoggingAspect {
 
-  private static final String SENSITIVE_PACKAGE_PREFIX = "org.sopt.buddys.domain.auth.service";
+  private static final String SENSITIVE_PACKAGE_PREFIX = "org.sopt.buddys.domain.auth.service.";
 
   @Around("@within(org.springframework.stereotype.Service)")
   public Object logServiceCall(ProceedingJoinPoint joinPoint) throws Throwable {
