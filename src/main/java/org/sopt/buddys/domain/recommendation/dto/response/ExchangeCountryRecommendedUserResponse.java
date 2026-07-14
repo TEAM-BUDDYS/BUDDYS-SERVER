@@ -15,7 +15,7 @@ public record ExchangeCountryRecommendedUserResponse(
     String nickname,
 
     @Schema(description = "파견 국가")
-    CountryResponse exchangeCountry,
+    ExchangeCountryResponse exchangeCountry,
 
     @Schema(description = "연령대", example = "20대")
     String ageRange,
@@ -32,7 +32,7 @@ public record ExchangeCountryRecommendedUserResponse(
     return new ExchangeCountryRecommendedUserResponse(
         user.getId(),
         user.getNickname(),
-        CountryResponse.from(user.getExchangeCountry()),
+        ExchangeCountryResponse.from(user.getExchangeCountry()),
         toAgeRange(user.getBirthDate()),
         (int) Math.round(result.totalSimilarity() * 100),
         user.getProfileImageUrl()
@@ -50,7 +50,7 @@ public record ExchangeCountryRecommendedUserResponse(
     return "%d0대".formatted(age / 10);
   }
 
-  public record CountryResponse(
+  public record ExchangeCountryResponse(
       @Schema(description = "국가 ID", example = "1")
       Long countryId,
 
@@ -58,11 +58,11 @@ public record ExchangeCountryRecommendedUserResponse(
       String name
   ) {
 
-    private static CountryResponse from(Country country) {
+    private static ExchangeCountryResponse from(Country country) {
       if (country == null) {
         return null;
       }
-      return new CountryResponse(country.getId(), country.getName());
+      return new ExchangeCountryResponse(country.getId(), country.getName());
     }
   }
 }

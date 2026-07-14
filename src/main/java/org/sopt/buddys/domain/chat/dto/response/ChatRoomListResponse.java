@@ -65,7 +65,7 @@ public record ChatRoomListResponse(
       long unreadMessageCount
   ) {
 
-    private static ChatRoomListItemResponse from(ChatRoomListItemResult result) {
+    public static ChatRoomListItemResponse from(ChatRoomListItemResult result) {
       return new ChatRoomListItemResponse(
           result.chatRoomId(),
           ChatParticipantResponse.of(

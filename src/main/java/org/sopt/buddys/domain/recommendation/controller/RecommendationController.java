@@ -55,10 +55,12 @@ public class RecommendationController {
       @Parameter(hidden = true)
       @LoginUser Long userId,
       @Parameter(description = "조회할 개수. 1 이상 " + MAX_SIZE + "이하입니다.", example = "4")
-      @RequestParam(defaultValue = "4") @Min(1) @Max(MAX_SIZE) int size
+      @RequestParam(defaultValue = "4") @Min(1) @Max(MAX_SIZE) int size,
+      @Parameter(description = "이미지 있는 게시물만 조회할지 여부. true면 이미지 있는 게시물만 조회, false면 이미지 없는 게시물도 포함", example = "false")
+      @RequestParam(defaultValue = "false") boolean requireImage
   ) {
     return BaseResponse.success(GlobalSuccessCode.OK,
-        RecommendedPostListResponse.from(recommendationService.getRecommendedPosts(userId, size)));
+        RecommendedPostListResponse.from(recommendationService.getRecommendedPosts(userId, size, requireImage)));
   }
 
   @Operation(

@@ -74,15 +74,7 @@ public class ChatRoomService {
 
     List<ChatRoomListItemResult> chatRoomResults = chatRooms.getContent()
         .stream()
-        .map(chatRoom -> new ChatRoomListItemResult(
-            chatRoom.getChatRoomId(),
-            chatRoom.getParticipantUserId(),
-            chatRoom.getParticipantNickname(),
-            chatRoom.getParticipantProfileImageUrl(),
-            chatRoom.getLastMessage(),
-            chatRoom.getLastMessageSentAt(),
-            chatRoom.getUnreadMessageCount()
-        ))
+        .map(this::toChatRoomListItemResult)
         .toList();
 
     return new ChatRoomListResult(
@@ -91,6 +83,30 @@ public class ChatRoomService {
         chatRooms.getSize(),
         chatRooms.hasNext()
     );
+  }
+
+  public ChatRoomListItemResult getChatRoomListItemForNotification(
+      Long userId,
+      Long chatRoomId
+  ) {
+
+    return getChatRoomListItemResult(userId, chatRoomId);
+  }
+
+  private ChatRoomListItemResult getChatRoomListItemResult(
+      Long userId,
+      Long chatRoomId
+  ) {
+
+    ChatRoomMemberRepository.ChatRoomListProjection chatRoom =
+        chatRoomMemberRepository.findChatRoomListItemByUserIdAndChatRoomId(userId, chatRoomId)
+            .orElseThrow(() -> chatRoomAccessException(chatRoomId));
+
+    return toChatRoomListItemResult(chatRoom);
+  }
+
+  public List<Long> getChatRoomMemberIds(Long chatRoomId) {
+    return chatRoomMemberRepository.findActiveUserIdsByChatRoomId(chatRoomId);
   }
 
   public ChatRoomResult getChatRoom(
@@ -102,12 +118,7 @@ public class ChatRoomService {
 
     ChatRoomMemberRepository.ChatRoomDetailProjection chatRoomDetail =
         chatRoomMemberRepository.findChatRoomDetailByIdAndUserId(chatRoomId, userId)
-            .orElseThrow(() -> {
-              if (!chatRoomRepository.existsById(chatRoomId)) {
-                return new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
-              }
-              return new BaseException(GlobalErrorCode.FORBIDDEN);
-            });
+            .orElseThrow(() -> chatRoomAccessException(chatRoomId));
 
     return new ChatRoomResult(
         chatRoomDetail.getChatRoom(),
@@ -130,6 +141,28 @@ public class ChatRoomService {
   private User getActiveUser(Long userId) {
     return userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+  }
+
+  private BaseException chatRoomAccessException(Long chatRoomId) {
+    if (!chatRoomRepository.existsById(chatRoomId)) {
+      return new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
+    }
+    return new BaseException(GlobalErrorCode.FORBIDDEN);
+  }
+
+  private ChatRoomListItemResult toChatRoomListItemResult(
+      ChatRoomMemberRepository.ChatRoomListProjection chatRoom
+  ) {
+
+    return new ChatRoomListItemResult(
+        chatRoom.getChatRoomId(),
+        chatRoom.getParticipantUserId(),
+        chatRoom.getParticipantNickname(),
+        chatRoom.getParticipantProfileImageUrl(),
+        chatRoom.getLastMessage(),
+        chatRoom.getLastMessageSentAt(),
+        chatRoom.getUnreadMessageCount()
+    );
   }
 
   private ChatRoom createChatRoom(
