@@ -34,7 +34,7 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
     } finally {
       log.info("[RESPONSE] {} {} → {} ({}ms)", method, uri, response.getStatus(), System.currentTimeMillis() - start);
-      MDC.clear();
+      MDC.remove(REQUEST_ID_KEY);
     }
   }
 }
