@@ -331,13 +331,13 @@ class PostServiceTest {
     assertThat(response.conditions().genderConditions()).containsExactly(GenderCondition.ANY);
     assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
     assertThat(response.conditions().activityTags())
-        .extracting(PostDetailResponse.TagResponse::name)
+        .extracting(PostDetailResponse.PostTagResponse::name)
         .containsExactly("맛집");
     assertThat(response.conditions().interestTags())
-        .extracting(PostDetailResponse.TagResponse::name)
+        .extracting(PostDetailResponse.PostTagResponse::name)
         .containsExactly("사진");
     assertThat(response.conditions().travelStyleTags())
-        .extracting(PostDetailResponse.TagResponse::name)
+        .extracting(PostDetailResponse.PostTagResponse::name)
         .containsExactly("계획형");
     assertThat(response.viewCount()).isEqualTo(1L);
     assertThat(response.commentCount()).isEqualTo(3L);
