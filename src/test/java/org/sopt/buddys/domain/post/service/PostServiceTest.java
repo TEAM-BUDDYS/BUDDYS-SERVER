@@ -189,7 +189,7 @@ class PostServiceTest {
         "제목",
         "본문",
         List.of(AgeCondition.EARLY_20S),
-        List.of(GenderCondition.ANY),
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE),
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
         List.of(interestTagId),
@@ -295,7 +295,7 @@ class PostServiceTest {
         "도쿄 같이 여행할 동행 구해요",
         "같이 맛집이랑 관광지 다니실 분 구해요.",
         List.of(AgeCondition.LATE_20S, AgeCondition.EARLY_20S, AgeCondition.MID_20S),
-        List.of(GenderCondition.ANY),
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE),
         CompanionType.MEAL,
         RecruitmentCountType.TWO,
         List.of(foodTagId, photoTagId, planTagId),
@@ -328,7 +328,8 @@ class PostServiceTest {
     assertThat(response.recruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(response.conditions().ageConditions())
         .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
-    assertThat(response.conditions().genderConditions()).containsExactly(GenderCondition.ANY);
+    assertThat(response.conditions().genderConditions())
+        .containsExactly(GenderCondition.MALE, GenderCondition.FEMALE);
     assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
     assertThat(response.conditions().activityTags())
         .extracting(PostDetailResponse.PostTagResponse::name)
@@ -527,7 +528,7 @@ class PostServiceTest {
         "제목",
         "본문",
         List.of(AgeCondition.EARLY_20S),
-        List.of(GenderCondition.ANY),
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE),
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO,
         tagIds,
