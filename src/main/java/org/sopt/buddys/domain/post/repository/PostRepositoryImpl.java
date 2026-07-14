@@ -5,10 +5,8 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostStatus;
@@ -119,7 +117,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         JPAExpressions
             .select(postGenderCondition.post.id)
             .from(postGenderCondition)
-            .where(postGenderCondition.id.genderCondition.in(expandGenderConditions(condition.genderConditions())))
+            .where(postGenderCondition.id.genderCondition.in(condition.genderConditions()))
     );
   }
 
@@ -140,15 +138,6 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
             .from(postTag)
             .where(postTag.tag.id.eq(tagId))
     );
-  }
-
-  private Set<GenderCondition> expandGenderConditions(List<GenderCondition> genderConditions) {
-    Set<GenderCondition> expandedGenderConditions = EnumSet.copyOf(genderConditions);
-    if (expandedGenderConditions.contains(GenderCondition.MALE)
-        || expandedGenderConditions.contains(GenderCondition.FEMALE)) {
-      expandedGenderConditions.add(GenderCondition.ANY);
-    }
-    return expandedGenderConditions;
   }
 
   private String normalizeKeyword(String keyword) {

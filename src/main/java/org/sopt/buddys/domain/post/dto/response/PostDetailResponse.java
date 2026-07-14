@@ -157,7 +157,7 @@ public record PostDetailResponse(
       @Schema(description = "선호 나이 조건")
       List<AgeCondition> ageConditions,
 
-      @Schema(description = "성별 조건", example = "[\"ANY\"]")
+      @Schema(description = "성별 조건", example = "[\"MALE\", \"FEMALE\"]")
       List<GenderCondition> genderConditions,
 
       @Schema(description = "동행 유형", example = "MEAL")

@@ -49,7 +49,7 @@ public record CreatePostRequest(
     @NotEmpty
     List<@NotNull AgeCondition> ageConditions,
 
-    @Schema(description = "성별 조건. ANY(상관없음), MALE(남성), FEMALE(여성). 중복 선택 가능", example = "[\"MALE\", \"FEMALE\"]")
+    @Schema(description = "성별 조건. MALE(남성), FEMALE(여성). 성별 무관은 모두 선택", example = "[\"MALE\", \"FEMALE\"]")
     @NotEmpty
     List<@NotNull GenderCondition> genderConditions,
 
