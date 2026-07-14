@@ -7,7 +7,7 @@ contactPoints:
       - uid: discord-alerts-receiver
         type: discord
         settings:
-          url: ${DISCORD_WEBHOOK_URL}
+          url: $__env{DISCORD_WEBHOOK_URL}
           use_discord_username: false
         disableResolveMessage: false
 
