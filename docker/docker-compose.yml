@@ -9,8 +9,13 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       TZ: Asia/Seoul
+    volumes:
+      - app-logs:/app/logs
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  app-logs:
