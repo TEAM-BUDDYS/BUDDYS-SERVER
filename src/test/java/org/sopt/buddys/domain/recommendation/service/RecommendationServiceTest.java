@@ -175,7 +175,7 @@ class RecommendationServiceTest {
     given(postImageRepository.findThumbnailImageUrlsByPostIds(List.of(10L, 11L))).willReturn(List.of());
 
     // when
-    List<RecommendedPostResult> result = recommendationService.getRecommendedPosts(USER_ID, 10);
+    List<RecommendedPostResult> result = recommendationService.getRecommendedPosts(USER_ID, 10, false);
 
     // then
     assertThat(result).hasSize(2);
@@ -198,7 +198,7 @@ class RecommendationServiceTest {
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(me));
 
     // when, then
-    assertThatThrownBy(() -> recommendationService.getRecommendedPosts(USER_ID, 1))
+    assertThatThrownBy(() -> recommendationService.getRecommendedPosts(USER_ID, 1, false))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(RecommendationErrorCode.INTEREST_COUNTRY_NOT_SET)
         );
@@ -219,7 +219,7 @@ class RecommendationServiceTest {
     given(postImageRepository.findThumbnailImageUrlsByPostIds(List.of(10L))).willReturn(List.of());
 
     // when
-    recommendationService.getRecommendedPosts(USER_ID, 10);
+    recommendationService.getRecommendedPosts(USER_ID, 10, false);
 
     // then
     verify(postRepository).findByCountryIdAndStatusAndAuthorIdNot(COUNTRY_ID, PostStatus.RECRUITING, USER_ID);
@@ -242,12 +242,35 @@ class RecommendationServiceTest {
     given(postImageRepository.findThumbnailImageUrlsByPostIds(List.of(10L, 11L, 12L))).willReturn(List.of());
 
     // when
-    List<RecommendedPostResult> result = recommendationService.getRecommendedPosts(USER_ID, 2);
+    List<RecommendedPostResult> result = recommendationService.getRecommendedPosts(USER_ID, 2, false);
 
     // then
     assertThat(result).hasSize(2);
     assertThat(result.get(0).post().getId()).isEqualTo(12L);
     assertThat(result.get(1).post().getId()).isEqualTo(11L);
+  }
+
+  @DisplayName("requireImage가 true이면 이미지가 있는 게시글만 조회 대상으로 삼는다")
+  @Test
+  void getRecommendedPosts_requireImageTrue_onlyQueriesPostsWithImage() {
+    // given
+    User me = createUser(USER_ID, COUNTRY_ID);
+    Post withImage = mockPost(10L, 5L);
+
+    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(me));
+    given(userTagRepository.findAllByUserIdIn(List.of(USER_ID))).willReturn(List.of());
+    given(postRepository.findByCountryIdAndStatusAndAuthorIdNotAndHasImage(COUNTRY_ID, PostStatus.RECRUITING, USER_ID))
+        .willReturn(List.of(withImage));
+    given(postTagRepository.findAllByPostIdIn(List.of(10L))).willReturn(List.of());
+    given(postImageRepository.findThumbnailImageUrlsByPostIds(List.of(10L))).willReturn(List.of());
+
+    // when
+    List<RecommendedPostResult> result = recommendationService.getRecommendedPosts(USER_ID, 10, true);
+
+    // then
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).post().getId()).isEqualTo(10L);
+    verify(postRepository).findByCountryIdAndStatusAndAuthorIdNotAndHasImage(COUNTRY_ID, PostStatus.RECRUITING, USER_ID);
   }
 
   @DisplayName("같은 파견 국가 사용자 중 태그 일치율이 높은 순서로 추천한다")
