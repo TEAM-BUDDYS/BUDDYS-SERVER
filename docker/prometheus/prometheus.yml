@@ -5,4 +5,9 @@ scrape_configs:
   - job_name: "buddys-server"
     metrics_path: "/actuator/prometheus"
     static_configs:
-      - targets: ["app:8080"]
+      - targets: ["host.docker.internal:8081"]
+        labels:
+          color: blue
+      - targets: ["host.docker.internal:8082"]
+        labels:
+          color: green

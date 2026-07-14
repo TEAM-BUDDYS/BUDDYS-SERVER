@@ -32,7 +32,7 @@ groups:
         noDataState: Alerting
         execErrState: Alerting
         annotations:
-          summary: "buddys-server 인스턴스가 응답하지 않습니다 (Prometheus가 스크래핑 실패)."
+          summary: "buddys-server Blue/Green 인스턴스가 모두 응답하지 않습니다 (Prometheus가 스크래핑 실패)."
         labels:
           severity: critical
         data:
@@ -44,7 +44,7 @@ groups:
             model:
               refId: A
               instant: true
-              expr: up{job="buddys-server"}
+              expr: sum(up{job="buddys-server"})
           - refId: C
             datasourceUid: __expr__
             relativeTimeRange:
