@@ -1,5 +1,6 @@
 package org.sopt.buddys.global.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,27 +27,42 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(BaseException.class)
   public ResponseEntity<BaseResponse<Void>> handleBaseException(
-      BaseException e
+      BaseException e,
+      HttpServletRequest request
   ) {
 
     ErrorCode errorCode = e.getErrorCode();
 
-    log.warn(
-        "[BusinessException] code={}, message={}",
-        errorCode.getCode(),
-        e.getMessage()
-    );
+    if (isSensitiveErrorCode(errorCode)) {
+      log.warn(
+          "[BusinessException] {} {} → code={}",
+          request.getMethod(),
+          request.getRequestURI(),
+          errorCode.getCode()
+          );
+    } else {
+      log.warn(
+          "[BusinessException] {} {} → code={}, message={}",
+          request.getMethod(),
+          request.getRequestURI(),
+          errorCode.getCode(),
+          e.getMessage()
+      );
+    }
 
     return errorResponse(errorCode);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<BaseResponse<Map<String, String>>> handleValidation(
-      MethodArgumentNotValidException e
+      MethodArgumentNotValidException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[MethodArgumentNotValidException] fieldErrorCount={}",
+        "[MethodArgumentNotValidException] {} {} → fieldErrorCount={}",
+        request.getMethod(),
+        request.getRequestURI(),
         e.getBindingResult().getFieldErrorCount()
     );
 
@@ -69,11 +85,14 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(BindException.class)
   public ResponseEntity<BaseResponse<Void>> handleBindException(
-      BindException e
+      BindException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[BindException] objectName={}, fieldErrorCount={}",
+        "[BindException] {} {} → objectName={}, fieldErrorCount={}",
+        request.getMethod(),
+        request.getRequestURI(),
         e.getObjectName(),
         e.getBindingResult().getFieldErrorCount()
     );
@@ -82,11 +101,14 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(ConstraintViolationException.class)
   public ResponseEntity<BaseResponse<Void>> handleConstraintViolation(
-      ConstraintViolationException e
+      ConstraintViolationException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[ConstraintViolationException] violationCount={}",
+        "[ConstraintViolationException] {} {} → violationCount={}",
+        request.getMethod(),
+        request.getRequestURI(),
         e.getConstraintViolations().size()
     );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
@@ -94,11 +116,14 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(HandlerMethodValidationException.class)
   public ResponseEntity<BaseResponse<Void>> handleHandlerMethodValidation(
-      HandlerMethodValidationException e
+      HandlerMethodValidationException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[HandlerMethodValidationException] parameterValidationCount={}",
+        "[HandlerMethodValidationException] {} {} → parameterValidationCount={}",
+        request.getMethod(),
+        request.getRequestURI(),
         e.getParameterValidationResults().size()
     );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
@@ -106,11 +131,14 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(MissingServletRequestParameterException.class)
   public ResponseEntity<BaseResponse<Void>> handleMissingServletRequestParameter(
-      MissingServletRequestParameterException e
+      MissingServletRequestParameterException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[MissingServletRequestParameterException] parameterName={}, parameterType={}",
+        "[MissingServletRequestParameterException] {} {} → parameterName={}, parameterType={}",
+        request.getMethod(),
+        request.getRequestURI(),
         e.getParameterName(),
         e.getParameterType()
     );
@@ -119,11 +147,14 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   public ResponseEntity<BaseResponse<Void>> handleMethodArgumentTypeMismatch(
-      MethodArgumentTypeMismatchException e
+      MethodArgumentTypeMismatchException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[MethodArgumentTypeMismatchException] parameterName={}, requiredType={}",
+        "[MethodArgumentTypeMismatchException] {} {} → parameterName={}, requiredType={}",
+        request.getMethod(),
+        request.getRequestURI(),
         e.getName(),
         getSimpleName(e.getRequiredType())
     );
@@ -132,11 +163,14 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadable(
-      HttpMessageNotReadableException e
+      HttpMessageNotReadableException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[HttpMessageNotReadableException] causeType={}",
+        "[HttpMessageNotReadableException] {} {} → causeType={}",
+        request.getMethod(),
+        request.getRequestURI(),
         getSimpleName(e.getMostSpecificCause().getClass())
     );
     return errorResponse(GlobalErrorCode.INVALID_REQUEST);
@@ -144,30 +178,42 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(NoHandlerFoundException.class)
   public ResponseEntity<BaseResponse<Void>> handleNoHandlerFound(
-      NoHandlerFoundException e
+      NoHandlerFoundException e,
+      HttpServletRequest request
   ) {
 
-    log.warn("[NoHandlerFoundException] httpMethod={}", e.getHttpMethod());
+    log.warn(
+        "[NoHandlerFoundException] {} {}",
+        request.getMethod(),
+        request.getRequestURI()
+    );
     return errorResponse(GlobalErrorCode.RESOURCE_NOT_FOUND);
   }
 
   @ExceptionHandler(NoResourceFoundException.class)
   public ResponseEntity<BaseResponse<Void>> handleNoResourceFound(
-      NoResourceFoundException e
+      NoResourceFoundException e,
+      HttpServletRequest request
   ) {
 
-    log.warn("[NoResourceFoundException] resourceRequest");
+    log.warn(
+        "[NoResourceFoundException] {} {}",
+        request.getMethod(),
+        request.getRequestURI()
+    );
     return errorResponse(GlobalErrorCode.RESOURCE_NOT_FOUND);
   }
 
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<BaseResponse<Void>> handleHttpRequestMethodNotSupported(
-      HttpRequestMethodNotSupportedException e
+      HttpRequestMethodNotSupportedException e,
+      HttpServletRequest request
   ) {
 
     log.warn(
-        "[HttpRequestMethodNotSupportedException] method={}, supportedMethods={}",
-        e.getMethod(),
+        "[HttpRequestMethodNotSupportedException] {} {} → supportedMethods={}",
+        request.getMethod(),
+        request.getRequestURI(),
         e.getSupportedHttpMethods()
     );
     return errorResponse(GlobalErrorCode.METHOD_NOT_ALLOWED);
@@ -175,10 +221,16 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<BaseResponse<Void>> handleException(
-      Exception e
+      Exception e,
+      HttpServletRequest request
   ) {
 
-    log.error("Unexpected Exception", e);
+    log.error(
+        "[UnexpectedException] {} {}",
+        request.getMethod(),
+        request.getRequestURI(),
+        e
+    );
 
     return errorResponse(GlobalErrorCode.INTERNAL_SERVER_ERROR);
   }
@@ -200,5 +252,9 @@ public class GlobalExceptionHandler {
       return null;
     }
     return type.getSimpleName();
+  }
+
+  private boolean isSensitiveErrorCode(ErrorCode errorCode) {
+    return errorCode.getCode().startsWith("AUTH-");
   }
 }
