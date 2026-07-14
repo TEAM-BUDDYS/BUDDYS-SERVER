@@ -31,10 +31,11 @@ public class ServiceLoggingAspect {
       log.info("[{}] 호출 완료 ({}ms)", signature, System.currentTimeMillis() - start);
       return result;
     } catch (BaseException e) {
-      log.warn("[{}] 비즈니스 예외 ({}ms) code={}, message={}", signature, System.currentTimeMillis() - start, e.getErrorCode(), e.getMessage());
-      throw e;
-    } catch (Exception e) {
-      log.error("[{}] 예상치 못한 예외 ({}ms)", signature, System.currentTimeMillis() - start, e);
+      if (isSensitive(joinPoint)) {
+        log.warn("[{}] 비즈니스 예외 ({}ms) code={}", signature, System.currentTimeMillis() - start, e.getErrorCode().getCode());
+      } else {
+        log.warn("[{}] 비즈니스 예외 ({}ms) code={}, message={}", signature, System.currentTimeMillis() - start, e.getErrorCode(), e.getMessage());
+      }
       throw e;
     }
   }
@@ -42,5 +43,4 @@ public class ServiceLoggingAspect {
   private boolean isSensitive(ProceedingJoinPoint joinPoint) {
     return joinPoint.getSignature().getDeclaringTypeName().startsWith(SENSITIVE_PACKAGE_PREFIX);
   }
-
 }

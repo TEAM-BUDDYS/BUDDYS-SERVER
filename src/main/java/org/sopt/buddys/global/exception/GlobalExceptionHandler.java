@@ -33,13 +33,22 @@ public class GlobalExceptionHandler {
 
     ErrorCode errorCode = e.getErrorCode();
 
-    log.warn(
-        "[BusinessException] {} {} → code={}, message={}",
-        request.getMethod(),
-        request.getRequestURI(),
-        errorCode.getCode(),
-        e.getMessage()
-    );
+    if (isSensitiveErrorCode(errorCode)) {
+      log.warn(
+          "[BusinessException] {} {} → code={}",
+          request.getMethod(),
+          request.getRequestURI(),
+          errorCode.getCode()
+          );
+    } else {
+      log.warn(
+          "[BusinessException] {} {} → code={}, message={}",
+          request.getMethod(),
+          request.getRequestURI(),
+          errorCode.getCode(),
+          e.getMessage()
+      );
+    }
 
     return errorResponse(errorCode);
   }
@@ -243,5 +252,9 @@ public class GlobalExceptionHandler {
       return null;
     }
     return type.getSimpleName();
+  }
+
+  private boolean isSensitiveErrorCode(ErrorCode errorCode) {
+    return errorCode.getCode().startsWith("AUTH-");
   }
 }
