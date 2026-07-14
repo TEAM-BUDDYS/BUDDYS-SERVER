@@ -1,0 +1,158 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: discord-alerts
+    receivers:
+      - uid: discord-alerts-receiver
+        type: discord
+        settings:
+          url: ${DISCORD_WEBHOOK_URL}
+          use_discord_username: false
+        disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: discord-alerts
+    group_by: ["alertname"]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+
+groups:
+  - orgId: 1
+    name: buddys-server-alerts
+    folder: Buddys Server Alerts
+    interval: 1m
+    rules:
+      - uid: buddys-instance-down
+        title: "🔴 Instance Down"
+        condition: C
+        for: 1m
+        noDataState: Alerting
+        execErrState: Alerting
+        annotations:
+          summary: "buddys-server 인스턴스가 응답하지 않습니다 (Prometheus가 스크래핑 실패)."
+        labels:
+          severity: critical
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: A
+              instant: true
+              expr: up{job="buddys-server"}
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+                  operator:
+                    type: and
+                  query:
+                    params: ["A"]
+                  reducer:
+                    type: last
+                    params: []
+
+      - uid: buddys-5xx-error-rate
+        title: "🟠 5xx Error Rate Detected"
+        condition: C
+        for: 1m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: "buddys-server에서 5xx 서버 에러가 발생하고 있습니다."
+        labels:
+          severity: warning
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: A
+              instant: true
+              expr: sum(rate(http_server_requests_seconds_count{job="buddys-server", status=~"5.."}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+                  operator:
+                    type: and
+                  query:
+                    params: ["A"]
+                  reducer:
+                    type: last
+                    params: []
+
+      - uid: buddys-hikaricp-pending
+        title: "🟡 HikariCP Connections Pending"
+        condition: C
+        for: 2m
+        noDataState: OK
+        execErrState: Alerting
+        annotations:
+          summary: "DB 커넥션 풀에 대기 중인 요청이 2분 이상 지속되고 있습니다 (풀 고갈 의심)."
+        labels:
+          severity: warning
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: A
+              instant: true
+              expr: hikaricp_connections_pending{job="buddys-server"}
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+                  operator:
+                    type: and
+                  query:
+                    params: ["A"]
+                  reducer:
+                    type: last
+                    params: []
