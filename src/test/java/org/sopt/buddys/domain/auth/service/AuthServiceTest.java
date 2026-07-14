@@ -46,7 +46,7 @@ public class AuthServiceTest {
     String code = "kakao-auth-code";
     String kakaoAccessToken = "kakao-access-token";
     KakaoUserInfo kakaoUserInfo = createKakaoUserInfo("12345");
-    AuthTokens expectedTokens = new AuthTokens("jwt-token", "refresh-token", false);
+    AuthTokens expectedTokens = new AuthTokens(1L, "jwt-token", "refresh-token", false);
 
     given(kakaoAuthClient.getAccessToken(code)).willReturn(kakaoAccessToken);
     given(kakaoAuthClient.getUserInfo(kakaoAccessToken)).willReturn(kakaoUserInfo);
@@ -56,6 +56,7 @@ public class AuthServiceTest {
     AuthTokens response = authService.kakaoLogin(code);
 
     // then
+    assertThat(response.userId()).isEqualTo(1L);
     assertThat(response.accessToken()).isEqualTo("jwt-token");
     assertThat(response.refreshToken()).isEqualTo("refresh-token");
     then(kakaoAuthClient).should(times(1)).getAccessToken(code);

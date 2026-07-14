@@ -40,7 +40,7 @@ public class AuthTransactionService {
         RefreshToken.of(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration())
     );
 
-    return new AuthTokens(jwt, refreshToken, userService.isOnboardingCompleted(user));
+    return new AuthTokens(user.getId(), jwt, refreshToken, userService.isOnboardingCompleted(user));
   }
 
   private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {
