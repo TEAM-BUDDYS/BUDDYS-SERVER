@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Env / OS ###
+.env
+.env.*
+!.env.docker.example
+.DS_Store
