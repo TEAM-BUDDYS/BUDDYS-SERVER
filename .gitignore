@@ -38,3 +38,9 @@ out/
 
 ### Logs ###
 logs/
+
+### Env / OS ###
+.env
+.env.*
+!.env.docker.example
+.DS_Store

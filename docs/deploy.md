@@ -15,6 +15,12 @@ Client -> HTTPS -> Nginx(80/443) -> Spring Boot Blue/Green(127.0.0.1:8081 or 127
 
 ## First-Time EC2 Setup
 
+Create the shared `buddys-monitoring` Docker network first. Prometheus and the Blue/Green `app` containers run as separate Compose projects (separate default networks), so this external network is what lets Prometheus reach `app-8081`/`app-8082` by name instead of depending on host-published ports. `deploy-blue-green.sh` also creates it automatically if missing, but creating it upfront avoids a first-run ordering issue with whichever stack (monitoring or app) starts first.
+
+```bash
+sudo docker network create buddys-monitoring
+```
+
 Create the backend snippet with the current legacy 8080 backend first. This lets the deploy script detect the initial legacy state and move traffic to Blue on 8081 only after the new container is healthy.
 
 ```bash
@@ -124,6 +130,7 @@ sudo nginx -t
 ## Operational Notes
 
 - Do not open 8081 or 8082 in the security group. They are bound to `127.0.0.1` and should only be reachable through Nginx.
+- Prometheus scrapes `app` over the shared `buddys-monitoring` Docker network (`app-8081`/`app-8082` aliases on container port 8080), not the host-published 127.0.0.1 ports. If a color's container isn't running or hasn't joined `buddys-monitoring`, its Prometheus target reports DOWN — check `docker network inspect buddys-monitoring` and `docker compose -p buddys-blue|buddys-green ps` when investigating.
 - Keep inbound ports limited to 22, 80, and 443 unless there is a separate operational reason.
 - Blue and Green run at the same time during deployment, so check EC2 memory and disk usage before enabling this flow.
 - Flyway migrations must remain backward compatible with the previous running version until rollback is no longer needed.

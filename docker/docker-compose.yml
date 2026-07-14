@@ -10,6 +10,53 @@ services:
       TZ: Asia/Seoul
     volumes:
       - app-logs:/app/logs
+    networks:
+      default: {}
+      monitoring:
+        aliases:
+          - app-${APP_PORT}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: buddys-prometheus
+    restart: unless-stopped
+    networks:
+      default: {}
+      monitoring: {}
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: buddys-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
     logging:
       driver: "json-file"
       options:
@@ -17,4 +64,11 @@ services:
         max-file: "3"
 
 volumes:
+  prometheus-data:
+  grafana-data:
   app-logs:
+
+networks:
+  monitoring:
+    name: buddys-monitoring
+    external: true

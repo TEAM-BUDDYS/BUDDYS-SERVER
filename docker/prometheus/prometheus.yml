@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 30s
+
+scrape_configs:
+  - job_name: "buddys-server"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["app-8081:8080"]
+        labels:
+          color: blue
+      - targets: ["app-8082:8080"]
+        labels:
+          color: green

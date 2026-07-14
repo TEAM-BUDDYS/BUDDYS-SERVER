@@ -9,6 +9,7 @@ readonly BLUE_PORT="8081"
 readonly GREEN_PORT="8082"
 readonly HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
 readonly HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-5}"
+readonly MONITORING_NETWORK="buddys-monitoring"
 
 DOCKER_IMAGE="${1:-}"
 
@@ -105,6 +106,11 @@ fi
 
 if [ ! -f "$ENV_FILE" ]; then
   fail "Environment file not found: $ENV_FILE"
+fi
+
+if ! sudo docker network inspect "$MONITORING_NETWORK" >/dev/null 2>&1; then
+  log "Creating shared monitoring network: $MONITORING_NETWORK"
+  sudo docker network create "$MONITORING_NETWORK" >/dev/null
 fi
 
 CURRENT_PORT="$(detect_current_port)"
