@@ -23,7 +23,7 @@ public class MdcLoggingFilter extends OncePerRequestFilter {
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
-    MDC.put(REQUEST_ID_KEY, UUID.randomUUID().toString().substring(0, 8));
+    MDC.put(REQUEST_ID_KEY, UUID.randomUUID().toString().replace("-", "").substring(0, 16));
 
     String method = request.getMethod();
     String uri = request.getRequestURI();
