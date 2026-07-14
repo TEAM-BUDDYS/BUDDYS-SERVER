@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-aspectj'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -30,6 +31,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-flyway'
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+	implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+	implementation 'com.github.loki4j:loki-logback-appender:2.0.3'
 	implementation platform('software.amazon.awssdk:bom:2.20.0')
 	implementation 'software.amazon.awssdk:s3'
 	compileOnly 'org.projectlombok:lombok'

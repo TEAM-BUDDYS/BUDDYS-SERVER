@@ -25,6 +25,8 @@ RUN groupadd --system app && useradd --system --gid app --home-dir /app --shell 
 
 COPY --from=builder --chown=app:app /app/app.jar app.jar
 
+RUN mkdir -p logs && chown -R app:app logs
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD ["bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /actuator/health HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n' >&3; response=$(cat <&3); printf '%s' \"$response\" | grep -q ' 200 ' && printf '%s' \"$response\" | grep -q '\"status\":\"UP\"'"]

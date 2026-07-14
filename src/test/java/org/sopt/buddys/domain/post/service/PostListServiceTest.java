@@ -94,12 +94,16 @@ class PostListServiceTest {
   @Test
   void getPosts_withoutCondition_returnsRecruitingPostsOrderByLatestExceptMine() {
     // given
-    createPost(author.getId(), "오래된 글", "본문", franceId, parisId, List.of(GenderCondition.ANY));
-    Post myPost = createPost(viewer.getId(), "내 글", "본문", franceId, parisId, List.of(GenderCondition.ANY));
-    Post completedPost = createPost(author.getId(), "모집완료 글", "본문", franceId, parisId, List.of(GenderCondition.ANY));
+    createPost(author.getId(), "오래된 글", "본문", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
+    Post myPost = createPost(viewer.getId(), "내 글", "본문", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
+    Post completedPost = createPost(author.getId(), "모집완료 글", "본문", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
     completedPost.updateStatus(PostStatus.COMPLETED);
     postRepository.save(completedPost);
-    createPost(author.getId(), "최신 글", "본문", franceId, parisId, List.of(GenderCondition.ANY));
+    createPost(author.getId(), "최신 글", "본문", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
 
     // when
     PostListResult result = postService.getPosts(viewer.getId(), emptyCondition(), 0, 20);
@@ -116,9 +120,12 @@ class PostListServiceTest {
   @Test
   void getPosts_keyword_filtersTitleOrContentAndBlankKeywordIgnored() {
     // given
-    createPost(author.getId(), "파리 산책", "본문", franceId, parisId, List.of(GenderCondition.ANY));
-    createPost(author.getId(), "제목", "파리 맛집 가요", franceId, parisId, List.of(GenderCondition.ANY));
-    createPost(author.getId(), "도쿄 산책", "본문", japanId, tokyoId, List.of(GenderCondition.ANY));
+    createPost(author.getId(), "파리 산책", "본문", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
+    createPost(author.getId(), "제목", "파리 맛집 가요", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
+    createPost(author.getId(), "도쿄 산책", "본문", japanId, tokyoId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
 
     // when
     PostListResult keywordResult = postService.getPosts(viewer.getId(), condition("파리"), 0, 20);
@@ -149,7 +156,8 @@ class PostListServiceTest {
         List.of()
     );
     createPost(author.getId(), "국가 불일치", "파리 여행", japanId, tokyoId, List.of(GenderCondition.FEMALE));
-    createPost(author.getId(), "성별 무관", "파리 여행", franceId, parisId, List.of(GenderCondition.ANY));
+    createPost(author.getId(), "성별 무관", "파리 여행", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
     createPost(author.getId(), "태그 불일치", "파리 여행", franceId, parisId, List.of(GenderCondition.FEMALE));
 
     PostSearchCondition condition = new PostSearchCondition(
@@ -171,12 +179,13 @@ class PostListServiceTest {
         .containsExactly("조건 일치");
   }
 
-  @DisplayName("성별 필터는 선택한 성별과 ANY 조건 게시글을 함께 반환한다")
+  @DisplayName("성별 무관 게시글은 남성과 여성 필터에 모두 반환된다")
   @Test
   void getPosts_genderCondition_includesAnyCondition() {
     // given
     createPost(author.getId(), "여성 조건", "본문", franceId, parisId, List.of(GenderCondition.FEMALE));
-    createPost(author.getId(), "성별 무관", "본문", franceId, parisId, List.of(GenderCondition.ANY));
+    createPost(author.getId(), "성별 무관", "본문", franceId, parisId,
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE));
     createPost(author.getId(), "남성 조건", "본문", franceId, parisId, List.of(GenderCondition.MALE));
 
     // when
@@ -281,7 +290,7 @@ class PostListServiceTest {
         LocalDate.now().plusDays(20),
         LocalDate.now().plusDays(20),
         List.of(AgeCondition.EARLY_20S),
-        List.of(GenderCondition.ANY),
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE),
         CompanionType.FULL_TRIP,
         List.of(travelTagId),
         List.of()
@@ -295,7 +304,7 @@ class PostListServiceTest {
         LocalDate.now().plusDays(10),
         LocalDate.now().plusDays(15),
         List.of(AgeCondition.EARLY_20S),
-        List.of(GenderCondition.ANY),
+        List.of(GenderCondition.MALE, GenderCondition.FEMALE),
         CompanionType.FULL_TRIP,
         List.of(travelTagId),
         List.of("https://example.com/first.png", "https://example.com/second.png")
@@ -486,6 +495,7 @@ class PostListServiceTest {
     jdbcTemplate.update("DELETE FROM post");
     jdbcTemplate.update("DELETE FROM tag");
     jdbcTemplate.update("DELETE FROM `user`");
+    jdbcTemplate.update("DELETE FROM university");
     jdbcTemplate.update("DELETE FROM city");
     jdbcTemplate.update("DELETE FROM country");
   }

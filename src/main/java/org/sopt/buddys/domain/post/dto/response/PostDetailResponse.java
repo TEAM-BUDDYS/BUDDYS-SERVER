@@ -157,20 +157,20 @@ public record PostDetailResponse(
       @Schema(description = "선호 나이 조건")
       List<AgeCondition> ageConditions,
 
-      @Schema(description = "성별 조건", example = "[\"ANY\"]")
+      @Schema(description = "성별 조건", example = "[\"MALE\", \"FEMALE\"]")
       List<GenderCondition> genderConditions,
 
       @Schema(description = "동행 유형", example = "MEAL")
       CompanionType travelType,
 
       @Schema(description = "활동 태그 목록")
-      List<TagResponse> activityTags,
+      List<PostTagResponse> activityTags,
 
       @Schema(description = "관심사 태그 목록")
-      List<TagResponse> interestTags,
+      List<PostTagResponse> interestTags,
 
       @Schema(description = "여행 스타일 태그 목록")
-      List<TagResponse> travelStyleTags
+      List<PostTagResponse> travelStyleTags
   ) {
 
     public ConditionsResponse {
@@ -192,16 +192,16 @@ public record PostDetailResponse(
       );
     }
 
-    private static List<TagResponse> toTagResponses(PostDetailResult result, TagType tagType) {
+    private static List<PostTagResponse> toTagResponses(PostDetailResult result, TagType tagType) {
       return result.tags()
           .stream()
           .filter(tag -> tag.tagType() == tagType)
-          .map(TagResponse::from)
+          .map(PostTagResponse::from)
           .toList();
     }
   }
 
-  public record TagResponse(
+  public record PostTagResponse(
       @Schema(description = "태그 ID", example = "1")
       Long tagId,
 
@@ -209,8 +209,8 @@ public record PostDetailResponse(
       String name
   ) {
 
-    private static TagResponse from(PostDetailResult.TagResult tag) {
-      return new TagResponse(tag.tagId(), tag.name());
+    private static PostTagResponse from(PostDetailResult.TagResult tag) {
+      return new PostTagResponse(tag.tagId(), tag.name());
     }
   }
 }

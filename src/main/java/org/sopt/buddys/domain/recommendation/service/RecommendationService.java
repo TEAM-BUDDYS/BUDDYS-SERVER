@@ -69,10 +69,13 @@ public class RecommendationService {
         .toList();
   }
 
-  public List<RecommendedPostResult> getRecommendedPosts(Long userId, int size) {
+  public List<RecommendedPostResult> getRecommendedPosts(Long userId, int size, boolean requireImage) {
     RequesterContext ctx = resolveRequester(userId);
 
-    List<Post> candidates = postRepository.findByCountryIdAndStatusAndAuthorIdNot(ctx.interestCountryId(), PostStatus.RECRUITING, userId);
+    List<Post> candidates = requireImage
+        ? postRepository.findByCountryIdAndStatusAndAuthorIdNotAndHasImage(ctx.interestCountryId(), PostStatus.RECRUITING, userId)
+        : postRepository.findByCountryIdAndStatusAndAuthorIdNot(ctx.interestCountryId(), PostStatus.RECRUITING, userId);
+
     List<Long> candidateIds = candidates.stream().map(Post::getId).toList();
 
     Map<Long, Map<TagType, Set<Long>>> postTags = fetchPostTagMap(candidateIds);

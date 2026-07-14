@@ -2,6 +2,8 @@ package org.sopt.buddys.domain.image.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +42,9 @@ public class ImageController {
             imageUrl은 업로드 완료 후 게시글/프로필 등록 시 사용하는 최종 이미지 URL입니다.
           """
   )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "발급 성공")
+  })
   @InvalidRequestResponse
   @UnsupportedContentTypeResponse
   @CommonErrorResponses
