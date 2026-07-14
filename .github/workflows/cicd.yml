@@ -121,6 +121,26 @@ jobs:
           target: "/home/ubuntu/BUDDYS-SERVER/docker/"
           strip_components: 1
 
+      - name: Copy Prometheus config
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker/prometheus/prometheus.yml"
+          target: "/home/ubuntu/BUDDYS-SERVER/docker/"
+          strip_components: 1
+
+      - name: Copy Grafana provisioning
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker/grafana/provisioning"
+          target: "/home/ubuntu/BUDDYS-SERVER/docker/"
+          strip_components: 1
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         env:
