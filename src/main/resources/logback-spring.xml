@@ -3,6 +3,8 @@
 
   <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId}] [%thread] %logger{36} - %msg%n"/>
 
+  <springProperty name="appName" source="spring.application.name" defaultValue="buddys"/>
+
   <springProfile name="local">
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
       <encoder>
@@ -39,9 +41,34 @@
       </rollingPolicy>
     </appender>
 
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+      <http>
+        <url>${LOKI_URL}</url>
+        <auth>
+          <username>${LOKI_USER}</username>
+          <password>${LOKI_TOKEN}</password>
+        </auth>
+      </http>
+      <!-- 카디널리티가 유한한 값만: requestId처럼 요청마다 달라지는 값은 절대 label에 넣지 않는다.-->
+      <labels>
+        app=${appName}
+        env=prod
+        level=%level
+      </labels>
+      <!-- requestId는 label이 아니라 JSON 본문(MDC)에 담아서 LogQL의 `| json | requestId="..."`로 필터링한다.
+           CONSOLE/FILE과 동일한 LogstashLayout을 그대로 재사용해 같은 JSON 구조를 보장한다. -->
+      <message class="net.logstash.logback.layout.LogstashLayout">
+        <fieldNames>
+          <timestamp>timestamp</timestamp>
+          <logger>logger</logger>
+        </fieldNames>
+      </message>
+    </appender>
+
     <root level="INFO">
       <appender-ref ref="CONSOLE"/>
       <appender-ref ref="FILE"/>
+      <appender-ref ref="LOKI"/>
     </root>
     <logger name="org.hibernate" level="WARN"/>
     <logger name="org.springframework" level="WARN"/>
