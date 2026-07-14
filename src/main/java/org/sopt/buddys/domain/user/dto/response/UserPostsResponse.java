@@ -2,8 +2,6 @@ package org.sopt.buddys.domain.user.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
@@ -51,11 +49,12 @@ public record UserPostsResponse(
       @Schema(description = "게시글 썸네일 이미지 URL", example = "https://example.com/post-thumbnail.png")
       String thumbnailImageUrl,
 
-      @Schema(description = "게시글 일정 표시 텍스트", example = "26.09.06 ~ 26.09.19 (13일)")
-      String dateText
-  ) {
+      @Schema(description = "동행 시작일", example = "2026-07-23")
+      LocalDate startDate,
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yy.MM.dd");
+      @Schema(description = "동행 종료일", example = "2026-07-28")
+      LocalDate endDate
+  ) {
 
     private static PostResponse from(UserPostsResult.PostResult result) {
       Post post = result.post();
@@ -64,19 +63,8 @@ public record UserPostsResponse(
           post.getTitle(),
           post.getContent(),
           result.thumbnailImageUrl(),
-          toDateText(post.getStartDate(), post.getEndDate())
-      );
-    }
-
-    private static String toDateText(LocalDate startDate, LocalDate endDate) {
-      if (startDate == null || endDate == null) {
-        return null;
-      }
-      long days = ChronoUnit.DAYS.between(startDate, endDate);
-      return "%s ~ %s (%d일)".formatted(
-          startDate.format(DATE_FORMATTER),
-          endDate.format(DATE_FORMATTER),
-          days
+          post.getStartDate(),
+          post.getEndDate()
       );
     }
   }
