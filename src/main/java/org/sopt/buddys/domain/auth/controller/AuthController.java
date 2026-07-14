@@ -56,7 +56,7 @@ public class AuthController {
     AuthTokens tokens = authService.kakaoLogin(code);
     addRefreshTokenCookie(response, tokens.refreshToken());
     return ResponseEntity.ok(
-        BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.accessToken(), tokens.onboardingCompleted()))
+        BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.userId(), tokens.accessToken(), tokens.onboardingCompleted()))
     );
   }
 
@@ -77,7 +77,7 @@ public class AuthController {
     AuthTokens tokens = authService.reissue(refreshToken);
     addRefreshTokenCookie(response, tokens.refreshToken());
     return ResponseEntity.ok(
-        BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.accessToken(), tokens.onboardingCompleted()))
+        BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.userId(), tokens.accessToken(), tokens.onboardingCompleted()))
     );
   }
 

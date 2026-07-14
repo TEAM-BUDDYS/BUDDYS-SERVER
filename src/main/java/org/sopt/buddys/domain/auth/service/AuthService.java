@@ -64,6 +64,6 @@ public class AuthService {
     refreshTokenRepository.deleteByUserId(userId);
     refreshTokenRepository.save(RefreshToken.of(userId, newRefreshToken, jwtProperties.refreshTokenExpiration()));
 
-    return new AuthTokens(newAccessToken, newRefreshToken, userService.isOnboardingCompleted(user));
+    return new AuthTokens(userId, newAccessToken, newRefreshToken, userService.isOnboardingCompleted(user));
   }
 }
