@@ -13,6 +13,7 @@ import static org.mockito.Mockito.times;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
@@ -170,8 +171,8 @@ public class UserOnboardingServiceTest {
 
     OnboardingCommand request = createRequestWithExchangeCountry(
         exchangeCountryId,
-        LocalDate.of(2027, 3, 1),
-        LocalDate.of(2027, 8, 31)
+        YearMonth.of(2027, 3),
+        YearMonth.of(2027, 8)
     );
 
     // when, then
@@ -197,8 +198,8 @@ public class UserOnboardingServiceTest {
 
     OnboardingCommand request = createRequestWithExchangeCountry(
         exchangeCountryId,
-        LocalDate.of(2027, 8, 31),
-        LocalDate.of(2027, 3, 1)
+        YearMonth.of(2027, 8),
+        YearMonth.of(2027, 3)
     );
 
     // when, then
@@ -221,8 +222,8 @@ public class UserOnboardingServiceTest {
 
     OnboardingCommand request = createRequestWithExchangeCountry(
         null,
-        LocalDate.of(2027, 3, 1),
-        LocalDate.of(2027, 8, 31)
+        YearMonth.of(2027, 3),
+        YearMonth.of(2027, 8)
     );
 
     // when, then
@@ -430,8 +431,8 @@ public class UserOnboardingServiceTest {
 
   private OnboardingCommand createRequestWithExchangeCountry(
       Long exchangeCountryId,
-      LocalDate exchangeStartDate,
-      LocalDate exchangeEndDate
+      YearMonth exchangeStartDate,
+      YearMonth exchangeEndDate
   ) {
     return new OnboardingCommand(
         COUNTRY_ID,
