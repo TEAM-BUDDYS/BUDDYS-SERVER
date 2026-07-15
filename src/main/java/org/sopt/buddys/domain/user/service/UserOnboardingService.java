@@ -1,6 +1,6 @@
 package org.sopt.buddys.domain.user.service;
 
-import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -116,7 +116,7 @@ public class UserOnboardingService {
     return city;
   }
 
-  private void validateExchangeDates(LocalDate start, LocalDate end) {
+  private void validateExchangeDates(YearMonth start, YearMonth end) {
     if (start != null && end != null && start.isAfter(end)) {
       throw new BaseException(UserErrorCode.INVALID_EXCHANGE_PERIOD);
     }

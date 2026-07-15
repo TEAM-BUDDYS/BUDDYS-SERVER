@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.service.command.OnboardingCommand;
@@ -25,11 +26,11 @@ public record OnboardingRequest(
     @Size(max = 100)
     String exchangeUniversity,
 
-    @Schema(description = "교환학생 시작일", example = "2027-03-01", nullable = true)
-    LocalDate exchangeStartDate,
+    @Schema(description = "교환학생 시작 연월", example = "2027-03", nullable = true)
+    YearMonth exchangeStartDate,
 
-    @Schema(description = "교환학생 종료일", example = "2027-08-31", nullable = true)
-    LocalDate exchangeEndDate,
+    @Schema(description = "교환학생 종료 연월", example = "2027-08", nullable = true)
+    YearMonth exchangeEndDate,
 
     @Schema(description = "활동 태그 ID 목록. 1~3개", example = "[1, 2, 3]")
     @NotEmpty @Size(min = 1, max = 3) List<Long> activityTagIds,

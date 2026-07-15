@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.user.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,6 +15,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -101,11 +103,13 @@ public class User extends BaseEntity {
   @Column(name = "exchange_university", length = 100)
   private String exchangeUniversity;
 
+  @Convert(converter = YearMonthDateConverter.class)
   @Column(name = "exchange_start_date")
-  private LocalDate exchangeStartDate;
+  private YearMonth exchangeStartDate;
 
+  @Convert(converter = YearMonthDateConverter.class)
   @Column(name = "exchange_end_date")
-  private LocalDate exchangeEndDate;
+  private YearMonth exchangeEndDate;
 
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
@@ -141,8 +145,8 @@ public class User extends BaseEntity {
       City interestCity,
       Country exchangeCountry,
       String exchangeUniversity,
-      LocalDate exchangeStartDate,
-      LocalDate exchangeEndDate
+      YearMonth exchangeStartDate,
+      YearMonth exchangeEndDate
   ) {
     this.gender = gender;
     this.birthDate = birthDate;
