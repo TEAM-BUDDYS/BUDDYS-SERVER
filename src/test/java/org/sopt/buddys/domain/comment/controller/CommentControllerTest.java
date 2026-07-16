@@ -125,7 +125,12 @@ class CommentControllerTest {
   void getComments_returnsCommentsOrderByCreatedAtAsc() throws Exception {
     // given
     User postAuthor = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
-    User commentAuthor = userRepository.save(createUser("commenter@test.com", "provider-commenter", "댓글작성자"));
+    User commentAuthor = userRepository.save(createUser(
+        "commenter@test.com",
+        "provider-commenter",
+        "댓글작성자",
+        "https://example.com/commenter.png"
+    ));
     Post post = createPost(postAuthor);
 
     Comment recentComment = saveComment(post, commentAuthor, "최신 댓글", LocalDateTime.now().minusMinutes(3));
@@ -144,12 +149,18 @@ class CommentControllerTest {
         .andExpect(jsonPath("$.data.size").value(20))
         .andExpect(jsonPath("$.data.hasNext").value(false))
         .andExpect(jsonPath("$.data.comments[0].commentId").value(oldComment.getId()))
+        .andExpect(jsonPath("$.data.comments[0].writerId").value(commentAuthor.getId()))
         .andExpect(jsonPath("$.data.comments[0].writerName").value("댓글작성자"))
+        .andExpect(jsonPath("$.data.comments[0].writerProfileImageUrl")
+            .value("https://example.com/commenter.png"))
         .andExpect(jsonPath("$.data.comments[0].content").value("오래된 댓글"))
         .andExpect(jsonPath("$.data.comments[0].createdAt").exists())
         .andExpect(jsonPath("$.data.comments[0].timeAgo").value("2시간 전"))
         .andExpect(jsonPath("$.data.comments[1].commentId").value(recentComment.getId()))
+        .andExpect(jsonPath("$.data.comments[1].writerId").value(commentAuthor.getId()))
         .andExpect(jsonPath("$.data.comments[1].writerName").value("댓글작성자"))
+        .andExpect(jsonPath("$.data.comments[1].writerProfileImageUrl")
+            .value("https://example.com/commenter.png"))
         .andExpect(jsonPath("$.data.comments[1].content").value("최신 댓글"))
         .andExpect(jsonPath("$.data.comments[1].createdAt").exists())
         .andExpect(jsonPath("$.data.comments[1].timeAgo").value("3분 전"));
@@ -387,11 +398,21 @@ class CommentControllerTest {
   }
 
   private User createUser(String email, String providerId, String nickname) {
+    return createUser(email, providerId, nickname, null);
+  }
+
+  private User createUser(
+      String email,
+      String providerId,
+      String nickname,
+      String profileImageUrl
+  ) {
     return User.builder()
         .email(email)
         .provider(AuthProvider.KAKAO)
         .providerId(providerId)
         .nickname(nickname)
+        .profileImageUrl(profileImageUrl)
         .build();
   }
 
