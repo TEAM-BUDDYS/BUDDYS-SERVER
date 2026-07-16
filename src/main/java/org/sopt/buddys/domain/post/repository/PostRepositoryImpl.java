@@ -38,7 +38,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         .selectFrom(post)
         .distinct()
         .join(post.country).fetchJoin()
-        .where(toPredicate(userId, condition))
+        .where(toPredicate(condition))
         .orderBy(post.createdAt.desc(), post.id.desc())
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + 1L)
@@ -51,10 +51,9 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
     return new SliceImpl<>(posts, pageable, hasNext);
   }
 
-  private BooleanBuilder toPredicate(Long userId, PostSearchCondition condition) {
+  private BooleanBuilder toPredicate(PostSearchCondition condition) {
     BooleanBuilder builder = new BooleanBuilder()
         .and(post.status.eq(PostStatus.RECRUITING))
-        .and(post.author.id.ne(userId))
         .and(keywordContains(condition.keyword()))
         .and(countryEquals(condition.countryId()))
         .and(startDateGoe(condition))
