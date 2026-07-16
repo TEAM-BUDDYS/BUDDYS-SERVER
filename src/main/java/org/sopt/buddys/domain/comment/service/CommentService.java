@@ -47,7 +47,9 @@ public class CommentService {
         .stream()
         .map(comment -> new CommentResult(
             comment.getId(),
+            comment.getAuthor().getId(),
             comment.getAuthor().getNickname(),
+            comment.getAuthor().getProfileImageUrl(),
             comment.getContent(),
             comment.getCreatedAt(),
             toTimeAgo(comment.getCreatedAt(), now)
