@@ -48,8 +48,14 @@ public record CommentListResponse(
       @Schema(description = "댓글 ID", example = "1")
       Long commentId,
 
+      @Schema(description = "댓글 작성자 사용자 ID", example = "10")
+      Long writerId,
+
       @Schema(description = "댓글 작성자 이름", example = "유저 1")
       String writerName,
+
+      @Schema(description = "댓글 작성자 프로필 이미지 URL", example = "https://example.com/profile.png", nullable = true)
+      String writerProfileImageUrl,
 
       @Schema(description = "댓글 내용", example = "저도 관심 있어요! DM 보낼게요.")
       String content,
@@ -64,7 +70,9 @@ public record CommentListResponse(
     private static CommentResponse from(CommentListResult.CommentResult result) {
       return new CommentResponse(
           result.commentId(),
+          result.writerId(),
           result.writerName(),
+          result.writerProfileImageUrl(),
           result.content(),
           result.createdAt(),
           result.timeAgo()
