@@ -16,7 +16,9 @@ public record CommentListResult(
 
   public record CommentResult(
       Long commentId,
+      Long writerId,
       String writerName,
+      String writerProfileImageUrl,
       String content,
       LocalDateTime createdAt,
       String timeAgo
