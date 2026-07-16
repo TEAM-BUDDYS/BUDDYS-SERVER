@@ -90,9 +90,9 @@ class PostListServiceTest {
     cleanUp();
   }
 
-  @DisplayName("조건 없이 조회하면 모집중 게시글만 최신순으로 반환하고 내 글은 제외한다")
+  @DisplayName("조건 없이 조회하면 내 글을 포함한 모집중 게시글을 최신순으로 반환한다")
   @Test
-  void getPosts_withoutCondition_returnsRecruitingPostsOrderByLatestExceptMine() {
+  void getPosts_withoutCondition_returnsRecruitingPostsOrderByLatestIncludingMine() {
     // given
     createPost(author.getId(), "오래된 글", "본문", franceId, parisId,
         List.of(GenderCondition.MALE, GenderCondition.FEMALE));
@@ -110,9 +110,10 @@ class PostListServiceTest {
 
     // then
     assertThat(result.content()).extracting(post -> post.post().getTitle())
-        .containsExactly("최신 글", "오래된 글");
+        .containsExactly("최신 글", "내 글", "오래된 글");
     assertThat(result.content()).extracting(post -> post.post().getId())
-        .doesNotContain(myPost.getId(), completedPost.getId());
+        .contains(myPost.getId())
+        .doesNotContain(completedPost.getId());
     assertThat(result.hasNext()).isFalse();
   }
 
@@ -227,9 +228,9 @@ class PostListServiceTest {
         List.of(travelTagId, mealTagId),
         List.of()
     );
-    createPost(
+    Post ownPost = createPost(
         viewer.getId(),
-        "내 글 제외",
+        "내 글 포함",
         "본문",
         franceId,
         parisId,
@@ -274,7 +275,7 @@ class PostListServiceTest {
 
     // then
     assertThat(result.content()).extracting(post -> post.post().getId())
-        .containsExactly(matchedPost.getId());
+        .containsExactly(ownPost.getId(), matchedPost.getId());
   }
 
   @DisplayName("페이징, hasNext, 썸네일, durationDays를 반환한다")
