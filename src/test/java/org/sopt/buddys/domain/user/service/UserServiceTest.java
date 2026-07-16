@@ -108,7 +108,10 @@ class UserServiceTest {
     // then
     assertThat(result.user().getDeletedAt()).isNotNull();
     assertThat(result.representativeTags()).containsExactlyInAnyOrder("액티비티", "문화생활", "활발한");
-    assertThat(result.allTags()).isEmpty();
+    assertThat(result.allTags()).hasSize(3);
+    assertThat(getTags(result, TagType.ACTIVITY)).containsExactly("액티비티");
+    assertThat(getTags(result, TagType.INTEREST)).containsExactly("문화생활");
+    assertThat(getTags(result, TagType.TRAVEL_STYLE)).containsExactly("활발한");
   }
 
   @DisplayName("타 유저 게시글 조회는 삭제된 사용자가 작성한 게시글도 조회한다")
