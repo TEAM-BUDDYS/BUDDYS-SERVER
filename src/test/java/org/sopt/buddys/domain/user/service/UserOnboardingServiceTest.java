@@ -306,6 +306,35 @@ public class UserOnboardingServiceTest {
     then(userTagRepository).should(never()).saveAll(any());
   }
 
+  @DisplayName("MySQL 8.0.19+ 포맷(테이블명 접두사)의 닉네임 중복도 DUPLICATE_NICKNAME 예외로 변환한다")
+  @Test
+  void completeOnboarding_duplicateNicknameWithTablePrefixedConstraintName_throwsException() {
+    // given
+    Country interestCountry = mockCountry(COUNTRY_ID);
+    City interestCity = mockCity(interestCountry);
+    Tag activityTag = mockTag(1L, TagType.ACTIVITY);
+    Tag interestTag = mockTag(2L, TagType.INTEREST);
+    Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
+
+    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+    given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
+
+    ConstraintViolationException nicknameConstraintViolation = new ConstraintViolationException(
+        "duplicate nickname", new SQLException("duplicate"), "user.uk_user_nickname"
+    );
+    willThrow(new DataIntegrityViolationException("duplicate", nicknameConstraintViolation))
+        .given(userRepository).flush();
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, createValidRequest()))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(org.sopt.buddys.domain.auth.code.AuthErrorCode.DUPLICATE_NICKNAME)
+        );
+    then(userTagRepository).should(never()).saveAll(any());
+  }
+
   @DisplayName("닉네임 충돌이 아닌 다른 제약 위반은 원본 예외를 그대로 전파한다")
   @Test
   void completeOnboarding_otherConstraintViolation_rethrowsOriginalException() {

@@ -144,7 +144,9 @@ public class UserOnboardingService {
     Throwable cause = exception;
     while (cause != null) {
       if (cause instanceof org.hibernate.exception.ConstraintViolationException constraintViolationException) {
-        return constraintName.equals(constraintViolationException.getConstraintName());
+        String actualConstraintName = constraintViolationException.getConstraintName();
+        // MySQL 8.0.19+는 제약조건명 앞에 테이블명을 붙여 반환한다(예: "user.uk_user_nickname").
+        return actualConstraintName != null && actualConstraintName.endsWith(constraintName);
       }
       cause = cause.getCause();
     }
