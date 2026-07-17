@@ -1,12 +1,24 @@
 # BUDDYS-SERVER
-
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/1990c996-22a7-4f41-97e3-d9d9a540f886" />
 BUDDYS 서비스의 백엔드 레포지토리입니다.
 
+
+<br />
 <br />
 
 ## 📌 Service Introduction
-
-<!-- TODO: 서비스 소개 이미지 추가 -->
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/fc869169-6970-40b4-ae3e-7afff4d47e7b" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c87b1c23-cd49-4352-a627-8d0fad4f86d8" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/8a65c7ac-1819-46e2-8111-ffe124dcd271" />
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/fcd027d4-b479-4c5c-b155-e049db54f2bc" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/f8669c98-d299-434d-ab2c-cb942b6ad911" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/6b811c61-37bb-4249-9aa6-57897e633f9d" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/46f6cf57-04b6-412c-bdb5-2bce36aedde2" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/f8f91beb-4930-46d2-a511-c254969efc52" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/4fb6805c-66b6-4e01-8caf-d4ecfb6ba896" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2f33f768-9f52-49df-8130-42c78f467a51" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/0b97edf7-f018-42a1-a440-4acd3c52b584" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2f51017e-a258-43ce-966e-3801047aeb5f" />
 
 <br />
 <br />
@@ -24,9 +36,10 @@ BUDDYS 서비스의 백엔드 레포지토리입니다.
     </thead>
     <tbody>
       <tr>
-        <td align="center"><!-- TODO: 프로필 이미지 추가 --></td>
-        <td align="center"><!-- TODO: 프로필 이미지 추가 --></td>
-        <td align="center"><!-- TODO: 프로필 이미지 추가 --></td>
+        <td align="center"><img width="300" alt="이해령" src="https://github.com/user-attachments/assets/8b48a1c9-aa95-49b0-8a5b-f62ca8d7b5c8" /></td>
+        <td align="center"><img width="300" alt="이지현" src="https://github.com/user-attachments/assets/f4680709-285c-4b09-a8af-d2e53064ba60" /></td>
+        <td align="center"><img width="300" alt="김가윤" src="https://github.com/user-attachments/assets/16dc808a-409f-46a1-b330-6fc8cd4f3a17" />
+</td>
       </tr>
       <tr align="center">
         <td>Backend</td>
