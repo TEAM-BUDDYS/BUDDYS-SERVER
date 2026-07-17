@@ -144,7 +144,10 @@ public class UserOnboardingService {
     Throwable cause = exception;
     while (cause != null) {
       if (cause instanceof org.hibernate.exception.ConstraintViolationException constraintViolationException) {
-        return constraintName.equals(constraintViolationException.getConstraintName());
+        String actualConstraintName = constraintViolationException.getConstraintName();
+        return actualConstraintName != null
+            && (actualConstraintName.equals(constraintName)
+                || actualConstraintName.endsWith("." + constraintName));
       }
       cause = cause.getCause();
     }
