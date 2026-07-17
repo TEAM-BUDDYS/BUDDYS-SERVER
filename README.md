@@ -91,11 +91,11 @@ BUDDYS 서비스의 백엔드 레포지토리입니다.
 <summary> 📦 패키지 전략 </summary>
 <br/>
 
-#### 도메인형 구조 (Domain-based Package)
+### 도메인형 구조 (Domain-based Package)
 
 프로젝트는 **도메인 중심 패키지 구조**를 적용했습니다. 기능(도메인)별로 관련된 Controller, Service, Repository, Entity 등을 하나의 패키지에 모아 응집도를 높이고, 기능 추가 및 유지보수가 용이하도록 구성했습니다.
 
-```
+```text
 org.sopt.buddys
 ├── domain
 │   ├── auth
