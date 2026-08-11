@@ -31,8 +31,8 @@ public class AuthService {
   private final UserRepository userRepository;
   private final UserService userService;
 
-  public AuthTokens kakaoLogin(String code) {
-    String accessToken = kakaoAuthClient.getAccessToken(code);
+  public AuthTokens kakaoLogin(String code, String redirectUri) {
+    String accessToken = kakaoAuthClient.getAccessToken(code, redirectUri);
     KakaoUserInfo kakaoUser = kakaoAuthClient.getUserInfo(accessToken);
 
     String providerId = String.valueOf(kakaoUser.id());

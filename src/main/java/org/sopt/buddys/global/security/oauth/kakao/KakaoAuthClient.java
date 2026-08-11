@@ -30,14 +30,19 @@ public class KakaoAuthClient {
     this.properties = properties;
   }
 
-  public String getAccessToken(String code) {
+  public String getAccessToken(String code, String redirectUri) {
+    if (!properties.redirectUrls().contains(redirectUri)) {
+      log.warn("Rejected kakao login: redirect_uri not in whitelist. redirectUri={}", redirectUri);
+      throw new BaseException(AuthErrorCode.KAKAO_REDIRECT_URI_NOT_ALLOWED);
+    }
+
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
     MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
     params.add("grant_type", "authorization_code");
     params.add("client_id", properties.clientId());
-    params.add("redirect_uri", properties.redirectUrl());
+    params.add("redirect_uri", redirectUri);
     params.add("code", code);
     if (StringUtils.hasText(properties.clientSecret())) {
       params.add("client_secret", properties.clientSecret());
