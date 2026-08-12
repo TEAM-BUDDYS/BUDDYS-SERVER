@@ -44,22 +44,23 @@ public class AuthServiceTest {
   void kakaoLogin_callsKakaoApiAndDelegates() {
     // given
     String code = "kakao-auth-code";
+    String redirectUri = "http://localhost:3000/oauth/callback";
     String kakaoAccessToken = "kakao-access-token";
     KakaoUserInfo kakaoUserInfo = createKakaoUserInfo("12345");
     AuthTokens expectedTokens = new AuthTokens(1L, "jwt-token", "refresh-token", false);
 
-    given(kakaoAuthClient.getAccessToken(code)).willReturn(kakaoAccessToken);
+    given(kakaoAuthClient.getAccessToken(code, redirectUri)).willReturn(kakaoAccessToken);
     given(kakaoAuthClient.getUserInfo(kakaoAccessToken)).willReturn(kakaoUserInfo);
     given(authTransactionService.processKakaoLogin("12345", kakaoUserInfo)).willReturn(expectedTokens);
 
     // when
-    AuthTokens response = authService.kakaoLogin(code);
+    AuthTokens response = authService.kakaoLogin(code, redirectUri);
 
     // then
     assertThat(response.userId()).isEqualTo(1L);
     assertThat(response.accessToken()).isEqualTo("jwt-token");
     assertThat(response.refreshToken()).isEqualTo("refresh-token");
-    then(kakaoAuthClient).should(times(1)).getAccessToken(code);
+    then(kakaoAuthClient).should(times(1)).getAccessToken(code, redirectUri);
     then(kakaoAuthClient).should(times(1)).getUserInfo(kakaoAccessToken);
     then(authTransactionService).should(times(1)).processKakaoLogin("12345", kakaoUserInfo);
   }

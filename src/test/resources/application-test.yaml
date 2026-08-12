@@ -9,7 +9,7 @@ spring:
     kakao:
       client-id: test-client-id
       client-secret: test-client-secret
-      redirect-url: http://localhost:8080/test
+      redirect-urls: http://localhost:8080/test,http://localhost:3000/test
       token-url: https://kauth.kakao.com/oauth/token
       user-info-url: https://kapi.kakao.com/v2/user/me
 

@@ -45,15 +45,17 @@ public class AuthController {
   @Operation(summary = "카카오 로그인", description = "카카오 인가 코드를 이용해 로그인하고 JWT를 발급합니다.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "로그인 성공"),
-      @ApiResponse(responseCode = "400", description = "잘못된 인가 코드"),
+      @ApiResponse(responseCode = "400", description = "잘못된 인가 코드 또는 허용되지 않은 redirect_uri"),
   })
   @PostMapping("/kakao")
   public ResponseEntity<BaseResponse<LoginResponse>> kakaoLogin(
       @Parameter(description = "카카오 OAuth 인가 코드", example = "kaO7zQSSJXT...")
       @RequestParam @NotBlank String code,
+      @Parameter(description = "카카오 인가 요청 시 사용한 redirect_uri", example = "http://localhost:3000/auth/kakao/callback")
+      @RequestParam @NotBlank String redirectUri,
       HttpServletResponse response
   ) {
-    AuthTokens tokens = authService.kakaoLogin(code);
+    AuthTokens tokens = authService.kakaoLogin(code, redirectUri);
     addRefreshTokenCookie(response, tokens.refreshToken());
     return ResponseEntity.ok(
         BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.userId(), tokens.accessToken(), tokens.onboardingCompleted()))
