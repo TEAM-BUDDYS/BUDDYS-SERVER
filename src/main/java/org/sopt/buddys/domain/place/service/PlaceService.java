@@ -42,16 +42,21 @@ public class PlaceService {
 
     var response = googlePlacesClient.searchText(query.trim(), category, lat, lng, pageToken);
 
-    List<GooglePlace> matched = response.placesOrEmpty().stream()
-        .filter(place -> PlaceCategoryMapper.fromGooglePrimaryType(place.primaryType())
-            .filter(mapped -> category == null || category == mapped)
-            .isPresent())
+    List<MatchedPlace> matched = response.placesOrEmpty().stream()
+        .map(place -> new MatchedPlace(place, PlaceCategoryMapper.fromGooglePrimaryType(place.primaryType()).orElse(null)))
+        .filter(matchedPlace -> matchedPlace.category() != null
+            && (category == null || category == matchedPlace.category()))
         .toList();
 
-    Set<String> bookmarkedGooglePlaceIds = findBookmarkedGooglePlaceIds(userId, matched);
+    Set<String> bookmarkedGooglePlaceIds =
+        findBookmarkedGooglePlaceIds(userId, matched.stream().map(MatchedPlace::place).toList());
 
     List<PlaceSearchItemResult> items = matched.stream()
-        .map(place -> toItemResult(place, bookmarkedGooglePlaceIds.contains(place.id())))
+        .map(matchedPlace -> toItemResult(
+            matchedPlace.place(),
+            matchedPlace.category(),
+            bookmarkedGooglePlaceIds.contains(matchedPlace.place().id())
+        ))
         .toList();
 
     return new PlaceSearchResult(items, response.nextPageToken());
@@ -80,7 +85,7 @@ public class PlaceService {
     return Set.copyOf(placeBookmarkRepository.findBookmarkedGooglePlaceIds(userId, googlePlaceIds));
   }
 
-  private PlaceSearchItemResult toItemResult(GooglePlace place, boolean bookmarked) {
+  private PlaceSearchItemResult toItemResult(GooglePlace place, PlaceCategory category, boolean bookmarked) {
     Double latitude = place.location() != null ? place.location().latitude() : null;
     Double longitude = place.location() != null ? place.location().longitude() : null;
     boolean hasPhoto = place.photos() != null && !place.photos().isEmpty();
@@ -88,13 +93,16 @@ public class PlaceService {
     return new PlaceSearchItemResult(
         place.id(),
         place.displayName() != null ? place.displayName().text() : null,
-        PlaceCategoryMapper.fromGooglePrimaryType(place.primaryType()).orElseThrow(),
+        category,
         place.formattedAddress(),
         latitude,
         longitude,
         bookmarked,
         hasPhoto ? PHOTO_URL_TEMPLATE.formatted(place.id()) : null
     );
+  }
+
+  private record MatchedPlace(GooglePlace place, PlaceCategory category) {
   }
 
   private void validateQuery(String query) {

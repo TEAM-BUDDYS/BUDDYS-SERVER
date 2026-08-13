@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.place.client;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sopt.buddys.domain.place.client.dto.GoogleCircle;
@@ -65,17 +66,15 @@ public class GooglePlacesClient {
     headers.set("X-Goog-Api-Key", apiKey);
     headers.set("X-Goog-FieldMask", FIELD_MASK);
 
-    try {
-      return restTemplate.exchange(
-          searchTextUrl,
-          HttpMethod.POST,
-          new HttpEntity<>(request, headers),
-          GooglePlacesSearchResponse.class
-      ).getBody();
-    } catch (RestClientException e) {
-      log.warn("[GooglePlacesClient] searchText 호출 실패 → query={}", query, e);
-      throw new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE, e);
-    }
+    return execute(
+        () -> restTemplate.exchange(
+            searchTextUrl,
+            HttpMethod.POST,
+            new HttpEntity<>(request, headers),
+            GooglePlacesSearchResponse.class
+        ).getBody(),
+        "searchText query=" + query
+    );
   }
 
   public GooglePlaceDetailsResponse getPlaceDetails(String placeId) {
@@ -83,7 +82,7 @@ public class GooglePlacesClient {
     headers.set("X-Goog-Api-Key", apiKey);
     headers.set("X-Goog-FieldMask", "photos");
 
-    try {
+    return execute(() -> {
       URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/places/" + placeId).build().toUri();
       return restTemplate.exchange(
           uri,
@@ -91,37 +90,38 @@ public class GooglePlacesClient {
           new HttpEntity<>(headers),
           GooglePlaceDetailsResponse.class
       ).getBody();
-    } catch (IllegalStateException e) {
-      log.warn("[GooglePlacesClient] 잘못된 placeId → placeId={}", placeId, e);
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST, e);
-    } catch (RestClientException e) {
-      log.warn("[GooglePlacesClient] getPlaceDetails 호출 실패 → placeId={}", placeId, e);
-      throw new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE, e);
-    }
+    }, "getPlaceDetails placeId=" + placeId);
   }
 
   public String getPhotoMediaUri(String photoName, int maxWidthPx) {
     HttpHeaders headers = new HttpHeaders();
     headers.set("X-Goog-Api-Key", apiKey);
 
-    try {
+    GooglePhotoMediaResponse response = execute(() -> {
       URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/" + photoName + "/media")
           .queryParam("maxWidthPx", maxWidthPx)
           .queryParam("skipHttpRedirect", true)
           .build()
           .toUri();
-      GooglePhotoMediaResponse response = restTemplate.exchange(
+      return restTemplate.exchange(
           uri,
           HttpMethod.GET,
           new HttpEntity<>(headers),
           GooglePhotoMediaResponse.class
       ).getBody();
-      return response != null ? response.photoUri() : null;
+    }, "getPhotoMediaUri photoName=" + photoName);
+
+    return response != null ? response.photoUri() : null;
+  }
+
+  private <T> T execute(Supplier<T> request, String context) {
+    try {
+      return request.get();
     } catch (IllegalStateException e) {
-      log.warn("[GooglePlacesClient] 잘못된 photoName → photoName={}", photoName, e);
+      log.warn("[GooglePlacesClient] 잘못된 요청 파라미터 → {}", context, e);
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST, e);
     } catch (RestClientException e) {
-      log.warn("[GooglePlacesClient] getPhotoMediaUri 호출 실패 → photoName={}", photoName, e);
+      log.warn("[GooglePlacesClient] 구글 API 호출 실패 → {}", context, e);
       throw new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE, e);
     }
   }
