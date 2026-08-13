@@ -13,6 +13,12 @@ spring:
       token-url: https://kauth.kakao.com/oauth/token
       user-info-url: https://kapi.kakao.com/v2/user/me
 
+google:
+  places:
+    api-key: test-google-places-api-key
+    search-text-url: https://places.googleapis.com/v1/places:searchText
+    base-url: https://places.googleapis.com/v1
+
 cloud:
   aws:
     s3:
