@@ -4,5 +4,6 @@ public enum PlaceCategory {
   RESTAURANT,
   CAFE,
   TOURISM,
-  ACCOMMODATION
+  ACCOMMODATION,
+  ETC
 }

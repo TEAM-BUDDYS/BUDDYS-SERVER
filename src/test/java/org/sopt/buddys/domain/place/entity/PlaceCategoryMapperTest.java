@@ -16,10 +16,15 @@ class PlaceCategoryMapperTest {
     assertThat(PlaceCategoryMapper.fromGooglePrimaryType("lodging")).contains(PlaceCategory.ACCOMMODATION);
   }
 
-  @DisplayName("매핑 테이블에 없는 타입은 빈 값을 반환한다")
+  @DisplayName("매핑 테이블에 없는 타입은 ETC로 폴백한다")
   @Test
-  void fromGooglePrimaryType_unknownType_returnsEmpty() {
-    assertThat(PlaceCategoryMapper.fromGooglePrimaryType("parking")).isEmpty();
+  void fromGooglePrimaryType_unknownType_returnsEtc() {
+    assertThat(PlaceCategoryMapper.fromGooglePrimaryType("parking")).contains(PlaceCategory.ETC);
+  }
+
+  @DisplayName("primaryType 자체가 없으면 빈 값을 반환한다")
+  @Test
+  void fromGooglePrimaryType_nullType_returnsEmpty() {
     assertThat(PlaceCategoryMapper.fromGooglePrimaryType(null)).isEmpty();
   }
 

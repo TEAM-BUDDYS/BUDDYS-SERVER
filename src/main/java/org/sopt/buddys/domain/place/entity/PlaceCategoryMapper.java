@@ -52,6 +52,9 @@ public final class PlaceCategoryMapper {
   }
 
   public static Optional<PlaceCategory> fromGooglePrimaryType(String primaryType) {
-    return primaryType == null ? Optional.empty() : Optional.ofNullable(GOOGLE_TYPE_TO_CATEGORY.get(primaryType));
+    if (primaryType == null) {
+      return Optional.empty();
+    }
+    return Optional.of(GOOGLE_TYPE_TO_CATEGORY.getOrDefault(primaryType, PlaceCategory.ETC));
   }
 }

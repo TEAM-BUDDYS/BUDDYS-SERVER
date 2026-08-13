@@ -82,16 +82,34 @@ class PlaceServiceTest {
         .containsExactlyInAnyOrder("place-restaurant", "place-lodging");
   }
 
-  @DisplayName("우리 4종 카테고리로 매핑되지 않는 구글 타입은 결과에서 제외된다")
+  @DisplayName("우리 4종 카테고리로 매핑되지 않는 구글 타입은 ETC로 분류되어 결과에 포함된다")
   @Test
-  void search_unmappableGoogleType_isExcluded() {
+  void search_unmappableGoogleType_isCategorizedAsEtc() {
+    // given
+    GooglePlace unmappable = createGooglePlace("place-unknown", "parking");
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(unmappable), null));
+    given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
+
+    // when
+    PlaceSearchResult result = placeService.search(1L, "주차장", null, null, null, null);
+
+    // then
+    assertThat(result.places())
+        .extracting(PlaceSearchResult.PlaceSearchItemResult::category)
+        .containsExactly(PlaceCategory.ETC);
+  }
+
+  @DisplayName("특정 카테고리로 필터링하면 ETC로 분류된 장소는 제외된다")
+  @Test
+  void search_withCategory_excludesEtcPlaces() {
     // given
     GooglePlace unmappable = createGooglePlace("place-unknown", "parking");
     given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
         .willReturn(new GooglePlacesSearchResponse(List.of(unmappable), null));
 
     // when
-    PlaceSearchResult result = placeService.search(1L, "주차장", null, null, null, null);
+    PlaceSearchResult result = placeService.search(1L, "주차장", PlaceCategory.RESTAURANT, null, null, null);
 
     // then
     assertThat(result.places()).isEmpty();
