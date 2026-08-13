@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.place.service.result.PlaceSearchResult.PlaceSearch
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -56,6 +57,7 @@ public class PlaceService {
     return new PlaceSearchResult(items, response.nextPageToken());
   }
 
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public String getPhotoRedirectUri(String placeId, int maxWidth) {
     List<GooglePhoto> photos = googlePlacesClient.getPlaceDetails(placeId).photosOrEmpty();
 
