@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
@@ -167,7 +168,9 @@ public class PlaceController {
   @GetMapping("/{placeId}/photo")
   public ResponseEntity<Void> getPlacePhoto(
       @Parameter(description = "구글 place_id", example = "ChIJN1t_tDeuEmsRUsoyG83frY4")
-      @PathVariable String placeId,
+      @PathVariable
+      @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "placeId 형식이 올바르지 않습니다.")
+      String placeId,
       @Parameter(description = "최대 가로 픽셀. 1 이상 4800 이하입니다.", example = "400")
       @RequestParam(defaultValue = "400") @Min(1) @Max(4800) int maxWidth
   ) {

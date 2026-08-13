@@ -14,6 +14,7 @@ import org.sopt.buddys.domain.place.client.dto.GooglePlacesSearchResponse;
 import org.sopt.buddys.domain.place.code.PlaceErrorCode;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.entity.PlaceCategoryMapper;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -78,19 +79,21 @@ public class GooglePlacesClient {
   }
 
   public GooglePlaceDetailsResponse getPlaceDetails(String placeId) {
-    URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/places/" + placeId).build().toUri();
-
     HttpHeaders headers = new HttpHeaders();
     headers.set("X-Goog-Api-Key", apiKey);
     headers.set("X-Goog-FieldMask", "photos");
 
     try {
+      URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/places/" + placeId).build().toUri();
       return restTemplate.exchange(
           uri,
           HttpMethod.GET,
           new HttpEntity<>(headers),
           GooglePlaceDetailsResponse.class
       ).getBody();
+    } catch (IllegalStateException e) {
+      log.warn("[GooglePlacesClient] 잘못된 placeId → placeId={}", placeId, e);
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST, e);
     } catch (RestClientException e) {
       log.warn("[GooglePlacesClient] getPlaceDetails 호출 실패 → placeId={}", placeId, e);
       throw new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE, e);
@@ -98,16 +101,15 @@ public class GooglePlacesClient {
   }
 
   public String getPhotoMediaUri(String photoName, int maxWidthPx) {
-    URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/" + photoName + "/media")
-        .queryParam("maxWidthPx", maxWidthPx)
-        .queryParam("skipHttpRedirect", true)
-        .build()
-        .toUri();
-
     HttpHeaders headers = new HttpHeaders();
     headers.set("X-Goog-Api-Key", apiKey);
 
     try {
+      URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/" + photoName + "/media")
+          .queryParam("maxWidthPx", maxWidthPx)
+          .queryParam("skipHttpRedirect", true)
+          .build()
+          .toUri();
       GooglePhotoMediaResponse response = restTemplate.exchange(
           uri,
           HttpMethod.GET,
@@ -115,6 +117,9 @@ public class GooglePlacesClient {
           GooglePhotoMediaResponse.class
       ).getBody();
       return response != null ? response.photoUri() : null;
+    } catch (IllegalStateException e) {
+      log.warn("[GooglePlacesClient] 잘못된 photoName → photoName={}", photoName, e);
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST, e);
     } catch (RestClientException e) {
       log.warn("[GooglePlacesClient] getPhotoMediaUri 호출 실패 → photoName={}", photoName, e);
       throw new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE, e);
