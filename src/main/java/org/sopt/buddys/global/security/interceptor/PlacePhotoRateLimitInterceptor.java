@@ -71,9 +71,11 @@ public class PlacePhotoRateLimitInterceptor implements HandlerInterceptor {
   }
 
   private String resolveClientIp(HttpServletRequest request) {
-    String forwardedFor = request.getHeader("X-Forwarded-For");
-    if (forwardedFor != null && !forwardedFor.isBlank()) {
-      return forwardedFor.split(",")[0].trim();
+    // X-Forwarded-For는 nginx가 클라이언트가 보낸 값에 실제 IP를 append만 하므로(deploy/nginx/buddys.conf의 $proxy_add_x_forwarded_for) 클라이언트가 조작한 값을 그대로 신뢰하게 될 수 있어 사용하지 않는다.
+    // X-Real-IP는 nginx가 $remote_addr로 항상 덮어쓰므로(proxy_set_header X-Real-IP $remote_addr) 신뢰할 수 있다.
+    String realIp = request.getHeader("X-Real-IP");
+    if (realIp != null && !realIp.isBlank()) {
+      return realIp.trim();
     }
     return request.getRemoteAddr();
   }
