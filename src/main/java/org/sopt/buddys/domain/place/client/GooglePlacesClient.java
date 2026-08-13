@@ -111,12 +111,17 @@ public class GooglePlacesClient {
       ).getBody();
     }, "getPhotoMediaUri photoName=" + photoName);
 
-    return response != null ? response.photoUri() : null;
+    return response.photoUri();
   }
 
   private <T> T execute(Supplier<T> request, String context) {
     try {
-      return request.get();
+      T result = request.get();
+      if (result == null) {
+        log.warn("[GooglePlacesClient] 구글 응답 바디가 비어있음 → {}", context);
+        throw new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE);
+      }
+      return result;
     } catch (IllegalStateException e) {
       log.warn("[GooglePlacesClient] 잘못된 요청 파라미터 → {}", context, e);
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST, e);
