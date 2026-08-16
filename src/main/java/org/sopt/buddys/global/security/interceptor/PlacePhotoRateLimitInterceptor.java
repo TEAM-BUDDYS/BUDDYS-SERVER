@@ -40,23 +40,30 @@ public class PlacePhotoRateLimitInterceptor implements HandlerInterceptor {
     evictStaleWindowsIfDue();
 
     String clientIp = resolveClientIp(request);
-    RequestWindow window = windows.get(clientIp);
+    // computeIfAbsent의 매핑 함수가 null을 반환하면 삽입 없이 null을 돌려준다.
+    // 같은 키에 한해 "한도 체크 + 삽입"이 원자적으로 처리되므로, get() 후 별도로
+    // computeIfAbsent를 부르던 기존 방식의 체크-후-삽입 경쟁 상태가 사라진다.
+    RequestWindow window = windows.computeIfAbsent(clientIp,
+        key -> windows.size() >= MAX_TRACKED_CLIENTS ? null : new RequestWindow());
+
     if (window == null) {
-      if (windows.size() >= MAX_TRACKED_CLIENTS) {
-        // 추적 가능한 클라이언트 수를 넘어서면 더 이상 맵을 키우지 않고 이번 요청은 통과시킨다
-        return true;
-      }
-      window = windows.computeIfAbsent(clientIp, key -> new RequestWindow());
+      // 추적 가능한 클라이언트 수를 넘어선 새 클라이언트는 한도 없이 통과시키지 않고 429로 거절한다.
+      writeTooManyRequests(response);
+      return false;
     }
 
     if (window.incrementAndCheckExceeded()) {
-      response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-      response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-      response.setCharacterEncoding("UTF-8");
-      objectMapper.writeValue(response.getWriter(), BaseResponse.failure(GlobalErrorCode.TOO_MANY_REQUESTS));
+      writeTooManyRequests(response);
       return false;
     }
     return true;
+  }
+
+  private void writeTooManyRequests(HttpServletResponse response) throws java.io.IOException {
+    response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    response.setCharacterEncoding("UTF-8");
+    objectMapper.writeValue(response.getWriter(), BaseResponse.failure(GlobalErrorCode.TOO_MANY_REQUESTS));
   }
 
   private void evictStaleWindowsIfDue() {
