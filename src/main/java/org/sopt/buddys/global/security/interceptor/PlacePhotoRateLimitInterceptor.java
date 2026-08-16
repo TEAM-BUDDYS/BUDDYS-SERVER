@@ -20,11 +20,11 @@ public class PlacePhotoRateLimitInterceptor implements HandlerInterceptor {
   private static final int MAX_REQUESTS_PER_WINDOW = 60;
   private static final long WINDOW_MILLIS = Duration.ofMinutes(1).toMillis();
 
-  // 창이 끝나고도 한동안 재요청이 없으면 완전히 죽은 엔트리로 간주해 정리 대상으로 삼는다.
+  // 창이 끝나고도 한동안 재요청이 없으면 완전히 죽은 엔트리로 간주해 정리 대상으로 삼는다
   private static final long STALE_ENTRY_MILLIS = WINDOW_MILLIS * 2;
-  // 정리 스윕은 매 요청마다 돌리지 않고 이 주기로만 수행한다 (O(n) 스캔 비용 절약).
+  // 정리 스윕은 매 요청마다 돌리지 않고 이 주기로만 수행한다 (O(n) 스캔 비용 절약)
   private static final long CLEANUP_INTERVAL_MILLIS = Duration.ofMinutes(5).toMillis();
-  // 정리 주기가 돌기 전에 서로 다른 IP로 폭주 요청이 와도 메모리가 무한정 늘지 않도록 하는 하드 캡.
+  // 정리 주기가 돌기 전에 서로 다른 IP로 폭주 요청이 와도 메모리가 무한정 늘지 않도록 하는 하드 캡
   private static final int MAX_TRACKED_CLIENTS = 10_000;
 
   private final ObjectMapper objectMapper;
@@ -43,7 +43,7 @@ public class PlacePhotoRateLimitInterceptor implements HandlerInterceptor {
     RequestWindow window = windows.get(clientIp);
     if (window == null) {
       if (windows.size() >= MAX_TRACKED_CLIENTS) {
-        // 추적 가능한 클라이언트 수를 넘어서면 더 이상 맵을 키우지 않고 이번 요청은 통과시킨다.
+        // 추적 가능한 클라이언트 수를 넘어서면 더 이상 맵을 키우지 않고 이번 요청은 통과시킨다
         return true;
       }
       window = windows.computeIfAbsent(clientIp, key -> new RequestWindow());

@@ -62,8 +62,6 @@ public class GooglePlacesClient {
       BigDecimal lng,
       String pageToken
   ) {
-    // Text Search(New)의 includedType은 단일 값만 지원해 우리 카테고리(여러 구글 타입 묶음)를 표현할 수 없다.
-    // 서버 사이드 타입 제한 없이 전체를 받아온 뒤 PlaceService의 클라이언트 사이드 필터로 category를 좁힌다.
     GooglePlacesSearchRequest request = new GooglePlacesSearchRequest(
         query,
         toLocationBias(lat, lng),
@@ -115,7 +113,6 @@ public class GooglePlacesClient {
             new HttpEntity<>(request, headers),
             GooglePlacesSearchResponse.class
         ).getBody(),
-        // 유저의 정밀 좌표는 실패 로그에 남기지 않는다. (WARN 레벨로 남는 execute()의 context 문자열이라 위치 정보 노출 우려)
         "searchNearby category=" + category + " radius=" + radiusMeters
     );
   }

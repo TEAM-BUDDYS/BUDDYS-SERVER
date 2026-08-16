@@ -67,7 +67,6 @@ public class PlaceService {
 
     var response = googlePlacesClient.searchNearby(lat, lng, radius, category);
 
-    // 구글 Nearby Search(New)는 pageToken/nextPageToken을 지원하지 않아 한 번의 호출로 받은 최대 20개(구글 하드캡)가 전부이며, 다음 페이지는 항상 없다.
     return toSearchResult(userId, response.placesOrEmpty(), category, null);
   }
 

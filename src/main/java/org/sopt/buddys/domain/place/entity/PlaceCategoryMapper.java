@@ -73,8 +73,6 @@ public final class PlaceCategoryMapper {
       Map.entry("bed_and_breakfast", PlaceCategory.ACCOMMODATION)
   );
 
-  // GOOGLE_TYPE_TO_CATEGORY를 역으로 그룹핑해서 유도한다. 두 방향 매핑이 서로 다른 소스로 관리되면서
-  // 어긋나는 걸 막기 위해 항상 이 테이블 하나에서 파생시킨다.
   private static final Map<PlaceCategory, List<String>> CATEGORY_TO_GOOGLE_TYPES = GOOGLE_TYPE_TO_CATEGORY.entrySet()
       .stream()
       .filter(entry -> entry.getValue() != PlaceCategory.ETC)
@@ -86,8 +84,6 @@ public final class PlaceCategoryMapper {
   private PlaceCategoryMapper() {
   }
 
-  // Nearby Search(New)의 includedTypes(다중 타입 지원) 전용. Text Search(New)의 includedType은
-  // 단일 값만 지원해 우리 카테고리(여러 구글 타입 묶음)를 표현할 수 없어 이 리스트를 쓰지 않는다.
   public static List<String> toGoogleIncludedTypes(PlaceCategory category) {
     return category == null ? List.of() : CATEGORY_TO_GOOGLE_TYPES.getOrDefault(category, List.of());
   }
