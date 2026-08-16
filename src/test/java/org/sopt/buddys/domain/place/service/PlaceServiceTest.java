@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.place.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -219,6 +220,36 @@ class PlaceServiceTest {
     then(googlePlacesClient).should(never()).searchText(any(), any(), any(), any());
   }
 
+  @DisplayName("검색 시 위도/경도가 유효 범위를 벗어나면 구글 API를 호출하지 않고 예외가 발생한다")
+  @Test
+  void search_coordinatesOutOfRange_throwsWithoutCallingGoogle() {
+    // when, then
+    assertThatThrownBy(() ->
+        placeService.search(1L, "카페", null, BigDecimal.valueOf(91), BigDecimal.valueOf(127.0), null))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_COORDINATE_RANGE);
+    assertThatThrownBy(() ->
+        placeService.search(1L, "카페", null, BigDecimal.valueOf(37.5), BigDecimal.valueOf(181), null))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_COORDINATE_RANGE);
+    then(googlePlacesClient).should(never()).searchText(any(), any(), any(), any());
+  }
+
+  @DisplayName("검색 시 위도/경도가 경계값(±90, ±180)이면 정상 처리된다")
+  @Test
+  void search_coordinatesAtBoundary_isAccepted() {
+    // given
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(), null));
+
+    // when, then
+    assertThatCode(() ->
+        placeService.search(1L, "카페", null, BigDecimal.valueOf(90), BigDecimal.valueOf(180), null))
+        .doesNotThrowAnyException();
+  }
+
   @DisplayName("근처 장소 조회 시 category를 지정하면 매핑된 카테고리가 일치하는 장소만 반환한다")
   @Test
   void nearby_withCategory_returnsOnlyMatchingCategory() {
@@ -304,6 +335,36 @@ class PlaceServiceTest {
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(PlaceErrorCode.INVALID_CATEGORY);
     then(googlePlacesClient).should(never()).searchNearby(any(), any(), anyInt(), any());
+  }
+
+  @DisplayName("근처 장소 조회 시 위도/경도가 유효 범위를 벗어나면 구글 API를 호출하지 않고 예외가 발생한다")
+  @Test
+  void nearby_coordinatesOutOfRange_throwsWithoutCallingGoogle() {
+    // when, then
+    assertThatThrownBy(() ->
+        placeService.nearby(1L, BigDecimal.valueOf(-91), BigDecimal.valueOf(127.0), null, null))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_COORDINATE_RANGE);
+    assertThatThrownBy(() ->
+        placeService.nearby(1L, BigDecimal.valueOf(37.5), BigDecimal.valueOf(-181), null, null))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_COORDINATE_RANGE);
+    then(googlePlacesClient).should(never()).searchNearby(any(), any(), anyInt(), any());
+  }
+
+  @DisplayName("근처 장소 조회 시 위도/경도가 경계값(±90, ±180)이면 정상 처리된다")
+  @Test
+  void nearby_coordinatesAtBoundary_isAccepted() {
+    // given
+    given(googlePlacesClient.searchNearby(any(), any(), anyInt(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(), null));
+
+    // when, then
+    assertThatCode(() ->
+        placeService.nearby(1L, BigDecimal.valueOf(-90), BigDecimal.valueOf(-180), null, null))
+        .doesNotThrowAnyException();
   }
 
   @DisplayName("장소에 사진이 있으면 리다이렉트용 URI를 반환한다")

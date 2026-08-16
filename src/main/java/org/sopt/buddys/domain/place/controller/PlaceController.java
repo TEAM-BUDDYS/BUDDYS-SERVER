@@ -45,7 +45,7 @@ public class PlaceController {
       @ApiResponse(responseCode = "200", description = "검색 성공"),
       @ApiResponse(
           responseCode = "400",
-          description = "잘못된 요청 — query 파라미터 누락, category 값이 유효하지 않음, lat/lng 중 하나만 전달됨 중 하나",
+          description = "잘못된 요청 — query 파라미터 누락, category 값이 유효하지 않음, lat/lng 중 하나만 전달됨, lat/lng가 유효 범위를 벗어남 중 하나",
           content = @Content(
               mediaType = "application/json",
               schema = @Schema(implementation = BaseResponse.class),
@@ -85,6 +85,18 @@ public class PlaceController {
                             "data": null
                           }
                           """
+                  ),
+                  @ExampleObject(
+                      name = "lat/lng가 유효 범위를 벗어남",
+                      summary = "위도는 -90~90, 경도는 -180~180 범위를 벗어난 경우",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "PLACE-E008",
+                            "message": "위도는 -90~90, 경도는 -180~180 범위여야 합니다.",
+                            "data": null
+                          }
+                          """
                   )
               }
           )
@@ -119,7 +131,7 @@ public class PlaceController {
       @ApiResponse(responseCode = "200", description = "조회 성공"),
       @ApiResponse(
           responseCode = "400",
-          description = "잘못된 요청 — lat/lng 파라미터 누락, radius가 1~50000 범위를 벗어남, category 값이 유효하지 않음 중 하나",
+          description = "잘못된 요청 — lat/lng 파라미터 누락, lat/lng가 유효 범위를 벗어남, radius가 1~50000 범위를 벗어남, category 값이 유효하지 않음 중 하나",
           content = @Content(
               mediaType = "application/json",
               schema = @Schema(implementation = BaseResponse.class),
@@ -132,6 +144,18 @@ public class PlaceController {
                             "success": false,
                             "code": "PLACE-E006",
                             "message": "위도(lat)와 경도(lng)는 필수입니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "lat/lng가 유효 범위를 벗어남",
+                      summary = "위도는 -90~90, 경도는 -180~180 범위를 벗어난 경우",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "PLACE-E008",
+                            "message": "위도는 -90~90, 경도는 -180~180 범위여야 합니다.",
                             "data": null
                           }
                           """

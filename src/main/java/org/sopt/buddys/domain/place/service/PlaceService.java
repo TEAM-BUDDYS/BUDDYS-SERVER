@@ -27,6 +27,10 @@ public class PlaceService {
   private static final int DEFAULT_NEARBY_RADIUS_METERS = 1_500;
   private static final int MIN_NEARBY_RADIUS_METERS = 1;
   private static final int MAX_NEARBY_RADIUS_METERS = 50_000;
+  private static final BigDecimal MIN_LATITUDE = BigDecimal.valueOf(-90);
+  private static final BigDecimal MAX_LATITUDE = BigDecimal.valueOf(90);
+  private static final BigDecimal MIN_LONGITUDE = BigDecimal.valueOf(-180);
+  private static final BigDecimal MAX_LONGITUDE = BigDecimal.valueOf(180);
 
   private final GooglePlacesClient googlePlacesClient;
   private final PlaceBookmarkRepository placeBookmarkRepository;
@@ -41,6 +45,7 @@ public class PlaceService {
   ) {
     validateQuery(query);
     validateCoordinates(lat, lng);
+    validateCoordinateRange(lat, lng);
     PlaceCategory category = parseCategory(categoryRaw);
 
     var response = googlePlacesClient.searchText(query.trim(), lat, lng, pageToken);
@@ -56,6 +61,7 @@ public class PlaceService {
       String categoryRaw
   ) {
     validateRequiredCoordinates(lat, lng);
+    validateCoordinateRange(lat, lng);
     int radius = resolveRadius(radiusMeters);
     PlaceCategory category = parseCategory(categoryRaw);
 
@@ -156,6 +162,17 @@ public class PlaceService {
   private void validateRequiredCoordinates(BigDecimal lat, BigDecimal lng) {
     if (lat == null || lng == null) {
       throw new BaseException(PlaceErrorCode.MISSING_COORDINATES);
+    }
+  }
+
+  private void validateCoordinateRange(BigDecimal lat, BigDecimal lng) {
+    if (lat == null || lng == null) {
+      return;
+    }
+    boolean outOfRange = lat.compareTo(MIN_LATITUDE) < 0 || lat.compareTo(MAX_LATITUDE) > 0
+        || lng.compareTo(MIN_LONGITUDE) < 0 || lng.compareTo(MAX_LONGITUDE) > 0;
+    if (outOfRange) {
+      throw new BaseException(PlaceErrorCode.INVALID_COORDINATE_RANGE);
     }
   }
 
