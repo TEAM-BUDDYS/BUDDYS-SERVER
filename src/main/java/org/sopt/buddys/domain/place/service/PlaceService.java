@@ -13,7 +13,6 @@ import org.sopt.buddys.domain.place.entity.PlaceCategoryMapper;
 import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult.PlaceSearchItemResult;
-import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -25,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlaceService {
 
   private static final String PHOTO_URL_TEMPLATE = "/api/v1/places/%s/photo?maxWidth=400";
+  private static final int DEFAULT_NEARBY_RADIUS_METERS = 1_500;
+  private static final int MIN_NEARBY_RADIUS_METERS = 1;
+  private static final int MAX_NEARBY_RADIUS_METERS = 50_000;
 
   private final GooglePlacesClient googlePlacesClient;
   private final PlaceBookmarkRepository placeBookmarkRepository;
@@ -32,17 +34,44 @@ public class PlaceService {
   public PlaceSearchResult search(
       Long userId,
       String query,
-      PlaceCategory category,
+      String categoryRaw,
       BigDecimal lat,
       BigDecimal lng,
       String pageToken
   ) {
     validateQuery(query);
     validateCoordinates(lat, lng);
+    PlaceCategory category = parseCategory(categoryRaw);
 
-    var response = googlePlacesClient.searchText(query.trim(), category, lat, lng, pageToken);
+    var response = googlePlacesClient.searchText(query.trim(), lat, lng, pageToken);
 
-    List<MatchedPlace> matched = response.placesOrEmpty().stream()
+    return toSearchResult(userId, response.placesOrEmpty(), category, response.nextPageToken());
+  }
+
+  public PlaceSearchResult nearby(
+      Long userId,
+      BigDecimal lat,
+      BigDecimal lng,
+      Integer radiusMeters,
+      String categoryRaw
+  ) {
+    validateRequiredCoordinates(lat, lng);
+    int radius = resolveRadius(radiusMeters);
+    PlaceCategory category = parseCategory(categoryRaw);
+
+    var response = googlePlacesClient.searchNearby(lat, lng, radius, category);
+
+    // 구글 Nearby Search(New)는 pageToken/nextPageToken을 지원하지 않아 한 번의 호출로 받은 최대 20개(구글 하드캡)가 전부이며, 다음 페이지는 항상 없다.
+    return toSearchResult(userId, response.placesOrEmpty(), category, null);
+  }
+
+  private PlaceSearchResult toSearchResult(
+      Long userId,
+      List<GooglePlace> places,
+      PlaceCategory category,
+      String nextPageToken
+  ) {
+    List<MatchedPlace> matched = places.stream()
         .map(place -> new MatchedPlace(place, PlaceCategoryMapper.fromGooglePrimaryType(place.primaryType()).orElse(null)))
         .filter(matchedPlace -> matchedPlace.category() != null
             && (category == null || category == matchedPlace.category()))
@@ -59,7 +88,7 @@ public class PlaceService {
         ))
         .toList();
 
-    return new PlaceSearchResult(items, response.nextPageToken());
+    return new PlaceSearchResult(items, nextPageToken);
   }
 
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -105,15 +134,42 @@ public class PlaceService {
   private record MatchedPlace(GooglePlace place, PlaceCategory category) {
   }
 
+  private PlaceCategory parseCategory(String categoryRaw) {
+    if (categoryRaw == null || categoryRaw.isBlank()) {
+      return null;
+    }
+    try {
+      return PlaceCategory.valueOf(categoryRaw.trim());
+    } catch (IllegalArgumentException e) {
+      throw new BaseException(PlaceErrorCode.INVALID_CATEGORY);
+    }
+  }
+
   private void validateQuery(String query) {
     if (query == null || query.isBlank()) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+      throw new BaseException(PlaceErrorCode.MISSING_QUERY);
     }
   }
 
   private void validateCoordinates(BigDecimal lat, BigDecimal lng) {
     if ((lat == null) != (lng == null)) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+      throw new BaseException(PlaceErrorCode.LAT_LNG_MUST_BE_PAIRED);
     }
+  }
+
+  private void validateRequiredCoordinates(BigDecimal lat, BigDecimal lng) {
+    if (lat == null || lng == null) {
+      throw new BaseException(PlaceErrorCode.MISSING_COORDINATES);
+    }
+  }
+
+  private int resolveRadius(Integer radiusMeters) {
+    if (radiusMeters == null) {
+      return DEFAULT_NEARBY_RADIUS_METERS;
+    }
+    if (radiusMeters < MIN_NEARBY_RADIUS_METERS || radiusMeters > MAX_NEARBY_RADIUS_METERS) {
+      throw new BaseException(PlaceErrorCode.INVALID_RADIUS);
+    }
+    return radiusMeters;
   }
 }

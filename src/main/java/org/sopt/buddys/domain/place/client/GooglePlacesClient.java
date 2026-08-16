@@ -2,14 +2,17 @@ package org.sopt.buddys.domain.place.client;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.util.List;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sopt.buddys.domain.place.client.dto.GoogleCircle;
 import org.sopt.buddys.domain.place.client.dto.GoogleLatLng;
 import org.sopt.buddys.domain.place.client.dto.GoogleLocationBias;
+import org.sopt.buddys.domain.place.client.dto.GoogleLocationRestriction;
 import org.sopt.buddys.domain.place.client.dto.GooglePhotoMediaResponse;
 import org.sopt.buddys.domain.place.client.dto.GooglePlaceDetailsResponse;
+import org.sopt.buddys.domain.place.client.dto.GooglePlacesNearbyRequest;
 import org.sopt.buddys.domain.place.client.dto.GooglePlacesSearchRequest;
 import org.sopt.buddys.domain.place.client.dto.GooglePlacesSearchResponse;
 import org.sopt.buddys.domain.place.code.PlaceErrorCode;
@@ -32,9 +35,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequiredArgsConstructor
 public class GooglePlacesClient {
 
-  private static final String FIELD_MASK =
-      "places.id,places.displayName,places.primaryType,places.formattedAddress,places.location,places.photos,nextPageToken";
+  private static final String PLACE_FIELDS =
+      "places.id,places.displayName,places.primaryType,places.formattedAddress,places.location,places.photos";
+  private static final String SEARCH_TEXT_FIELD_MASK = PLACE_FIELDS + ",nextPageToken";
   private static final double DEFAULT_BIAS_RADIUS_METERS = 20_000.0;
+  private static final int NEARBY_MAX_RESULT_COUNT = 20;
+  private static final String LANGUAGE_CODE_KOREAN = "ko";
 
   private final RestTemplate restTemplate;
 
@@ -44,27 +50,31 @@ public class GooglePlacesClient {
   @Value("${google.places.search-text-url}")
   private String searchTextUrl;
 
+  @Value("${google.places.search-nearby-url}")
+  private String searchNearbyUrl;
+
   @Value("${google.places.base-url}")
   private String baseUrl;
 
   public GooglePlacesSearchResponse searchText(
       String query,
-      PlaceCategory category,
       BigDecimal lat,
       BigDecimal lng,
       String pageToken
   ) {
+    // Text Search(New)의 includedType은 단일 값만 지원해 우리 카테고리(여러 구글 타입 묶음)를 표현할 수 없다.
+    // 서버 사이드 타입 제한 없이 전체를 받아온 뒤 PlaceService의 클라이언트 사이드 필터로 category를 좁힌다.
     GooglePlacesSearchRequest request = new GooglePlacesSearchRequest(
         query,
-        PlaceCategoryMapper.toGoogleIncludedType(category),
         toLocationBias(lat, lng),
-        pageToken
+        pageToken,
+        LANGUAGE_CODE_KOREAN
     );
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
     headers.set("X-Goog-Api-Key", apiKey);
-    headers.set("X-Goog-FieldMask", FIELD_MASK);
+    headers.set("X-Goog-FieldMask", SEARCH_TEXT_FIELD_MASK);
 
     return execute(
         () -> restTemplate.exchange(
@@ -74,6 +84,39 @@ public class GooglePlacesClient {
             GooglePlacesSearchResponse.class
         ).getBody(),
         "searchText query=" + query
+    );
+  }
+
+  public GooglePlacesSearchResponse searchNearby(
+      BigDecimal lat,
+      BigDecimal lng,
+      int radiusMeters,
+      PlaceCategory category
+  ) {
+    List<String> includedTypes = PlaceCategoryMapper.toGoogleIncludedTypes(category);
+    GooglePlacesNearbyRequest request = new GooglePlacesNearbyRequest(
+        includedTypes.isEmpty() ? null : includedTypes,
+        NEARBY_MAX_RESULT_COUNT,
+        new GoogleLocationRestriction(
+            new GoogleCircle(new GoogleLatLng(lat.doubleValue(), lng.doubleValue()), radiusMeters)
+        ),
+        LANGUAGE_CODE_KOREAN
+    );
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set("X-Goog-Api-Key", apiKey);
+    headers.set("X-Goog-FieldMask", PLACE_FIELDS);
+
+    return execute(
+        () -> restTemplate.exchange(
+            searchNearbyUrl,
+            HttpMethod.POST,
+            new HttpEntity<>(request, headers),
+            GooglePlacesSearchResponse.class
+        ).getBody(),
+        // 유저의 정밀 좌표는 실패 로그에 남기지 않는다. (WARN 레벨로 남는 execute()의 context 문자열이라 위치 정보 노출 우려)
+        "searchNearby category=" + category + " radius=" + radiusMeters
     );
   }
 

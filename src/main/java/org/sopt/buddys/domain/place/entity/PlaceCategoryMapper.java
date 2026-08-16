@@ -1,16 +1,13 @@
 package org.sopt.buddys.domain.place.entity;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public final class PlaceCategoryMapper {
-
-  private static final Map<PlaceCategory, String> CATEGORY_TO_GOOGLE_TYPE = Map.of(
-      PlaceCategory.RESTAURANT, "restaurant",
-      PlaceCategory.CAFE, "cafe",
-      PlaceCategory.TOURISM, "tourist_attraction",
-      PlaceCategory.ACCOMMODATION, "lodging"
-  );
 
   private static final Map<String, PlaceCategory> GOOGLE_TYPE_TO_CATEGORY = Map.ofEntries(
       Map.entry("restaurant", PlaceCategory.RESTAURANT),
@@ -19,22 +16,54 @@ public final class PlaceCategoryMapper {
       Map.entry("meal_delivery", PlaceCategory.RESTAURANT),
       Map.entry("food_court", PlaceCategory.RESTAURANT),
       Map.entry("bar", PlaceCategory.RESTAURANT),
+      Map.entry("french_restaurant", PlaceCategory.RESTAURANT),
       Map.entry("cafe", PlaceCategory.CAFE),
       Map.entry("coffee_shop", PlaceCategory.CAFE),
       Map.entry("bakery", PlaceCategory.CAFE),
+      Map.entry("pastry_shop", PlaceCategory.CAFE),
+      // Culture
       Map.entry("tourist_attraction", PlaceCategory.TOURISM),
       Map.entry("museum", PlaceCategory.TOURISM),
       Map.entry("art_gallery", PlaceCategory.TOURISM),
+      Map.entry("art_museum", PlaceCategory.TOURISM),
+      Map.entry("cultural_landmark", PlaceCategory.TOURISM),
+      Map.entry("castle", PlaceCategory.TOURISM),
+      Map.entry("historical_place", PlaceCategory.TOURISM),
+      Map.entry("history_museum", PlaceCategory.TOURISM),
+      // Entertainment and Recreation
       Map.entry("park", PlaceCategory.TOURISM),
       Map.entry("amusement_park", PlaceCategory.TOURISM),
       Map.entry("zoo", PlaceCategory.TOURISM),
       Map.entry("aquarium", PlaceCategory.TOURISM),
       Map.entry("historical_landmark", PlaceCategory.TOURISM),
       Map.entry("monument", PlaceCategory.TOURISM),
+      Map.entry("garden", PlaceCategory.TOURISM),
+      Map.entry("plaza", PlaceCategory.TOURISM),
+      Map.entry("botanical_garden", PlaceCategory.TOURISM),
+      Map.entry("national_park", PlaceCategory.TOURISM),
+      Map.entry("state_park", PlaceCategory.TOURISM),
+      Map.entry("observation_deck", PlaceCategory.TOURISM),
+      Map.entry("visitor_center", PlaceCategory.TOURISM),
+      Map.entry("water_park", PlaceCategory.TOURISM),
+      Map.entry("wildlife_park", PlaceCategory.TOURISM),
+      Map.entry("wildlife_refuge", PlaceCategory.TOURISM),
+      Map.entry("marina", PlaceCategory.TOURISM),
+      // Places of Worship
       Map.entry("church", PlaceCategory.TOURISM),
       Map.entry("hindu_temple", PlaceCategory.TOURISM),
       Map.entry("mosque", PlaceCategory.TOURISM),
       Map.entry("synagogue", PlaceCategory.TOURISM),
+      Map.entry("buddhist_temple", PlaceCategory.TOURISM),
+      Map.entry("shinto_shrine", PlaceCategory.TOURISM),
+      // Natural Features
+      Map.entry("beach", PlaceCategory.TOURISM),
+      Map.entry("island", PlaceCategory.TOURISM),
+      Map.entry("lake", PlaceCategory.TOURISM),
+      Map.entry("mountain_peak", PlaceCategory.TOURISM),
+      Map.entry("nature_preserve", PlaceCategory.TOURISM),
+      Map.entry("river", PlaceCategory.TOURISM),
+      Map.entry("scenic_spot", PlaceCategory.TOURISM),
+      Map.entry("woods", PlaceCategory.TOURISM),
       Map.entry("lodging", PlaceCategory.ACCOMMODATION),
       Map.entry("hotel", PlaceCategory.ACCOMMODATION),
       Map.entry("motel", PlaceCategory.ACCOMMODATION),
@@ -44,17 +73,34 @@ public final class PlaceCategoryMapper {
       Map.entry("bed_and_breakfast", PlaceCategory.ACCOMMODATION)
   );
 
+  // GOOGLE_TYPE_TO_CATEGORY를 역으로 그룹핑해서 유도한다. 두 방향 매핑이 서로 다른 소스로 관리되면서
+  // 어긋나는 걸 막기 위해 항상 이 테이블 하나에서 파생시킨다.
+  private static final Map<PlaceCategory, List<String>> CATEGORY_TO_GOOGLE_TYPES = GOOGLE_TYPE_TO_CATEGORY.entrySet()
+      .stream()
+      .filter(entry -> entry.getValue() != PlaceCategory.ETC)
+      .collect(Collectors.groupingBy(
+          Map.Entry::getValue,
+          Collectors.mapping(Map.Entry::getKey, Collectors.toUnmodifiableList())
+      ));
+
   private PlaceCategoryMapper() {
   }
 
-  public static String toGoogleIncludedType(PlaceCategory category) {
-    return category == null ? null : CATEGORY_TO_GOOGLE_TYPE.get(category);
+  // Nearby Search(New)의 includedTypes(다중 타입 지원) 전용. Text Search(New)의 includedType은
+  // 단일 값만 지원해 우리 카테고리(여러 구글 타입 묶음)를 표현할 수 없어 이 리스트를 쓰지 않는다.
+  public static List<String> toGoogleIncludedTypes(PlaceCategory category) {
+    return category == null ? List.of() : CATEGORY_TO_GOOGLE_TYPES.getOrDefault(category, List.of());
   }
 
   public static Optional<PlaceCategory> fromGooglePrimaryType(String primaryType) {
     if (primaryType == null) {
       return Optional.empty();
     }
-    return Optional.of(GOOGLE_TYPE_TO_CATEGORY.getOrDefault(primaryType, PlaceCategory.ETC));
+    PlaceCategory category = GOOGLE_TYPE_TO_CATEGORY.get(primaryType);
+    if (category == null) {
+      log.debug("[PlaceCategoryMapper] 매핑 테이블에 없는 구글 primaryType → ETC로 폴백: {}", primaryType);
+      category = PlaceCategory.ETC;
+    }
+    return Optional.of(category);
   }
 }

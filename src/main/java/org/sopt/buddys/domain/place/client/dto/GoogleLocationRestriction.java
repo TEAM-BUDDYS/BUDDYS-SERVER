@@ -1,6 +1,6 @@
 package org.sopt.buddys.domain.place.client.dto;
 
-public record GoogleLocationBias(
+public record GoogleLocationRestriction(
     GoogleCircle circle
 ) {
 }

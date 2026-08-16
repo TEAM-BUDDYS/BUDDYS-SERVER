@@ -28,7 +28,6 @@ import org.sopt.buddys.domain.place.code.PlaceErrorCode;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult;
-import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,13 +48,13 @@ class PlaceServiceTest {
     // given
     GooglePlace restaurant = createGooglePlace("place-restaurant", "restaurant");
     GooglePlace museum = createGooglePlace("place-museum", "museum");
-    given(googlePlacesClient.searchText("맛집", PlaceCategory.RESTAURANT, null, null, null))
+    given(googlePlacesClient.searchText("맛집", null, null, null))
         .willReturn(new GooglePlacesSearchResponse(List.of(restaurant, museum), null));
     given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(1L, List.of("place-restaurant")))
         .willReturn(List.of());
 
     // when
-    PlaceSearchResult result = placeService.search(1L, "맛집", PlaceCategory.RESTAURANT, null, null, null);
+    PlaceSearchResult result = placeService.search(1L, "맛집", "RESTAURANT", null, null, null);
 
     // then
     assertThat(result.places())
@@ -69,7 +68,7 @@ class PlaceServiceTest {
     // given
     GooglePlace restaurant = createGooglePlace("place-restaurant", "restaurant");
     GooglePlace lodging = createGooglePlace("place-lodging", "lodging");
-    given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
         .willReturn(new GooglePlacesSearchResponse(List.of(restaurant, lodging), null));
     given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
 
@@ -87,7 +86,7 @@ class PlaceServiceTest {
   void search_unmappableGoogleType_isCategorizedAsEtc() {
     // given
     GooglePlace unmappable = createGooglePlace("place-unknown", "parking");
-    given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
         .willReturn(new GooglePlacesSearchResponse(List.of(unmappable), null));
     given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
 
@@ -105,11 +104,11 @@ class PlaceServiceTest {
   void search_withCategory_excludesEtcPlaces() {
     // given
     GooglePlace unmappable = createGooglePlace("place-unknown", "parking");
-    given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
         .willReturn(new GooglePlacesSearchResponse(List.of(unmappable), null));
 
     // when
-    PlaceSearchResult result = placeService.search(1L, "주차장", PlaceCategory.RESTAURANT, null, null, null);
+    PlaceSearchResult result = placeService.search(1L, "주차장", "RESTAURANT", null, null, null);
 
     // then
     assertThat(result.places()).isEmpty();
@@ -122,13 +121,13 @@ class PlaceServiceTest {
     // given
     GooglePlace bookmarked = createGooglePlace("place-bookmarked", "cafe");
     GooglePlace notBookmarked = createGooglePlace("place-plain", "cafe");
-    given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
         .willReturn(new GooglePlacesSearchResponse(List.of(bookmarked, notBookmarked), null));
     given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(1L, List.of("place-bookmarked", "place-plain")))
         .willReturn(List.of("place-bookmarked"));
 
     // when
-    PlaceSearchResult result = placeService.search(1L, "카페", PlaceCategory.CAFE, null, null, null);
+    PlaceSearchResult result = placeService.search(1L, "카페", "CAFE", null, null, null);
 
     // then
     assertThat(result.places())
@@ -154,12 +153,12 @@ class PlaceServiceTest {
         List.of(new GooglePhoto("places/place-with-photo/photos/photo-1"))
     );
     GooglePlace withoutPhoto = createGooglePlace("place-without-photo", "cafe");
-    given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
         .willReturn(new GooglePlacesSearchResponse(List.of(withPhoto, withoutPhoto), null));
     given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
 
     // when
-    PlaceSearchResult result = placeService.search(1L, "카페", PlaceCategory.CAFE, null, null, null);
+    PlaceSearchResult result = placeService.search(1L, "카페", "CAFE", null, null, null);
 
     // then
     assertThat(result.places())
@@ -176,7 +175,7 @@ class PlaceServiceTest {
   @Test
   void search_propagatesNextPageToken() {
     // given
-    given(googlePlacesClient.searchText(anyString(), any(), any(), any(), any()))
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
         .willReturn(new GooglePlacesSearchResponse(List.of(), "AeCrKx..."));
 
     // when
@@ -193,8 +192,8 @@ class PlaceServiceTest {
     assertThatThrownBy(() -> placeService.search(1L, "   ", null, null, null, null))
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
-        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
-    then(googlePlacesClient).should(never()).searchText(any(), any(), any(), any(), any());
+        .isEqualTo(PlaceErrorCode.MISSING_QUERY);
+    then(googlePlacesClient).should(never()).searchText(any(), any(), any(), any());
   }
 
   @DisplayName("위도만 있고 경도가 없으면 예외가 발생한다")
@@ -205,8 +204,106 @@ class PlaceServiceTest {
         placeService.search(1L, "카페", null, BigDecimal.valueOf(37.5), null, null))
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
-        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
-    then(googlePlacesClient).should(never()).searchText(any(), any(), any(), any(), any());
+        .isEqualTo(PlaceErrorCode.LAT_LNG_MUST_BE_PAIRED);
+    then(googlePlacesClient).should(never()).searchText(any(), any(), any(), any());
+  }
+
+  @DisplayName("검색 시 category 값이 유효하지 않으면 구글 API를 호출하지 않고 예외가 발생한다")
+  @Test
+  void search_invalidCategory_throwsWithoutCallingGoogle() {
+    // when, then
+    assertThatThrownBy(() -> placeService.search(1L, "카페", "NOT_A_CATEGORY", null, null, null))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_CATEGORY);
+    then(googlePlacesClient).should(never()).searchText(any(), any(), any(), any());
+  }
+
+  @DisplayName("근처 장소 조회 시 category를 지정하면 매핑된 카테고리가 일치하는 장소만 반환한다")
+  @Test
+  void nearby_withCategory_returnsOnlyMatchingCategory() {
+    // given
+    GooglePlace restaurant = createGooglePlace("place-restaurant", "restaurant");
+    GooglePlace museum = createGooglePlace("place-museum", "museum");
+    given(googlePlacesClient.searchNearby(BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0), 1_500, PlaceCategory.RESTAURANT))
+        .willReturn(new GooglePlacesSearchResponse(List.of(restaurant, museum), null));
+    given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(1L, List.of("place-restaurant")))
+        .willReturn(List.of());
+
+    // when
+    PlaceSearchResult result = placeService.nearby(
+        1L, BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0), null, "RESTAURANT");
+
+    // then
+    assertThat(result.places())
+        .extracting(PlaceSearchResult.PlaceSearchItemResult::placeId)
+        .containsExactly("place-restaurant");
+  }
+
+  @DisplayName("근처 장소 조회 시 radius를 생략하면 기본값 1500m로 구글에 요청한다")
+  @Test
+  void nearby_withoutRadius_usesDefaultRadius() {
+    // given
+    given(googlePlacesClient.searchNearby(any(), any(), anyInt(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(), null));
+
+    // when
+    placeService.nearby(1L, BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0), null, null);
+
+    // then
+    then(googlePlacesClient).should()
+        .searchNearby(BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0), 1_500, null);
+  }
+
+  @DisplayName("근처 장소 조회 시 nextPageToken은 항상 null이다")
+  @Test
+  void nearby_alwaysReturnsNullNextPageToken() {
+    // given
+    GooglePlace place = createGooglePlace("place-1", "cafe");
+    given(googlePlacesClient.searchNearby(any(), any(), anyInt(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(place), "ignored-if-google-ever-sends-one"));
+    given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
+
+    // when
+    PlaceSearchResult result = placeService.nearby(1L, BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0), null, null);
+
+    // then
+    assertThat(result.nextPageToken()).isNull();
+  }
+
+  @DisplayName("근처 장소 조회 시 위도가 없으면 구글 API를 호출하지 않고 예외가 발생한다")
+  @Test
+  void nearby_missingLatitude_throwsWithoutCallingGoogle() {
+    // when, then
+    assertThatThrownBy(() -> placeService.nearby(1L, null, BigDecimal.valueOf(127.0), null, null))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.MISSING_COORDINATES);
+    then(googlePlacesClient).should(never()).searchNearby(any(), any(), anyInt(), any());
+  }
+
+  @DisplayName("근처 장소 조회 시 radius가 최대치를 초과하면 예외가 발생한다")
+  @Test
+  void nearby_radiusExceedsMax_throwsException() {
+    // when, then
+    assertThatThrownBy(() ->
+        placeService.nearby(1L, BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0), 50_001, null))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_RADIUS);
+    then(googlePlacesClient).should(never()).searchNearby(any(), any(), anyInt(), any());
+  }
+
+  @DisplayName("근처 장소 조회 시 category 값이 유효하지 않으면 구글 API를 호출하지 않고 예외가 발생한다")
+  @Test
+  void nearby_invalidCategory_throwsWithoutCallingGoogle() {
+    // when, then
+    assertThatThrownBy(() ->
+        placeService.nearby(1L, BigDecimal.valueOf(37.5), BigDecimal.valueOf(127.0), null, "NOT_A_CATEGORY"))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_CATEGORY);
+    then(googlePlacesClient).should(never()).searchNearby(any(), any(), anyInt(), any());
   }
 
   @DisplayName("장소에 사진이 있으면 리다이렉트용 URI를 반환한다")

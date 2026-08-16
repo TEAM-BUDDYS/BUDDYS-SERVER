@@ -28,18 +28,23 @@ class PlaceCategoryMapperTest {
     assertThat(PlaceCategoryMapper.fromGooglePrimaryType(null)).isEmpty();
   }
 
-  @DisplayName("우리 카테고리는 구글 includedType으로 변환된다")
+  @DisplayName("우리 카테고리는 매핑된 모든 구글 타입 목록으로 변환된다")
   @Test
-  void toGoogleIncludedType_ourCategory_mapsToGoogleType() {
-    assertThat(PlaceCategoryMapper.toGoogleIncludedType(PlaceCategory.RESTAURANT)).isEqualTo("restaurant");
-    assertThat(PlaceCategoryMapper.toGoogleIncludedType(PlaceCategory.CAFE)).isEqualTo("cafe");
-    assertThat(PlaceCategoryMapper.toGoogleIncludedType(PlaceCategory.TOURISM)).isEqualTo("tourist_attraction");
-    assertThat(PlaceCategoryMapper.toGoogleIncludedType(PlaceCategory.ACCOMMODATION)).isEqualTo("lodging");
+  void toGoogleIncludedTypes_ourCategory_mapsToAllGoogleTypes() {
+    assertThat(PlaceCategoryMapper.toGoogleIncludedTypes(PlaceCategory.RESTAURANT))
+        .contains("restaurant", "fast_food_restaurant", "bar");
+    assertThat(PlaceCategoryMapper.toGoogleIncludedTypes(PlaceCategory.CAFE))
+        .contains("cafe", "coffee_shop", "bakery");
+    assertThat(PlaceCategoryMapper.toGoogleIncludedTypes(PlaceCategory.TOURISM))
+        .contains("tourist_attraction", "museum", "beach");
+    assertThat(PlaceCategoryMapper.toGoogleIncludedTypes(PlaceCategory.ACCOMMODATION))
+        .contains("lodging", "hotel", "hostel");
   }
 
-  @DisplayName("카테고리가 없으면 includedType도 없다")
+  @DisplayName("ETC 카테고리나 카테고리가 없으면 매핑된 구글 타입이 없다")
   @Test
-  void toGoogleIncludedType_nullCategory_returnsNull() {
-    assertThat(PlaceCategoryMapper.toGoogleIncludedType(null)).isNull();
+  void toGoogleIncludedTypes_etcOrNullCategory_returnsEmpty() {
+    assertThat(PlaceCategoryMapper.toGoogleIncludedTypes(PlaceCategory.ETC)).isEmpty();
+    assertThat(PlaceCategoryMapper.toGoogleIncludedTypes(null)).isEmpty();
   }
 }

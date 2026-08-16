@@ -10,13 +10,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.place.controller.swagger.GooglePlacesUnavailableResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceSearchResponse;
-import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.service.PlaceService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -57,20 +56,20 @@ public class PlaceController {
                       value = """
                           {
                             "success": false,
-                            "code": "GLB-E001",
-                            "message": "잘못된 요청입니다.",
+                            "code": "PLACE-E003",
+                            "message": "검색어(query)를 입력해주세요.",
                             "data": null
                           }
                           """
                   ),
                   @ExampleObject(
                       name = "잘못된 category 값",
-                      summary = "RESTAURANT, CAFE, TOURISM, ACCOMMODATION 중 하나가 아닌 값을 보낸 경우",
+                      summary = "RESTAURANT, CAFE, TOURISM, ACCOMMODATION, ETC 중 하나가 아닌 값을 보낸 경우",
                       value = """
                           {
                             "success": false,
-                            "code": "GLB-E001",
-                            "message": "잘못된 요청입니다.",
+                            "code": "PLACE-E004",
+                            "message": "유효하지 않은 장소 카테고리입니다.",
                             "data": null
                           }
                           """
@@ -81,41 +80,26 @@ public class PlaceController {
                       value = """
                           {
                             "success": false,
-                            "code": "GLB-E001",
-                            "message": "잘못된 요청입니다.",
+                            "code": "PLACE-E005",
+                            "message": "위도(lat)와 경도(lng)는 함께 전달해야 합니다.",
                             "data": null
                           }
                           """
                   )
               }
           )
-      ),
-      @ApiResponse(
-          responseCode = "502",
-          description = "구글 Places 응답 실패 (업스트림 오류)",
-          content = @Content(
-              mediaType = "application/json",
-              schema = @Schema(implementation = BaseResponse.class),
-              examples = @ExampleObject(value = """
-                  {
-                    "success": false,
-                    "code": "PLACE-E001",
-                    "message": "지도 서비스 응답에 실패했습니다.",
-                    "data": null
-                  }
-                  """)
-          )
       )
   })
+  @GooglePlacesUnavailableResponse
   @CommonErrorResponses
   @GetMapping("/search")
   public BaseResponse<PlaceSearchResponse> searchPlaces(
       @Parameter(hidden = true)
       @LoginUser Long userId,
       @Parameter(description = "검색 키워드", example = "커피")
-      @RequestParam @NotBlank String query,
+      @RequestParam(required = false) String query,
       @Parameter(description = "장소 카테고리, 없으면 전체 검색", example = "CAFE")
-      @RequestParam(required = false) PlaceCategory category,
+      @RequestParam(required = false) String category,
       @Parameter(description = "위도. lng와 함께 넘기면 주변 검색으로 편향됩니다.", example = "37.5567")
       @RequestParam(required = false) BigDecimal lat,
       @Parameter(description = "경도. lat와 함께 넘기면 주변 검색으로 편향됩니다.", example = "126.9236")
@@ -125,6 +109,78 @@ public class PlaceController {
   ) {
     return BaseResponse.success(GlobalSuccessCode.OK,
         PlaceSearchResponse.from(placeService.search(userId, query, category, lat, lng, pageToken))
+    );
+  }
+
+  @Operation(
+      summary = "근처 장소 목록 조회",
+      description = "구글 Places Nearby Search API를 통해 좌표 주변 장소를 조회합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(
+          responseCode = "400",
+          description = "잘못된 요청 — lat/lng 파라미터 누락, radius가 1~50000 범위를 벗어남, category 값이 유효하지 않음 중 하나",
+          content = @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = BaseResponse.class),
+              examples = {
+                  @ExampleObject(
+                      name = "lat/lng 파라미터 누락",
+                      summary = "lat 또는 lng를 아예 안 보낸 경우",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "PLACE-E006",
+                            "message": "위도(lat)와 경도(lng)는 필수입니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "radius 범위 초과",
+                      summary = "radius가 1~50000 범위를 벗어난 경우",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "PLACE-E007",
+                            "message": "radius는 1 이상 50000 이하이어야 합니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "잘못된 category 값",
+                      summary = "RESTAURANT, CAFE, TOURISM, ACCOMMODATION, ETC 중 하나가 아닌 값을 보낸 경우",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "PLACE-E004",
+                            "message": "유효하지 않은 장소 카테고리입니다.",
+                            "data": null
+                          }
+                          """
+                  )
+              }
+          )
+      )
+  })
+  @GooglePlacesUnavailableResponse
+  @CommonErrorResponses
+  @GetMapping("/nearby")
+  public BaseResponse<PlaceSearchResponse> getNearbyPlaces(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "위도", example = "48.86")
+      @RequestParam(required = false) BigDecimal lat,
+      @Parameter(description = "경도", example = "2.33")
+      @RequestParam(required = false) BigDecimal lng,
+      @Parameter(description = "검색 반경(미터). 1 이상 50000 이하이며, 기본값은 1500입니다.", example = "1500")
+      @RequestParam(required = false) Integer radius,
+      @Parameter(description = "장소 카테고리, 없으면 전체 카테고리에서 조회", example = "RESTAURANT")
+      @RequestParam(required = false) String category
+  ) {
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        PlaceSearchResponse.from(placeService.nearby(userId, lat, lng, radius, category))
     );
   }
 
@@ -146,24 +202,9 @@ public class PlaceController {
                   }
                   """)
           )
-      ),
-      @ApiResponse(
-          responseCode = "502",
-          description = "구글 Places 응답 실패 (업스트림 오류)",
-          content = @Content(
-              mediaType = "application/json",
-              schema = @Schema(implementation = BaseResponse.class),
-              examples = @ExampleObject(value = """
-                  {
-                    "success": false,
-                    "code": "PLACE-E001",
-                    "message": "지도 서비스 응답에 실패했습니다.",
-                    "data": null
-                  }
-                  """)
-          )
       )
   })
+  @GooglePlacesUnavailableResponse
   @InvalidRequestResponse
   @GetMapping("/{placeId}/photo")
   public ResponseEntity<Void> getPlacePhoto(
