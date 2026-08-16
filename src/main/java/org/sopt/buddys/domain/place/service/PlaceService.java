@@ -99,11 +99,7 @@ public class PlaceService {
         .findFirst()
         .orElseThrow(() -> new BaseException(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
 
-    String photoUri = googlePlacesClient.getPhotoMediaUri(firstPhoto.name(), maxWidth);
-    if (photoUri == null) {
-      throw new BaseException(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND);
-    }
-    return photoUri;
+    return googlePlacesClient.getPhotoMediaUri(firstPhoto.name(), maxWidth);
   }
 
   private Set<String> findBookmarkedGooglePlaceIds(Long userId, List<GooglePlace> places) {

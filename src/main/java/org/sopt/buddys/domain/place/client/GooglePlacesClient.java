@@ -154,7 +154,12 @@ public class GooglePlacesClient {
       ).getBody();
     }, "getPhotoMediaUri photoName=" + photoName);
 
-    return response.photoUri();
+    String photoUri = response.photoUri();
+    if (photoUri == null || photoUri.isBlank()) {
+      log.warn("[GooglePlacesClient] 사진 URI가 비어있음 → photoName={}", photoName);
+      throw new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE);
+    }
+    return photoUri;
   }
 
   private <T> T execute(Supplier<T> request, String context) {
