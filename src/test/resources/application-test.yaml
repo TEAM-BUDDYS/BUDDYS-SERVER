@@ -12,6 +12,12 @@ spring:
       redirect-urls: http://localhost:8080/test,http://localhost:3000/test
       token-url: https://kauth.kakao.com/oauth/token
       user-info-url: https://kapi.kakao.com/v2/user/me
+    google:
+      client-id: test-client-id
+      client-secret: test-client-secret
+      redirect-urls: http://localhost:8080/test,http://localhost:3000/test
+      token-url: https://oauth2.googleapis.com/token
+      user-info-url: https://www.googleapis.com/oauth2/v3/userinfo
 
 cloud:
   aws:
