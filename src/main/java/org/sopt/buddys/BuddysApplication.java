@@ -1,12 +1,13 @@
 package org.sopt.buddys;
 
 import org.sopt.buddys.global.security.jwt.JwtProperties;
+import org.sopt.buddys.global.security.oauth.google.GoogleOAuthProperties;
 import org.sopt.buddys.global.security.oauth.kakao.KakaoOAuthProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-@EnableConfigurationProperties({JwtProperties.class, KakaoOAuthProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, KakaoOAuthProperties.class, GoogleOAuthProperties.class})
 @SpringBootApplication
 public class BuddysApplication {
 
