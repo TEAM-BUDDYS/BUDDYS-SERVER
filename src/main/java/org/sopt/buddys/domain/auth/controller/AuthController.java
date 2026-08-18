@@ -66,6 +66,7 @@ public class AuthController {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "로그인 성공"),
       @ApiResponse(responseCode = "400", description = "잘못된 인가 코드 또는 허용되지 않은 redirect_uri"),
+      @ApiResponse(responseCode = "401", description = "신규 가입 사용자의 구글 이메일이 인증되지 않음"),
   })
   @PostMapping("/google")
   public ResponseEntity<BaseResponse<LoginResponse>> googleLogin(
