@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class PlaceService {
 
   private static final String PHOTO_URL_TEMPLATE = "/api/v1/places/%s/photo?maxWidth=400";
@@ -35,6 +34,7 @@ public class PlaceService {
   private final GooglePlacesClient googlePlacesClient;
   private final PlaceBookmarkRepository placeBookmarkRepository;
 
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public PlaceSearchResult search(
       Long userId,
       String query,
@@ -53,6 +53,7 @@ public class PlaceService {
     return toSearchResult(userId, response.placesOrEmpty(), category, response.nextPageToken());
   }
 
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public PlaceSearchResult nearby(
       Long userId,
       BigDecimal lat,
