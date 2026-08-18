@@ -2,6 +2,9 @@ package org.sopt.buddys.global.security.oauth.google;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.List;
@@ -12,10 +15,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class GoogleAuthClientTest {
+
+  private static final String USER_INFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
 
   @Mock
   private RestTemplate restTemplate;
@@ -29,7 +38,7 @@ class GoogleAuthClientTest {
         "client-secret",
         List.of("http://localhost:3000/auth/google/callback"),
         "https://oauth2.googleapis.com/token",
-        "https://www.googleapis.com/oauth2/v3/userinfo"
+        USER_INFO_URL
     );
     GoogleAuthClient googleAuthClient = new GoogleAuthClient(restTemplate, properties);
 
@@ -39,5 +48,38 @@ class GoogleAuthClientTest {
         .satisfies(e -> assertThat(((BaseException) e).getErrorCode())
             .isEqualTo(AuthErrorCode.GOOGLE_REDIRECT_URI_NOT_ALLOWED));
     verifyNoInteractions(restTemplate);
+  }
+
+  @DisplayName("구글 이메일이 인증되지 않았으면 로그인을 거부한다")
+  @Test
+  void getUserInfo_rejectsUnverifiedEmail() {
+    // given
+    GoogleOAuthProperties properties = new GoogleOAuthProperties(
+        "client-id",
+        "client-secret",
+        List.of("http://localhost:3000/auth/google/callback"),
+        "https://oauth2.googleapis.com/token",
+        USER_INFO_URL
+    );
+    GoogleAuthClient googleAuthClient = new GoogleAuthClient(restTemplate, properties);
+    GoogleUserInfo unverifiedUser = new GoogleUserInfo(
+        "google-user-id",
+        "user@example.com",
+        false,
+        "사용자",
+        null
+    );
+    given(restTemplate.exchange(
+        eq(USER_INFO_URL),
+        eq(HttpMethod.GET),
+        any(HttpEntity.class),
+        eq(GoogleUserInfo.class)
+    )).willReturn(ResponseEntity.ok(unverifiedUser));
+
+    // when & then
+    assertThatThrownBy(() -> googleAuthClient.getUserInfo("access-token"))
+        .isInstanceOf(BaseException.class)
+        .satisfies(e -> assertThat(((BaseException) e).getErrorCode())
+            .isEqualTo(AuthErrorCode.GOOGLE_EMAIL_NOT_VERIFIED));
   }
 }
