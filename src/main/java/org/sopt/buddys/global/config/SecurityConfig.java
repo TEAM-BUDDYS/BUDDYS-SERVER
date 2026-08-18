@@ -43,7 +43,7 @@ public class SecurityConfig {
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            .requestMatchers("/api/v1/auth/login", "/api/v1/auth/reissue", "/api/v1/auth/signup", "/api/v1/auth/kakao").permitAll()
+            .requestMatchers("/api/v1/auth/login", "/api/v1/auth/reissue", "/api/v1/auth/signup", "/api/v1/auth/kakao", "/api/v1/auth/google").permitAll()
             .requestMatchers("/api/v1/tags/**").permitAll()
             .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
             .requestMatchers("/ws", "/ws/**").permitAll()
