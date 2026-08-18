@@ -16,7 +16,8 @@ public enum AuthErrorCode implements ErrorCode {
   REFRESH_TOKEN_EXPIRED("AUTH-E005", HttpStatus.UNAUTHORIZED, "리프레쉬 토큰이 만료되었습니다."),
   KAKAO_REDIRECT_URI_NOT_ALLOWED("AUTH-E006", HttpStatus.BAD_REQUEST, "허용되지 않은 redirect_uri입니다."),
   GOOGLE_AUTH_FAILED("AUTH-E007", HttpStatus.BAD_REQUEST, "구글 인증에 실패했습니다."),
-  GOOGLE_REDIRECT_URI_NOT_ALLOWED("AUTH-E008", HttpStatus.BAD_REQUEST, "허용되지 않은 redirect_uri입니다.");
+  GOOGLE_REDIRECT_URI_NOT_ALLOWED("AUTH-E008", HttpStatus.BAD_REQUEST, "허용되지 않은 redirect_uri입니다."),
+  GOOGLE_EMAIL_NOT_VERIFIED("AUTH-E009", HttpStatus.UNAUTHORIZED, "인증된 구글 이메일이 필요합니다.");
 
   private final String code;
   private final HttpStatus httpStatus;

@@ -86,6 +86,9 @@ public class GoogleAuthClient {
       if (body == null || !StringUtils.hasText(body.sub())) {
         throw new BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
       }
+      if (!Boolean.TRUE.equals(body.emailVerified())) {
+        throw new BaseException(AuthErrorCode.GOOGLE_EMAIL_NOT_VERIFIED);
+      }
 
       return body;
     } catch (RestClientResponseException e) {
