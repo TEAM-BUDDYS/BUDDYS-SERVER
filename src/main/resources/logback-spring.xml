@@ -11,6 +11,9 @@
         <pattern>${LOG_PATTERN}</pattern>
       </encoder>
     </appender>
+    <logger name="org.springframework.web.client" level="INFO"/>
+    <logger name="org.springframework.web.servlet.DispatcherServlet" level="INFO"/>
+    <logger name="org.springframework.security.web.FilterChainProxy" level="INFO"/>
     <root level="DEBUG">
       <appender-ref ref="CONSOLE"/>
     </root>
