@@ -12,6 +12,7 @@ import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
+import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,30 @@ public class AuthTransactionService {
   private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {
     try {
       return userRepository.save(User.ofKakao(providerId, kakaoUser));
+    } catch (DataIntegrityViolationException e) {
+      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, "이미 사용 중인 닉네임입니다.");
+    }
+  }
+
+  @Transactional
+  public AuthTokens processGoogleLogin(String providerId, GoogleUserInfo googleUser) {
+    User user = userRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, providerId)
+        .orElseGet(() -> saveNewGoogleUser(providerId, googleUser));
+
+    String jwt = jwtProvider.generateToken(user.getId());
+    String refreshToken = jwtProvider.generateRefreshToken(user.getId());
+
+    refreshTokenRepository.deleteByUserId(user.getId());
+    refreshTokenRepository.save(
+        RefreshToken.of(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration())
+    );
+
+    return new AuthTokens(user.getId(), jwt, refreshToken, userService.isOnboardingCompleted(user));
+  }
+
+  private User saveNewGoogleUser(String providerId, GoogleUserInfo googleUser) {
+    try {
+      return userRepository.save(User.ofGoogle(providerId, googleUser));
     } catch (DataIntegrityViolationException e) {
       throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, "이미 사용 중인 닉네임입니다.");
     }
