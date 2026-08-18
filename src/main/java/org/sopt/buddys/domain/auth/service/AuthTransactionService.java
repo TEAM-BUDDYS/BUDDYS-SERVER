@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.auth.service;
 
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
@@ -30,32 +31,29 @@ public class AuthTransactionService {
 
   @Transactional
   public AuthTokens processKakaoLogin(String providerId, KakaoUserInfo kakaoUser) {
-    User user = userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId)
-        .orElseGet(() -> saveNewKakaoUser(providerId, kakaoUser));
-
-    String jwt = jwtProvider.generateToken(user.getId());
-    String refreshToken = jwtProvider.generateRefreshToken(user.getId());
-
-    refreshTokenRepository.deleteByUserId(user.getId());
-    refreshTokenRepository.save(
-        RefreshToken.of(user.getId(), refreshToken, jwtProperties.refreshTokenExpiration())
+    return processSocialLogin(
+        AuthProvider.KAKAO,
+        providerId,
+        () -> User.ofKakao(providerId, kakaoUser)
     );
-
-    return new AuthTokens(user.getId(), jwt, refreshToken, userService.isOnboardingCompleted(user));
-  }
-
-  private User saveNewKakaoUser(String providerId, KakaoUserInfo kakaoUser) {
-    try {
-      return userRepository.save(User.ofKakao(providerId, kakaoUser));
-    } catch (DataIntegrityViolationException e) {
-      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, "이미 사용 중인 닉네임입니다.");
-    }
   }
 
   @Transactional
   public AuthTokens processGoogleLogin(String providerId, GoogleUserInfo googleUser) {
-    User user = userRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, providerId)
-        .orElseGet(() -> saveNewGoogleUser(providerId, googleUser));
+    return processSocialLogin(
+        AuthProvider.GOOGLE,
+        providerId,
+        () -> User.ofGoogle(providerId, googleUser)
+    );
+  }
+
+  private AuthTokens processSocialLogin(
+      AuthProvider provider,
+      String providerId,
+      Supplier<User> newUserSupplier
+  ) {
+    User user = userRepository.findByProviderAndProviderId(provider, providerId)
+        .orElseGet(() -> saveNewUser(newUserSupplier));
 
     String jwt = jwtProvider.generateToken(user.getId());
     String refreshToken = jwtProvider.generateRefreshToken(user.getId());
@@ -68,9 +66,9 @@ public class AuthTransactionService {
     return new AuthTokens(user.getId(), jwt, refreshToken, userService.isOnboardingCompleted(user));
   }
 
-  private User saveNewGoogleUser(String providerId, GoogleUserInfo googleUser) {
+  private User saveNewUser(Supplier<User> newUserSupplier) {
     try {
-      return userRepository.save(User.ofGoogle(providerId, googleUser));
+      return userRepository.save(newUserSupplier.get());
     } catch (DataIntegrityViolationException e) {
       throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, "이미 사용 중인 닉네임입니다.");
     }

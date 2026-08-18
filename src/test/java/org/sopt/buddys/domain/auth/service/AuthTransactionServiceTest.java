@@ -26,6 +26,7 @@ import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
+import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -134,6 +135,43 @@ public class AuthTransactionServiceTest {
     // then - 기존 토큰 삭제 후 새 토큰 저장 순서 보장
     then(refreshTokenRepository).should(times(1)).deleteByUserId(1L);
     then(refreshTokenRepository).should(times(1)).save(any());
+  }
+
+  @DisplayName("기존 구글 회원도 공통 소셜 로그인 흐름으로 토큰이 발급된다")
+  @Test
+  void processGoogleLogin_existingUser_issuesTokens() {
+    // given
+    String providerId = "google-user-id";
+    GoogleUserInfo googleUserInfo = new GoogleUserInfo(
+        providerId,
+        "test@gmail.com",
+        true,
+        "사용자",
+        "http://img.url"
+    );
+    User existingUser = User.builder()
+        .id(1L)
+        .provider(AuthProvider.GOOGLE)
+        .providerId(providerId)
+        .email(googleUserInfo.email())
+        .nickname("닉네임")
+        .profileImageUrl(googleUserInfo.picture())
+        .build();
+
+    given(userRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, providerId))
+        .willReturn(Optional.of(existingUser));
+    given(jwtProvider.generateToken(1L)).willReturn("jwt-token");
+    given(jwtProvider.generateRefreshToken(1L)).willReturn("refresh-token");
+    given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
+    given(userService.isOnboardingCompleted(existingUser)).willReturn(false);
+
+    // when
+    AuthTokens result = authTransactionService.processGoogleLogin(providerId, googleUserInfo);
+
+    // then
+    assertThat(result.accessToken()).isEqualTo("jwt-token");
+    assertThat(result.refreshToken()).isEqualTo("refresh-token");
+    then(userRepository).should(never()).save(any(User.class));
   }
 
   private KakaoUserInfo createKakaoUserInfo(String id) {
