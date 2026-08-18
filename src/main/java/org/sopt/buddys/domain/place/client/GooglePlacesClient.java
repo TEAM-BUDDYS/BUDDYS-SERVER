@@ -36,7 +36,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class GooglePlacesClient {
 
   private static final String PLACE_FIELDS =
-      "places.id,places.displayName,places.primaryType,places.formattedAddress,places.location,places.photos";
+      "places.id,places.displayName,places.primaryType,places.types,places.formattedAddress,places.location,places.photos";
   private static final String SEARCH_TEXT_FIELD_MASK = PLACE_FIELDS + ",nextPageToken";
   private static final double DEFAULT_BIAS_RADIUS_METERS = 20_000.0;
   private static final int NEARBY_MAX_RESULT_COUNT = 20;

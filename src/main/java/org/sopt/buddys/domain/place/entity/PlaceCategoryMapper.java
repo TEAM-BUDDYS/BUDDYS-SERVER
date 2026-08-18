@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.place.entity;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -88,13 +89,22 @@ public final class PlaceCategoryMapper {
     return category == null ? List.of() : CATEGORY_TO_GOOGLE_TYPES.getOrDefault(category, List.of());
   }
 
-  public static Optional<PlaceCategory> fromGooglePrimaryType(String primaryType) {
-    if (primaryType == null) {
+  public static Optional<PlaceCategory> resolveCategory(String primaryType, List<String> types) {
+    if (primaryType == null && (types == null || types.isEmpty())) {
       return Optional.empty();
     }
-    PlaceCategory category = GOOGLE_TYPE_TO_CATEGORY.get(primaryType);
+
+    PlaceCategory category = primaryType != null ? GOOGLE_TYPE_TO_CATEGORY.get(primaryType) : null;
+    if (category == null && types != null) {
+      category = types.stream()
+          .map(GOOGLE_TYPE_TO_CATEGORY::get)
+          .filter(Objects::nonNull)
+          .findFirst()
+          .orElse(null);
+    }
     if (category == null) {
-      log.debug("[PlaceCategoryMapper] 매핑 테이블에 없는 구글 primaryType → ETC로 폴백: {}", primaryType);
+      log.debug("[PlaceCategoryMapper] 매핑 테이블에 없는 구글 타입 → ETC로 폴백: primaryType={}, types={}",
+          primaryType, types);
       category = PlaceCategory.ETC;
     }
     return Optional.of(category);

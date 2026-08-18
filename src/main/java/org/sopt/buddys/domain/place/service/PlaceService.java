@@ -77,7 +77,8 @@ public class PlaceService {
       String nextPageToken
   ) {
     List<MatchedPlace> matched = places.stream()
-        .map(place -> new MatchedPlace(place, PlaceCategoryMapper.fromGooglePrimaryType(place.primaryType()).orElse(null)))
+        .map(place -> new MatchedPlace(place,
+            PlaceCategoryMapper.resolveCategory(place.primaryType(), place.types()).orElse(null)))
         .filter(matchedPlace -> matchedPlace.category() != null
             && (category == null || category == matchedPlace.category()))
         .toList();

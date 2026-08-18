@@ -100,6 +100,32 @@ class PlaceServiceTest {
         .containsExactly(PlaceCategory.ETC);
   }
 
+  @DisplayName("primaryType이 매핑 테이블에 없어도 types의 상위 타입으로 카테고리가 분류된다")
+  @Test
+  void search_primaryTypeUnmapped_fallsBackToTypesForCategory() {
+    // given
+    GooglePlace japaneseRestaurant = new GooglePlace(
+        "place-japanese",
+        new GoogleDisplayName("일식집", "ko"),
+        "japanese_restaurant",
+        List.of("japanese_restaurant", "restaurant", "food", "point_of_interest"),
+        "서울",
+        new GoogleLatLng(37.5, 127.0),
+        List.of()
+    );
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(japaneseRestaurant), null));
+    given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
+
+    // when
+    PlaceSearchResult result = placeService.search(1L, "일식", "RESTAURANT", null, null, null);
+
+    // then
+    assertThat(result.places())
+        .extracting(PlaceSearchResult.PlaceSearchItemResult::placeId)
+        .containsExactly("place-japanese");
+  }
+
   @DisplayName("특정 카테고리로 필터링하면 ETC로 분류된 장소는 제외된다")
   @Test
   void search_withCategory_excludesEtcPlaces() {
@@ -149,6 +175,7 @@ class PlaceServiceTest {
         "place-with-photo",
         new GoogleDisplayName("사진 있는 장소", "ko"),
         "cafe",
+        List.of("cafe"),
         "서울",
         new GoogleLatLng(37.5, 127.0),
         List.of(new GooglePhoto("places/place-with-photo/photos/photo-1"))
@@ -404,6 +431,7 @@ class PlaceServiceTest {
         id,
         new GoogleDisplayName("이름", "ko"),
         primaryType,
+        List.of(primaryType),
         "서울",
         new GoogleLatLng(37.5, 127.0),
         List.of()
