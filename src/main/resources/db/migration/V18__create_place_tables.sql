@@ -5,7 +5,7 @@
 CREATE TABLE place
 (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    google_place_id VARCHAR(255)   NOT NULL,             -- 구글맵 place_id
+    google_place_id VARCHAR(512)   NOT NULL,             -- 구글맵 place_id
     name            VARCHAR(255)   NOT NULL,             -- 표시용 스냅샷
     category        VARCHAR(20)    NOT NULL,             -- PlaceCategory: RESTAURANT, CAFE, TOURISM, ACCOMMODATION, ETC
     country_id      BIGINT,
