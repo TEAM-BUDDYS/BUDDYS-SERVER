@@ -50,9 +50,9 @@ class GoogleAuthClientTest {
     verifyNoInteractions(restTemplate);
   }
 
-  @DisplayName("구글 이메일이 인증되지 않았으면 로그인을 거부한다")
+  @DisplayName("구글 이메일 인증 여부와 관계없이 사용자 정보를 반환한다")
   @Test
-  void getUserInfo_rejectsUnverifiedEmail() {
+  void getUserInfo_returnsUnverifiedUser() {
     // given
     GoogleOAuthProperties properties = new GoogleOAuthProperties(
         "client-id",
@@ -76,10 +76,10 @@ class GoogleAuthClientTest {
         eq(GoogleUserInfo.class)
     )).willReturn(ResponseEntity.ok(unverifiedUser));
 
-    // when & then
-    assertThatThrownBy(() -> googleAuthClient.getUserInfo("access-token"))
-        .isInstanceOf(BaseException.class)
-        .satisfies(e -> assertThat(((BaseException) e).getErrorCode())
-            .isEqualTo(AuthErrorCode.GOOGLE_EMAIL_NOT_VERIFIED));
+    // when
+    GoogleUserInfo result = googleAuthClient.getUserInfo("access-token");
+
+    // then
+    assertThat(result).isEqualTo(unverifiedUser);
   }
 }

@@ -140,6 +140,9 @@ public class User extends BaseEntity {
     if (info.email() == null || info.email().isBlank()) {
       throw new org.sopt.buddys.global.exception.BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
     }
+    if (!Boolean.TRUE.equals(info.emailVerified())) {
+      throw new org.sopt.buddys.global.exception.BaseException(AuthErrorCode.GOOGLE_EMAIL_NOT_VERIFIED);
+    }
 
     String nickname = UUID.randomUUID().toString().replace("-", "");
 

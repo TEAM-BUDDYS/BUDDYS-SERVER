@@ -137,7 +137,7 @@ public class AuthTransactionServiceTest {
     then(refreshTokenRepository).should(times(1)).save(any());
   }
 
-  @DisplayName("기존 구글 회원도 공통 소셜 로그인 흐름으로 토큰이 발급된다")
+  @DisplayName("기존 구글 회원은 이메일 인증 값이 false여도 토큰이 발급된다")
   @Test
   void processGoogleLogin_existingUser_issuesTokens() {
     // given
@@ -145,7 +145,7 @@ public class AuthTransactionServiceTest {
     GoogleUserInfo googleUserInfo = new GoogleUserInfo(
         providerId,
         "test@gmail.com",
-        true,
+        false,
         "사용자",
         "http://img.url"
     );
