@@ -118,7 +118,7 @@ public class PostService {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
 
-    Post post = postRepository.findById(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     if (!post.getAuthor().getId().equals(userId)) {

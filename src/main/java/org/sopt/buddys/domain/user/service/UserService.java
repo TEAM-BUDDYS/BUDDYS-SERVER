@@ -103,7 +103,7 @@ public class UserService {
     validatePageRequest(page, size);
 
     Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-    Slice<Post> posts = postRepository.findByAuthorId(userId, pageable);
+    Slice<Post> posts = postRepository.findByAuthorIdAndDeletedAtIsNull(userId, pageable);
     Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts);
 
     List<PostResult> postResults = posts.getContent()

@@ -118,7 +118,7 @@ class UserServiceTest {
     Long userId = 1L;
 
     given(userRepository.existsById(userId)).willReturn(true);
-    given(postRepository.findByAuthorId(any(Long.class), any(Pageable.class)))
+    given(postRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
         .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
 
     // when
