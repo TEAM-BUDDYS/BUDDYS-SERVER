@@ -1,4 +1,4 @@
-거package org.sopt.buddys.domain.auth.service;
+package org.sopt.buddys.domain.auth.service;
 
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
