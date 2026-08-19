@@ -23,7 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthTransactionService {
 
+  private static final String PROVIDER_UNIQUE_CONSTRAINT = "uk_user_provider";
+  private static final String NICKNAME_UNIQUE_CONSTRAINT = "uk_user_nickname";
+
   private final UserRepository userRepository;
+  private final SocialUserTransactionService socialUserTransactionService;
   private final UserService userService;
   private final JwtProvider jwtProvider;
   private final RefreshTokenRepository refreshTokenRepository;
@@ -53,7 +57,7 @@ public class AuthTransactionService {
       Supplier<User> newUserSupplier
   ) {
     User user = userRepository.findByProviderAndProviderId(provider, providerId)
-        .orElseGet(() -> saveNewUser(newUserSupplier));
+        .orElseGet(() -> saveNewUser(provider, providerId, newUserSupplier));
 
     String jwt = jwtProvider.generateToken(user.getId());
     String refreshToken = jwtProvider.generateRefreshToken(user.getId());
@@ -66,11 +70,39 @@ public class AuthTransactionService {
     return new AuthTokens(user.getId(), jwt, refreshToken, userService.isOnboardingCompleted(user));
   }
 
-  private User saveNewUser(Supplier<User> newUserSupplier) {
+  private User saveNewUser(
+      AuthProvider provider,
+      String providerId,
+      Supplier<User> newUserSupplier
+  ) {
     try {
-      return userRepository.save(newUserSupplier.get());
+      return socialUserTransactionService.create(newUserSupplier.get());
     } catch (DataIntegrityViolationException e) {
-      throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, "이미 사용 중인 닉네임입니다.");
+      if (isConstraintViolation(e, PROVIDER_UNIQUE_CONSTRAINT)) {
+        return socialUserTransactionService.findByProviderAndProviderId(provider, providerId)
+            .orElseThrow(() -> e);
+      }
+      if (isConstraintViolation(e, NICKNAME_UNIQUE_CONSTRAINT)) {
+        throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, "이미 사용 중인 닉네임입니다.");
+      }
+      throw e;
     }
+  }
+
+  private boolean isConstraintViolation(
+      DataIntegrityViolationException exception,
+      String constraintName
+  ) {
+    Throwable cause = exception;
+    while (cause != null) {
+      if (cause instanceof org.hibernate.exception.ConstraintViolationException constraintViolationException) {
+        String actualConstraintName = constraintViolationException.getConstraintName();
+        return actualConstraintName != null
+            && (actualConstraintName.equals(constraintName)
+                || actualConstraintName.endsWith("." + constraintName));
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 }

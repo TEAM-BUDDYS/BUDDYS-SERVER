@@ -9,7 +9,9 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
+import java.sql.SQLException;
 import java.util.Optional;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,9 @@ public class AuthTransactionServiceTest {
   private UserRepository userRepository;
 
   @Mock
+  private SocialUserTransactionService socialUserTransactionService;
+
+  @Mock
   private UserService userService;
 
   @Mock
@@ -60,7 +65,7 @@ public class AuthTransactionServiceTest {
     User savedUser = createSavedKakaoUser(1L, providerId, kakaoUserInfo);
 
     given(userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId)).willReturn(Optional.empty());
-    given(userRepository.save(any(User.class))).willReturn(savedUser);
+    given(socialUserTransactionService.create(any(User.class))).willReturn(savedUser);
     given(jwtProvider.generateToken(anyLong())).willReturn("jwt-token");
     given(jwtProvider.generateRefreshToken(anyLong())).willReturn("refresh-token");
     given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
@@ -72,7 +77,7 @@ public class AuthTransactionServiceTest {
     // then
     assertThat(result.accessToken()).isEqualTo("jwt-token");
     assertThat(result.refreshToken()).isEqualTo("refresh-token");
-    then(userRepository).should(times(1)).save(any(User.class));
+    then(socialUserTransactionService).should(times(1)).create(any(User.class));
   }
 
   @DisplayName("기존 카카오 회원이 로그인하면 회원가입 없이 토큰이 발급된다")
@@ -95,7 +100,7 @@ public class AuthTransactionServiceTest {
     // then
     assertThat(result.accessToken()).isEqualTo("jwt-token");
     assertThat(result.refreshToken()).isEqualTo("refresh-token");
-    then(userRepository).should(never()).save(any(User.class));
+    then(socialUserTransactionService).should(never()).create(any(User.class));
   }
 
   @DisplayName("닉네임 중복으로 회원가입에 실패하면 DUPLICATE_NICKNAME 예외가 발생한다")
@@ -106,13 +111,91 @@ public class AuthTransactionServiceTest {
     KakaoUserInfo kakaoUserInfo = createKakaoUserInfo(providerId);
 
     given(userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId)).willReturn(Optional.empty());
-    given(userRepository.save(any(User.class))).willThrow(DataIntegrityViolationException.class);
+    ConstraintViolationException nicknameConstraintViolation = new ConstraintViolationException(
+        "duplicate nickname", new SQLException("duplicate"), "uk_user_nickname"
+    );
+    given(socialUserTransactionService.create(any(User.class))).willThrow(
+        new DataIntegrityViolationException("duplicate", nicknameConstraintViolation)
+    );
 
     // when & then
     assertThatThrownBy(() -> authTransactionService.processKakaoLogin(providerId, kakaoUserInfo))
         .isInstanceOf(BaseException.class)
         .satisfies(e -> assertThat(((BaseException) e).getErrorCode())
             .isEqualTo(AuthErrorCode.DUPLICATE_NICKNAME));
+  }
+
+  @DisplayName("동시 최초 로그인으로 provider 유니크 키가 충돌하면 생성된 사용자를 다시 조회해 로그인한다")
+  @Test
+  void processGoogleLogin_duplicateProvider_recoversAsExistingUser() {
+    // given
+    String providerId = "google-user-id";
+    GoogleUserInfo googleUserInfo = new GoogleUserInfo(
+        providerId,
+        "test@gmail.com",
+        true,
+        "사용자",
+        "http://img.url"
+    );
+    User concurrentlyCreatedUser = User.builder()
+        .id(1L)
+        .provider(AuthProvider.GOOGLE)
+        .providerId(providerId)
+        .email(googleUserInfo.email())
+        .nickname("닉네임")
+        .profileImageUrl(googleUserInfo.picture())
+        .build();
+    ConstraintViolationException providerConstraintViolation = new ConstraintViolationException(
+        "duplicate provider", new SQLException("duplicate"), "user.uk_user_provider"
+    );
+
+    given(userRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, providerId))
+        .willReturn(Optional.empty());
+    given(socialUserTransactionService.create(any(User.class))).willThrow(
+        new DataIntegrityViolationException("duplicate", providerConstraintViolation)
+    );
+    given(socialUserTransactionService.findByProviderAndProviderId(
+        AuthProvider.GOOGLE, providerId
+    )).willReturn(Optional.of(concurrentlyCreatedUser));
+    given(jwtProvider.generateToken(1L)).willReturn("jwt-token");
+    given(jwtProvider.generateRefreshToken(1L)).willReturn("refresh-token");
+    given(jwtProperties.refreshTokenExpiration()).willReturn(604800000L);
+    given(userService.isOnboardingCompleted(concurrentlyCreatedUser)).willReturn(false);
+
+    // when
+    AuthTokens result = authTransactionService.processGoogleLogin(providerId, googleUserInfo);
+
+    // then
+    assertThat(result.userId()).isEqualTo(1L);
+    assertThat(result.accessToken()).isEqualTo("jwt-token");
+    then(socialUserTransactionService).should().findByProviderAndProviderId(
+        AuthProvider.GOOGLE, providerId
+    );
+  }
+
+  @DisplayName("닉네임과 provider 이외의 제약 위반은 원본 예외를 그대로 전파한다")
+  @Test
+  void processKakaoLogin_otherConstraint_rethrowsOriginalException() {
+    // given
+    String providerId = "12345";
+    KakaoUserInfo kakaoUserInfo = createKakaoUserInfo(providerId);
+    ConstraintViolationException otherConstraintViolation = new ConstraintViolationException(
+        "other constraint", new SQLException("constraint violation"), "fk_user_country"
+    );
+    DataIntegrityViolationException originalException = new DataIntegrityViolationException(
+        "constraint violation", otherConstraintViolation
+    );
+
+    given(userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId))
+        .willReturn(Optional.empty());
+    given(socialUserTransactionService.create(any(User.class))).willThrow(originalException);
+
+    // when & then
+    assertThatThrownBy(() -> authTransactionService.processKakaoLogin(providerId, kakaoUserInfo))
+        .isSameAs(originalException);
+    then(socialUserTransactionService).should(never()).findByProviderAndProviderId(
+        AuthProvider.KAKAO, providerId
+    );
   }
 
   @DisplayName("로그인 시 기존 리프레시 토큰을 삭제하고 새로운 토큰을 저장한다")
@@ -171,7 +254,7 @@ public class AuthTransactionServiceTest {
     // then
     assertThat(result.accessToken()).isEqualTo("jwt-token");
     assertThat(result.refreshToken()).isEqualTo("refresh-token");
-    then(userRepository).should(never()).save(any(User.class));
+    then(socialUserTransactionService).should(never()).create(any(User.class));
   }
 
   private KakaoUserInfo createKakaoUserInfo(String id) {
