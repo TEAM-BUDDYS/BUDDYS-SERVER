@@ -9,11 +9,11 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "spring.oauth.google")
 public record GoogleOAuthProperties(
-    String clientId,
-    String clientSecret,
+    @NotBlank String clientId,
+    @NotBlank String clientSecret,
     @NotEmpty List<@NotBlank String> redirectUrls,
-    String tokenUrl,
-    String userInfoUrl
+    @NotBlank String tokenUrl,
+    @NotBlank String userInfoUrl
 ) {
   public GoogleOAuthProperties {
     if (redirectUrls != null) {
