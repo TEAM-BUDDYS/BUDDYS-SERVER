@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface PostGenderConditionRepository
     extends JpaRepository<PostGenderCondition, PostGenderConditionId> {
 
+  void deleteAllByPostId(Long postId);
+
   @Query("""
       select pgc.id.genderCondition
       from PostGenderCondition pgc

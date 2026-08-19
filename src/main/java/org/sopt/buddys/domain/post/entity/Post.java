@@ -100,4 +100,19 @@ public class Post extends BaseEntity {
   public void updateStatus(PostStatus status) {
     this.status = status;
   }
+
+  public void update(
+      Country country, City city, LocalDate startDate, LocalDate endDate,
+      String title, String content, CompanionType companionType,
+      RecruitmentCountType recruitmentCountType
+  ) {
+    this.country = country;
+    this.city = city;
+    this.startDate = startDate;
+    this.endDate = endDate;
+    this.title = title;
+    this.content = content;
+    this.companionType = companionType;
+    this.recruitmentCountType = recruitmentCountType;
+  }
 }
