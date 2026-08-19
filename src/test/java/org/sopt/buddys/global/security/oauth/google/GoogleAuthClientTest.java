@@ -15,10 +15,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.sopt.buddys.global.security.oauth.dto.GoogleTokenResponse;
 import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,5 +83,58 @@ class GoogleAuthClientTest {
 
     // then
     assertThat(result).isEqualTo(unverifiedUser);
+  }
+
+  @DisplayName("구글 토큰 응답 변환에 실패하면 GOOGLE_AUTH_FAILED로 변환한다")
+  @Test
+  void getAccessToken_responseConversionFails_throwsGoogleAuthFailed() {
+    // given
+    GoogleOAuthProperties properties = new GoogleOAuthProperties(
+        "client-id",
+        "client-secret",
+        List.of("http://localhost:3000/auth/google/callback"),
+        "https://oauth2.googleapis.com/token",
+        USER_INFO_URL
+    );
+    GoogleAuthClient googleAuthClient = new GoogleAuthClient(restTemplate, properties);
+    given(restTemplate.postForEntity(
+        eq("https://oauth2.googleapis.com/token"),
+        any(HttpEntity.class),
+        eq(GoogleTokenResponse.class)
+    )).willThrow(new RestClientException("response conversion failed"));
+
+    // when & then
+    assertThatThrownBy(() -> googleAuthClient.getAccessToken(
+        "code", "http://localhost:3000/auth/google/callback"
+    ))
+        .isInstanceOf(BaseException.class)
+        .satisfies(e -> assertThat(((BaseException) e).getErrorCode())
+            .isEqualTo(AuthErrorCode.GOOGLE_AUTH_FAILED));
+  }
+
+  @DisplayName("구글 사용자 정보 응답 변환에 실패하면 GOOGLE_AUTH_FAILED로 변환한다")
+  @Test
+  void getUserInfo_responseConversionFails_throwsGoogleAuthFailed() {
+    // given
+    GoogleOAuthProperties properties = new GoogleOAuthProperties(
+        "client-id",
+        "client-secret",
+        List.of("http://localhost:3000/auth/google/callback"),
+        "https://oauth2.googleapis.com/token",
+        USER_INFO_URL
+    );
+    GoogleAuthClient googleAuthClient = new GoogleAuthClient(restTemplate, properties);
+    given(restTemplate.exchange(
+        eq(USER_INFO_URL),
+        eq(HttpMethod.GET),
+        any(HttpEntity.class),
+        eq(GoogleUserInfo.class)
+    )).willThrow(new RestClientException("response conversion failed"));
+
+    // when & then
+    assertThatThrownBy(() -> googleAuthClient.getUserInfo("access-token"))
+        .isInstanceOf(BaseException.class)
+        .satisfies(e -> assertThat(((BaseException) e).getErrorCode())
+            .isEqualTo(AuthErrorCode.GOOGLE_AUTH_FAILED));
   }
 }

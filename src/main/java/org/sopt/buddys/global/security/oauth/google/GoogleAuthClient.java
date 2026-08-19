@@ -15,6 +15,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
@@ -67,6 +68,9 @@ public class GoogleAuthClient {
     } catch (ResourceAccessException e) {
       log.warn("Google token request timed out or network error", e);
       throw new BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
+    } catch (RestClientException e) {
+      log.warn("Google token response processing failed", e);
+      throw new BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
     }
   }
 
@@ -93,6 +97,9 @@ public class GoogleAuthClient {
       throw new BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
     } catch (ResourceAccessException e) {
       log.warn("Google user info request timed out or network error", e);
+      throw new BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
+    } catch (RestClientException e) {
+      log.warn("Google user info response processing failed", e);
       throw new BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
     }
   }
