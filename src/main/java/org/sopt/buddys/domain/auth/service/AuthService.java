@@ -66,4 +66,9 @@ public class AuthService {
 
     return new AuthTokens(userId, newAccessToken, newRefreshToken, userService.isOnboardingCompleted(user));
   }
+
+  @Transactional
+  public void logout(Long userId) {
+    refreshTokenRepository.deleteByUserId(userId);
+  }
 }

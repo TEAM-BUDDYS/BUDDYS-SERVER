@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.auth.service.AuthService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.response.BaseResponse;
+import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -91,6 +92,31 @@ public class AuthController {
         .maxAge(Duration.ofMillis(jwtProperties.refreshTokenExpiration()))
         .sameSite("None")
         .build();
+    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+  }
+
+  @PostMapping("/logout")
+  public ResponseEntity<BaseResponse<Void>> logout(
+          @LoginUser Long userId,
+          HttpServletResponse response
+  ) {
+    authService.logout(userId);
+    deleteRefreshTokenCookie(response);
+
+    return ResponseEntity.ok(
+            BaseResponse.success(GlobalSuccessCode.OK)
+    );
+  }
+
+  private void deleteRefreshTokenCookie(HttpServletResponse response) {
+    ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
+            .httpOnly(true)
+            .secure(true)
+            .path("/api/v1/auth/reissue")
+            .maxAge(Duration.ZERO)
+            .sameSite("None")
+            .build();
+
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }
 
