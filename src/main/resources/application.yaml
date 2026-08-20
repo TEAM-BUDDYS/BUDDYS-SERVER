@@ -31,6 +31,13 @@ spring:
       token-url: https://kauth.kakao.com/oauth/token
       user-info-url: https://kapi.kakao.com/v2/user/me
 
+google:
+  places:
+    api-key: ${GOOGLE_PLACES_API_KEY}
+    search-text-url: https://places.googleapis.com/v1/places:searchText
+    search-nearby-url: https://places.googleapis.com/v1/places:searchNearby
+    base-url: https://places.googleapis.com/v1
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
