@@ -182,4 +182,9 @@ public class User extends BaseEntity {
     this.interestCountry = interestCountry;
     this.interestCity = interestCity;
   }
+
+  public void withdraw() {
+    this.accountStatus = AccountStatus.WITHDRAWN;
+    this.deletedAt = LocalDateTime.now();
+  }
 }
