@@ -19,6 +19,13 @@ spring:
       token-url: https://oauth2.googleapis.com/token
       user-info-url: https://www.googleapis.com/oauth2/v3/userinfo
 
+google:
+  places:
+    api-key: test-google-places-api-key
+    search-text-url: https://places.googleapis.com/v1/places:searchText
+    search-nearby-url: https://places.googleapis.com/v1/places:searchNearby
+    base-url: https://places.googleapis.com/v1
+
 cloud:
   aws:
     s3:
