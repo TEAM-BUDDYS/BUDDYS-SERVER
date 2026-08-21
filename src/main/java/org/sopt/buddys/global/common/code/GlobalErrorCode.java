@@ -42,6 +42,12 @@ public enum GlobalErrorCode implements ErrorCode {
       "GLB-E006",
       HttpStatus.METHOD_NOT_ALLOWED,
       "지원하지 않는 HTTP 메서드입니다."
+  ),
+
+  TOO_MANY_REQUESTS(
+      "GLB-E007",
+      HttpStatus.TOO_MANY_REQUESTS,
+      "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
   );
 
   private final String code;
