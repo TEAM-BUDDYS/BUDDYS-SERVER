@@ -31,7 +31,7 @@ public record ExchangeCountryRecommendedUserResponse(
     User user = result.user();
     return new ExchangeCountryRecommendedUserResponse(
         user.getId(),
-        user.getNickname(),
+        user.getDisplayNickname(),
         ExchangeCountryResponse.from(user.getExchangeCountry()),
         toAgeRange(user.getBirthDate()),
         (int) Math.round(result.totalSimilarity() * 100),

@@ -11,7 +11,7 @@ public record RecommendedUserResponse(
 ) {
   public static RecommendedUserResponse from(RecommendedUserResult result) {
     return new RecommendedUserResponse(
-        result.user().getId(), result.user().getNickname(), result.user().getProfileImageUrl(),
+        result.user().getId(), result.user().getDisplayNickname(), result.user().getProfileImageUrl(),
         (int) Math.round(result.totalSimilarity() * 100)
     );
   }

@@ -8,6 +8,6 @@ public record OnboardingResponse(
     @Schema(description = "사용자 닉네임", example = "해령") String nickname
 ) {
   public static OnboardingResponse of(User user) {
-    return new OnboardingResponse(user.getId(), user.getNickname());
+    return new OnboardingResponse(user.getId(), user.getDisplayNickname());
   }
 }

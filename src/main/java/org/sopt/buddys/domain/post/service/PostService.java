@@ -175,7 +175,7 @@ public class PostService {
     Country country = author.getExchangeCountry();
     return new PostDetailResult.AuthorResult(
         author.getId(),
-        author.getNickname(),
+        author.getDisplayNickname(),
         author.getProfileImageUrl(),
         country == null ? null : country.getName(),
         toAge(author.getBirthDate()),

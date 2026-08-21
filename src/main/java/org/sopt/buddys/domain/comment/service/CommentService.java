@@ -48,7 +48,7 @@ public class CommentService {
         .map(comment -> new CommentResult(
             comment.getId(),
             comment.getAuthor().getId(),
-            comment.getAuthor().getNickname(),
+            comment.getAuthor().getDisplayNickname(),
             comment.getAuthor().getProfileImageUrl(),
             comment.getContent(),
             comment.getCreatedAt(),
