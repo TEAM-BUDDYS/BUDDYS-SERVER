@@ -11,6 +11,7 @@ import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.WithdrawUserSwagger;
 import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
 import org.sopt.buddys.domain.user.dto.response.OnboardingResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
@@ -23,6 +24,7 @@ import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,6 +42,16 @@ public class UserController {
 
   private final UserService userService;
   private final UserOnboardingService userOnboardingService;
+
+  @WithdrawUserSwagger
+  @DeleteMapping("/me")
+  public BaseResponse<Void> withdraw(
+      @Parameter(hidden = true)
+      @LoginUser Long userId
+  ) {
+    userService.withdraw(userId);
+    return BaseResponse.success(GlobalSuccessCode.OK);
+  }
 
   @GetMyProfileSwagger
   @GetMapping("/me")
