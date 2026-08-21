@@ -6,6 +6,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.auth.entity.RefreshToken;
+import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
@@ -30,6 +33,9 @@ public class UserRepositoryTest {
 
   @Autowired
   private UserRepository userRepository;
+
+  @Autowired
+  private RefreshTokenRepository refreshTokenRepository;
 
   @AfterEach
   void tearDown() {
@@ -59,6 +65,24 @@ public class UserRepositoryTest {
 
     // then
     assertThat(result).isEmpty();
+  }
+
+  @DisplayName("회원 상태 변경 후 리프레시 토큰을 삭제해도 soft delete 변경 사항이 저장된다")
+  @Test
+  void withdraw_thenDeleteRefreshToken_persistsSoftDelete() {
+    // given
+    User user = userRepository.save(User.ofKakao("12345", createKakaoUserInfo()));
+    refreshTokenRepository.save(RefreshToken.of(user.getId(), "refresh-token", 60_000L));
+
+    // when
+    user.withdraw();
+    refreshTokenRepository.deleteByUserId(user.getId());
+
+    // then
+    User withdrawnUser = userRepository.findById(user.getId()).orElseThrow();
+    assertThat(withdrawnUser.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
+    assertThat(withdrawnUser.getDeletedAt()).isNotNull();
+    assertThat(refreshTokenRepository.findById(user.getId())).isEmpty();
   }
 
   private KakaoUserInfo createKakaoUserInfo() {

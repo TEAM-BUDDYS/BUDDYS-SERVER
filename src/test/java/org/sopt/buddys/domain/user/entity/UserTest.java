@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.user.entity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
@@ -11,6 +12,26 @@ import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 
 public class UserTest {
+
+  @DisplayName("회원을 탈퇴시키면 계정 상태와 삭제 시각이 변경된다")
+  @Test
+  void withdraw_changesAccountStatusAndDeletedAt() {
+    // given
+    User user = User.builder()
+        .provider(AuthProvider.KAKAO)
+        .providerId("12345")
+        .email("test@kakao.com")
+        .nickname("버디")
+        .build();
+    LocalDateTime beforeWithdrawal = LocalDateTime.now();
+
+    // when
+    user.withdraw();
+
+    // then
+    assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
+    assertThat(user.getDeletedAt()).isAfterOrEqualTo(beforeWithdrawal);
+  }
 
   @DisplayName("카카오 계정 정보로 회원을 생성하면 카카오 제공자 정보와 기본 상태가 설정된다")
   @Test

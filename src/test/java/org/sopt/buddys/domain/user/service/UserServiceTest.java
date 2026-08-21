@@ -1,8 +1,10 @@
 package org.sopt.buddys.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,9 +16,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
@@ -25,6 +29,7 @@ import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
+import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
@@ -47,6 +52,41 @@ class UserServiceTest {
 
   @Mock
   private PostImageRepository postImageRepository;
+
+  @Mock
+  private RefreshTokenRepository refreshTokenRepository;
+
+  @DisplayName("회원 탈퇴 시 사용자를 soft delete하고 리프레시 토큰을 폐기한다")
+  @Test
+  void withdraw_activeUser_softDeletesAndRevokesRefreshToken() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId, false, false);
+    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+
+    // when
+    userService.withdraw(userId);
+
+    // then
+    assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
+    assertThat(user.getDeletedAt()).isNotNull();
+    then(refreshTokenRepository).should().deleteByUserId(userId);
+  }
+
+  @DisplayName("존재하지 않거나 이미 탈퇴한 회원은 탈퇴할 수 없다")
+  @Test
+  void withdraw_inactiveUser_throwsUserNotFound() {
+    // given
+    Long userId = 1L;
+    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> userService.withdraw(userId))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND));
+    then(refreshTokenRepository).shouldHaveNoInteractions();
+  }
 
   @DisplayName("타입별 태그 리스트를 만들고 대표 태그는 각 타입 리스트의 첫 번째 요소로 반환한다")
   @Test
