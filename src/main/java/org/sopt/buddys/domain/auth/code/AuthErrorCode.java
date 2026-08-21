@@ -17,7 +17,8 @@ public enum AuthErrorCode implements ErrorCode {
   KAKAO_REDIRECT_URI_NOT_ALLOWED("AUTH-E006", HttpStatus.BAD_REQUEST, "허용되지 않은 redirect_uri입니다."),
   GOOGLE_AUTH_FAILED("AUTH-E007", HttpStatus.BAD_REQUEST, "구글 인증에 실패했습니다."),
   GOOGLE_REDIRECT_URI_NOT_ALLOWED("AUTH-E008", HttpStatus.BAD_REQUEST, "허용되지 않은 redirect_uri입니다."),
-  GOOGLE_EMAIL_NOT_VERIFIED("AUTH-E009", HttpStatus.UNAUTHORIZED, "인증된 구글 이메일이 필요합니다.");
+  GOOGLE_EMAIL_NOT_VERIFIED("AUTH-E009", HttpStatus.UNAUTHORIZED, "인증된 구글 이메일이 필요합니다."),
+  WITHDRAWN_ACCOUNT("AUTH-E010", HttpStatus.FORBIDDEN, "탈퇴한 계정입니다.");
 
   private final String code;
   private final HttpStatus httpStatus;
