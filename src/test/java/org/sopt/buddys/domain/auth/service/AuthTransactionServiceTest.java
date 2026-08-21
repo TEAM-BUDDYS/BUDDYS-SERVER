@@ -10,7 +10,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
@@ -56,28 +55,6 @@ public class AuthTransactionServiceTest {
 
   @Mock
   private JwtProperties jwtProperties;
-
-  @DisplayName("탈퇴한 회원은 다시 로그인할 수 없다")
-  @Test
-  void processKakaoLogin_withdrawnUser_throwsWithdrawnAccount() {
-    // given
-    String providerId = "12345";
-    KakaoUserInfo kakaoUserInfo = createKakaoUserInfo(providerId);
-    User withdrawnUser = createSavedKakaoUser(1L, providerId, kakaoUserInfo);
-    org.springframework.test.util.ReflectionTestUtils.setField(
-        withdrawnUser, "deletedAt", LocalDateTime.now()
-    );
-    given(userRepository.findByProviderAndProviderId(AuthProvider.KAKAO, providerId))
-        .willReturn(Optional.of(withdrawnUser));
-
-    // when & then
-    assertThatThrownBy(() -> authTransactionService.processKakaoLogin(providerId, kakaoUserInfo))
-        .isInstanceOf(BaseException.class)
-        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
-            .isEqualTo(AuthErrorCode.WITHDRAWN_ACCOUNT));
-    then(jwtProvider).shouldHaveNoInteractions();
-    then(refreshTokenRepository).shouldHaveNoInteractions();
-  }
 
   @DisplayName("신규 카카오 회원이 로그인하면 자동으로 회원가입되고 토큰이 발급된다")
   @Test

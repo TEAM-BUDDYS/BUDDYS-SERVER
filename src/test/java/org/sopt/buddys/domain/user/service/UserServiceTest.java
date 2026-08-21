@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
@@ -56,6 +57,9 @@ class UserServiceTest {
   @Mock
   private RefreshTokenRepository refreshTokenRepository;
 
+  @Mock
+  private PlaceBookmarkRepository placeBookmarkRepository;
+
   @DisplayName("회원 탈퇴 시 사용자를 soft delete하고 리프레시 토큰을 폐기한다")
   @Test
   void withdraw_activeUser_softDeletesAndRevokesRefreshToken() {
@@ -70,6 +74,9 @@ class UserServiceTest {
     // then
     assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
     assertThat(user.getDeletedAt()).isNotNull();
+    then(userRepository).should().saveAndFlush(user);
+    then(userTagRepository).should().deleteByUserId(userId);
+    then(placeBookmarkRepository).should().deleteByUserId(userId);
     then(refreshTokenRepository).should().deleteByUserId(userId);
   }
 
@@ -86,6 +93,7 @@ class UserServiceTest {
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND));
     then(refreshTokenRepository).shouldHaveNoInteractions();
+    then(placeBookmarkRepository).shouldHaveNoInteractions();
   }
 
   @DisplayName("타입별 태그 리스트를 만들고 대표 태그는 각 타입 리스트의 첫 번째 요소로 반환한다")

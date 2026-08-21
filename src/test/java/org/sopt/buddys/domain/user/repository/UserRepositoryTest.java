@@ -85,6 +85,27 @@ public class UserRepositoryTest {
     assertThat(refreshTokenRepository.findById(user.getId())).isEmpty();
   }
 
+  @DisplayName("탈퇴 회원을 익명화하면 동일한 소셜 계정으로 신규 회원을 생성할 수 있다")
+  @Test
+  void anonymizeWithdrawnUser_allowsSignupWithSameSocialAccount() {
+    // given
+    User withdrawnUser = userRepository.saveAndFlush(
+        User.ofKakao("12345", createKakaoUserInfo())
+    );
+
+    // when
+    withdrawnUser.withdraw();
+    userRepository.saveAndFlush(withdrawnUser);
+    User newUser = userRepository.saveAndFlush(
+        User.ofKakao("12345", createKakaoUserInfo())
+    );
+
+    // then
+    assertThat(newUser.getId()).isNotEqualTo(withdrawnUser.getId());
+    assertThat(newUser.getProviderId()).isEqualTo("12345");
+    assertThat(newUser.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
+  }
+
   private KakaoUserInfo createKakaoUserInfo() {
     KakaoUserInfo.KakaoProfile profile = new KakaoUserInfo.KakaoProfile("닉네임", "http://img.url");
     KakaoUserInfo.KakaoAccount account = new KakaoUserInfo.KakaoAccount("test@kakao.com", profile);
