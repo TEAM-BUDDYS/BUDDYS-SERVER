@@ -106,6 +106,29 @@ public class UserRepositoryTest {
     assertThat(newUser.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
   }
 
+  @DisplayName("탈퇴 표시용 닉네임을 다른 회원이 사용 중이어도 탈퇴할 수 있다")
+  @Test
+  void withdraw_displayNicknameAlreadyExists_usesUniqueInternalNickname() {
+    // given
+    User user = userRepository.saveAndFlush(User.ofKakao("12345", createKakaoUserInfo()));
+    User nicknameOwner = User.builder()
+        .provider(AuthProvider.GOOGLE)
+        .providerId("google-user-id")
+        .email("other@gmail.com")
+        .nickname("탈퇴한 사용자_" + user.getId())
+        .build();
+    userRepository.saveAndFlush(nicknameOwner);
+
+    // when
+    user.withdraw();
+    userRepository.saveAndFlush(user);
+
+    // then
+    assertThat(user.getNickname()).isNotEqualTo(nicknameOwner.getNickname());
+    assertThat(user.getDisplayNickname()).isEqualTo("탈퇴한 사용자");
+    assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
+  }
+
   private KakaoUserInfo createKakaoUserInfo() {
     KakaoUserInfo.KakaoProfile profile = new KakaoUserInfo.KakaoProfile("닉네임", "http://img.url");
     KakaoUserInfo.KakaoAccount account = new KakaoUserInfo.KakaoAccount("test@kakao.com", profile);

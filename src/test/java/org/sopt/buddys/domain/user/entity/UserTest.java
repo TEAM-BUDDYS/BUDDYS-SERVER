@@ -39,7 +39,8 @@ public class UserTest {
     // then
     assertThat(user.getProviderId()).startsWith("withdrawn:").isNotEqualTo("12345");
     assertThat(user.getEmail()).endsWith("@deleted.invalid").isNotEqualTo("test@kakao.com");
-    assertThat(user.getNickname()).isEqualTo("탈퇴한 사용자_1");
+    assertThat(user.getNickname()).startsWith("탈퇴한 사용자_").hasSize(40);
+    assertThat(user.getDisplayNickname()).isEqualTo("탈퇴한 사용자");
     assertThat(user.getNickname()).hasSizeLessThanOrEqualTo(50);
     assertThat(user.getProfileImageUrl()).isNull();
     assertThat(user.getIntroduction()).isNull();
