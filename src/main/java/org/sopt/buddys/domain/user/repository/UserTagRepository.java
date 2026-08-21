@@ -6,6 +6,7 @@ import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.UserTag;
 import org.sopt.buddys.domain.user.entity.UserTagId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,6 +25,10 @@ public interface UserTagRepository extends JpaRepository<UserTag, UserTagId> {
   boolean existsByUserId(Long userId);
 
   long countByUserId(Long userId);
+
+  @Modifying
+  @Query("delete from UserTag ut where ut.user.id = :userId")
+  void deleteByUserId(@Param("userId") Long userId);
 
   @Query("""
       select ut.user.id as userId,
