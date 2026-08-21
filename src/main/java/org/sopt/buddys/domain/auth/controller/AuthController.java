@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Duration;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
+import org.sopt.buddys.domain.auth.controller.swagger.LogoutSwagger;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
 import org.sopt.buddys.domain.auth.dto.response.LoginResponse;
 import org.sopt.buddys.domain.auth.service.AuthService;
@@ -95,11 +96,7 @@ public class AuthController {
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }
 
-  @Operation(summary = "로그아웃", description = "저장된 리프레시 토큰을 폐기하고 리프레시 토큰 쿠키를 삭제합니다.")
-  @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
-      @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-  })
+  @LogoutSwagger
   @PostMapping("/logout")
   public ResponseEntity<BaseResponse<Void>> logout(
       @Parameter(hidden = true) @LoginUser Long userId,
