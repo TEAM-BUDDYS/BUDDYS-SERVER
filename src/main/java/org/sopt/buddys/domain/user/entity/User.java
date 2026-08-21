@@ -184,6 +184,24 @@ public class User extends BaseEntity {
   }
 
   public void withdraw() {
+    String anonymizedId = UUID.randomUUID().toString().replace("-", "");
+
+    this.email = "withdrawn-" + anonymizedId + "@deleted.invalid";
+    this.providerId = "withdrawn:" + anonymizedId;
+    this.nickname = "탈퇴한 사용자_" + id;
+    this.profileImageUrl = null;
+    this.introduction = null;
+    this.birthDate = null;
+    this.gender = null;
+    this.notificationEnabled = false;
+    this.universityVerified = false;
+    this.exchangeVerified = false;
+    this.interestCountry = null;
+    this.interestCity = null;
+    this.exchangeCountry = null;
+    this.exchangeUniversity = null;
+    this.exchangeStartDate = null;
+    this.exchangeEndDate = null;
     this.accountStatus = AccountStatus.WITHDRAWN;
     this.deletedAt = LocalDateTime.now();
   }
