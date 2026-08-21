@@ -59,6 +59,10 @@ public class AuthTransactionService {
     User user = userRepository.findByProviderAndProviderId(provider, providerId)
         .orElseGet(() -> saveNewUser(provider, providerId, newUserSupplier));
 
+    if (user.getDeletedAt() != null) {
+      throw new BaseException(AuthErrorCode.WITHDRAWN_ACCOUNT);
+    }
+
     String jwt = jwtProvider.generateToken(user.getId());
     String refreshToken = jwtProvider.generateRefreshToken(user.getId());
 

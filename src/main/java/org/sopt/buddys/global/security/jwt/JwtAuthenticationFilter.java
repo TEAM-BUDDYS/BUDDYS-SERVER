@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtProvider jwtProvider;
   private final ObjectMapper objectMapper;
+  private final UserRepository userRepository;
 
   private static final Set<String> PUBLIC_EXACT_PATHS = Set.of(
       "/api/v1/auth/login",
@@ -61,6 +63,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       String token = header.substring(7);
       Optional<Long> userId = jwtProvider.extractUserId(token);
       if (userId.isEmpty()) {
+        sendUnauthorized(response);
+        return;
+      }
+      if (!userRepository.existsByIdAndDeletedAtIsNull(userId.get())) {
         sendUnauthorized(response);
         return;
       }
