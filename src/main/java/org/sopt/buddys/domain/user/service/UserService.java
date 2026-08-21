@@ -50,8 +50,11 @@ public class UserService {
 
   @Transactional
   public void withdraw(Long userId) {
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+    User user = userRepository.findByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+    if (user.getDeletedAt() != null) {
+      return;
+    }
 
     user.withdraw();
     userRepository.saveAndFlush(user);

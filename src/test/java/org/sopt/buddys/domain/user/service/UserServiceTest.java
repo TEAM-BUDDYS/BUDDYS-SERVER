@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -71,7 +72,7 @@ class UserServiceTest {
     // given
     Long userId = 1L;
     User user = createUser(userId, false, false);
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+    given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
 
     // when
     userService.withdraw(userId);
@@ -86,12 +87,12 @@ class UserServiceTest {
     then(eventPublisher).should().publishEvent(any(UserWithdrawnEvent.class));
   }
 
-  @DisplayName("존재하지 않거나 이미 탈퇴한 회원은 탈퇴할 수 없다")
+  @DisplayName("존재하지 않는 회원은 탈퇴할 수 없다")
   @Test
-  void withdraw_inactiveUser_throwsUserNotFound() {
+  void withdraw_unknownUser_throwsUserNotFound() {
     // given
     Long userId = 1L;
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
+    given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.empty());
 
     // when & then
     assertThatThrownBy(() -> userService.withdraw(userId))
@@ -100,6 +101,26 @@ class UserServiceTest {
             .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND));
     then(refreshTokenRepository).shouldHaveNoInteractions();
     then(placeBookmarkRepository).shouldHaveNoInteractions();
+    then(eventPublisher).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("이미 탈퇴한 회원의 중복 요청은 추가 작업 없이 성공한다")
+  @Test
+  void withdraw_alreadyWithdrawnUser_doesNothing() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId, false, false);
+    user.withdraw();
+    given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+
+    // when
+    userService.withdraw(userId);
+
+    // then
+    then(userRepository).should(never()).saveAndFlush(any());
+    then(userTagRepository).shouldHaveNoInteractions();
+    then(placeBookmarkRepository).shouldHaveNoInteractions();
+    then(refreshTokenRepository).shouldHaveNoInteractions();
     then(eventPublisher).shouldHaveNoInteractions();
   }
 
