@@ -95,28 +95,29 @@ public class AuthController {
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }
 
+  @Operation(summary = "로그아웃", description = "저장된 리프레시 토큰을 폐기하고 리프레시 토큰 쿠키를 삭제합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "로그아웃 성공"),
+      @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+  })
   @PostMapping("/logout")
   public ResponseEntity<BaseResponse<Void>> logout(
-          @LoginUser Long userId,
-          HttpServletResponse response
+      @Parameter(hidden = true) @LoginUser Long userId,
+      HttpServletResponse response
   ) {
     authService.logout(userId);
     deleteRefreshTokenCookie(response);
-
-    return ResponseEntity.ok(
-            BaseResponse.success(GlobalSuccessCode.OK)
-    );
+    return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK));
   }
 
   private void deleteRefreshTokenCookie(HttpServletResponse response) {
     ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
-            .httpOnly(true)
-            .secure(true)
-            .path("/api/v1/auth/reissue")
-            .maxAge(Duration.ZERO)
-            .sameSite("None")
-            .build();
-
+        .httpOnly(true)
+        .secure(true)
+        .path("/api/v1/auth/reissue")
+        .maxAge(Duration.ZERO)
+        .sameSite("None")
+        .build();
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
   }
 
