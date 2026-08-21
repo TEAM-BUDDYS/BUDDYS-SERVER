@@ -25,12 +25,14 @@ import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.domain.user.event.UserWithdrawnEvent;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
@@ -60,6 +62,9 @@ class UserServiceTest {
   @Mock
   private PlaceBookmarkRepository placeBookmarkRepository;
 
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
+
   @DisplayName("회원 탈퇴 시 사용자를 soft delete하고 리프레시 토큰을 폐기한다")
   @Test
   void withdraw_activeUser_softDeletesAndRevokesRefreshToken() {
@@ -78,6 +83,7 @@ class UserServiceTest {
     then(userTagRepository).should().deleteByUserId(userId);
     then(placeBookmarkRepository).should().deleteByUserId(userId);
     then(refreshTokenRepository).should().deleteByUserId(userId);
+    then(eventPublisher).should().publishEvent(any(UserWithdrawnEvent.class));
   }
 
   @DisplayName("존재하지 않거나 이미 탈퇴한 회원은 탈퇴할 수 없다")
@@ -94,6 +100,7 @@ class UserServiceTest {
             .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND));
     then(refreshTokenRepository).shouldHaveNoInteractions();
     then(placeBookmarkRepository).shouldHaveNoInteractions();
+    then(eventPublisher).shouldHaveNoInteractions();
   }
 
   @DisplayName("타입별 태그 리스트를 만들고 대표 태그는 각 타입 리스트의 첫 번째 요소로 반환한다")

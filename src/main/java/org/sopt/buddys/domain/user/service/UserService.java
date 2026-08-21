@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.domain.user.event.UserWithdrawnEvent;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
@@ -24,6 +25,7 @@ import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -44,6 +46,7 @@ public class UserService {
   private final PostImageRepository postImageRepository;
   private final RefreshTokenRepository refreshTokenRepository;
   private final PlaceBookmarkRepository placeBookmarkRepository;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   public void withdraw(Long userId) {
@@ -55,6 +58,7 @@ public class UserService {
     userTagRepository.deleteByUserId(userId);
     placeBookmarkRepository.deleteByUserId(userId);
     refreshTokenRepository.deleteByUserId(userId);
+    eventPublisher.publishEvent(new UserWithdrawnEvent(userId));
   }
 
   public boolean isOnboardingCompleted(User user) {
