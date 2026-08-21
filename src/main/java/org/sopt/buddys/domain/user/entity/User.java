@@ -26,6 +26,7 @@ import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.global.common.entity.BaseEntity;
+import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 
 @Getter
@@ -130,6 +131,27 @@ public class User extends BaseEntity {
     user.email = account.email();
     user.nickname = nickname;
     user.profileImageUrl = profileImageUrl;
+    user.notificationEnabled = true;
+    user.accountStatus = AccountStatus.ACTIVE;
+    return user;
+  }
+
+  public static User ofGoogle(String providerId, GoogleUserInfo info) {
+    if (info.email() == null || info.email().isBlank()) {
+      throw new org.sopt.buddys.global.exception.BaseException(AuthErrorCode.GOOGLE_AUTH_FAILED);
+    }
+    if (!Boolean.TRUE.equals(info.emailVerified())) {
+      throw new org.sopt.buddys.global.exception.BaseException(AuthErrorCode.GOOGLE_EMAIL_NOT_VERIFIED);
+    }
+
+    String nickname = UUID.randomUUID().toString().replace("-", "");
+
+    User user = new User();
+    user.provider = AuthProvider.GOOGLE;
+    user.providerId = providerId;
+    user.email = info.email();
+    user.nickname = nickname;
+    user.profileImageUrl = info.picture();
     user.notificationEnabled = true;
     user.accountStatus = AccountStatus.ACTIVE;
     return user;

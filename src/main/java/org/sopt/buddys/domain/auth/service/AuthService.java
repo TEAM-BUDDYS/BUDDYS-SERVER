@@ -6,16 +6,16 @@ import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
 import org.sopt.buddys.domain.auth.entity.RefreshToken;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
-import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
+import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
+import org.sopt.buddys.global.security.oauth.google.GoogleAuthClient;
 import org.sopt.buddys.global.security.oauth.kakao.KakaoAuthClient;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
   private final KakaoAuthClient kakaoAuthClient;
+  private final GoogleAuthClient googleAuthClient;
   private final AuthTransactionService authTransactionService;
   private final JwtProvider jwtProvider;
   private final RefreshTokenRepository refreshTokenRepository;
@@ -37,6 +38,14 @@ public class AuthService {
 
     String providerId = String.valueOf(kakaoUser.id());
     return authTransactionService.processKakaoLogin(providerId, kakaoUser);
+  }
+
+  public AuthTokens googleLogin(String code, String redirectUri) {
+    String accessToken = googleAuthClient.getAccessToken(code, redirectUri);
+    GoogleUserInfo googleUser = googleAuthClient.getUserInfo(accessToken);
+
+    String providerId = googleUser.sub();
+    return authTransactionService.processGoogleLogin(providerId, googleUser);
   }
 
   @Transactional(noRollbackFor = BaseException.class)

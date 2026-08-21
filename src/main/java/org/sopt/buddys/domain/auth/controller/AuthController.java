@@ -62,6 +62,27 @@ public class AuthController {
     );
   }
 
+  @Operation(summary = "구글 로그인", description = "구글 인가 코드를 이용해 로그인하고 JWT를 발급합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "로그인 성공"),
+      @ApiResponse(responseCode = "400", description = "잘못된 인가 코드 또는 허용되지 않은 redirect_uri"),
+      @ApiResponse(responseCode = "401", description = "신규 가입 사용자의 구글 이메일이 인증되지 않음"),
+  })
+  @PostMapping("/google")
+  public ResponseEntity<BaseResponse<LoginResponse>> googleLogin(
+      @Parameter(description = "구글 OAuth 인가 코드", example = "4/0AY0e-g7...")
+      @RequestParam @NotBlank String code,
+      @Parameter(description = "구글 인가 요청 시 사용한 redirect_uri", example = "http://localhost:3000/auth/google/callback")
+      @RequestParam @NotBlank String redirectUri,
+      HttpServletResponse response
+  ) {
+    AuthTokens tokens = authService.googleLogin(code, redirectUri);
+    addRefreshTokenCookie(response, tokens.refreshToken());
+    return ResponseEntity.ok(
+        BaseResponse.success(GlobalSuccessCode.OK, new LoginResponse(tokens.userId(), tokens.accessToken(), tokens.onboardingCompleted()))
+    );
+  }
+
   @Operation(summary = "JWT 재발급", description = "리프레시 토큰을 이용해 새로운 JWT를 발급합니다.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "JWT 재발급 성공"),
