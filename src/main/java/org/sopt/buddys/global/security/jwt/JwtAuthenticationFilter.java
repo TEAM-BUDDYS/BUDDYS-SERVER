@@ -10,11 +10,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.response.BaseResponse;
-import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,12 +24,10 @@ import tools.jackson.databind.ObjectMapper;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtProvider jwtProvider;
   private final ObjectMapper objectMapper;
-  private final UserRepository userRepository;
 
   private static final Set<String> PUBLIC_EXACT_PATHS = Set.of(
       "/api/v1/auth/login",
@@ -69,22 +64,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         sendUnauthorized(response);
         return;
       }
-      boolean activeUser;
-      try {
-        activeUser = userRepository.existsByIdAndDeletedAtIsNull(userId.get());
-      } catch (DataAccessException e) {
-        log.error("[Authentication] 사용자 상태 조회 실패 userId={}", userId.get(), e);
-        sendError(
-            response,
-            HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-            GlobalErrorCode.INTERNAL_SERVER_ERROR
-        );
-        return;
-      }
-      if (!activeUser) {
-        sendUnauthorized(response);
-        return;
-      }
       UsernamePasswordAuthenticationToken auth =
           new UsernamePasswordAuthenticationToken(userId.get(), null, Collections.emptyList());
       auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -94,17 +73,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   }
 
   private void sendUnauthorized(HttpServletResponse response) throws IOException {
-    sendError(response, HttpServletResponse.SC_UNAUTHORIZED, GlobalErrorCode.UNAUTHORIZED);
-  }
-
-  private void sendError(
-      HttpServletResponse response,
-      int status,
-      GlobalErrorCode errorCode
-  ) throws IOException {
-    response.setStatus(status);
+    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     response.setCharacterEncoding("UTF-8");
-    objectMapper.writeValue(response.getWriter(), BaseResponse.failure(errorCode));
+    objectMapper.writeValue(response.getWriter(), BaseResponse.failure(GlobalErrorCode.UNAUTHORIZED));
   }
 }
