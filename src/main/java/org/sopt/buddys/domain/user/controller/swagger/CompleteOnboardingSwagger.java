@@ -107,6 +107,17 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                           "data": null
                         }
                         """
+                ),
+                @ExampleObject(
+                    name = "예약된 닉네임",
+                    value = """
+                        {
+                          "success": false,
+                          "code": "USER-E008",
+                          "message": "사용할 수 없는 닉네임입니다.",
+                          "data": null
+                        }
+                        """
                 )
             }
         )

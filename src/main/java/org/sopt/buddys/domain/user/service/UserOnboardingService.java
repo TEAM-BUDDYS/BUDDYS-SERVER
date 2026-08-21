@@ -48,6 +48,7 @@ public class UserOnboardingService {
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     validateNotAlreadyOnboarded(userId);
+    validateNickname(request.nickname());
     City interestCity = validateAndGetCity(request.interestCountryId(), request.interestCityId());
     Country interestCountry = interestCity.getCountry();
 
@@ -104,6 +105,12 @@ public class UserOnboardingService {
   private void validateNotAlreadyOnboarded(Long userId) {
     if (userTagRepository.existsByUserId(userId)) {
       throw new BaseException(UserErrorCode.ONBOARDING_ALREADY_COMPLETED);
+    }
+  }
+
+  private void validateNickname(String nickname) {
+    if (nickname.strip().startsWith(User.WITHDRAWN_DISPLAY_NICKNAME)) {
+      throw new BaseException(UserErrorCode.RESERVED_NICKNAME);
     }
   }
 

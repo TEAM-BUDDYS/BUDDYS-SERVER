@@ -123,6 +123,23 @@ public class UserOnboardingServiceTest {
         );
   }
 
+  @DisplayName("탈퇴 회원 표시명으로 시작하는 닉네임은 사용할 수 없다")
+  @Test
+  void completeOnboarding_reservedNickname_throwsException() {
+    // given
+    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    OnboardingCommand request = createRequestWithNickname(" 탈퇴한 사용자123");
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.RESERVED_NICKNAME)
+        );
+    then(cityRepository).shouldHaveNoInteractions();
+    then(tagRepository).shouldHaveNoInteractions();
+  }
+
   @DisplayName("관심 도시가 존재하지 않으면 LOC-E002 예외가 발생한다")
   @Test
   void completeOnboarding_interestCityNotFound_throwsException() {
@@ -467,6 +484,10 @@ public class UserOnboardingServiceTest {
   }
 
   private OnboardingCommand createValidRequest() {
+    return createRequestWithNickname("해령");
+  }
+
+  private OnboardingCommand createRequestWithNickname(String nickname) {
     return new OnboardingCommand(
         COUNTRY_ID,
         CITY_ID,
@@ -477,7 +498,7 @@ public class UserOnboardingServiceTest {
         List.of(1L),
         List.of(2L),
         List.of(3L),
-        "해령",
+        nickname,
         Gender.FEMALE,
         LocalDate.of(2000, 4, 2),
         "같이 여행 다녀요!",
