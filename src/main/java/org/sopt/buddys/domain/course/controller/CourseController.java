@@ -2,6 +2,9 @@ package org.sopt.buddys.domain.course.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,7 +24,6 @@ import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.sopt.buddys.global.swagger.CommonErrorResponses;
-import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,9 +43,40 @@ public class CourseController {
   @Operation(summary = "코스 게시글 작성", description = "로그인한 사용자가 여행 코스 게시글을 작성합니다.")
   @ApiResponses({
       @ApiResponse(responseCode = "201", description = "작성 성공"),
+      @ApiResponse(
+          responseCode = "400",
+          description = "잘못된 요청",
+          content = @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = BaseResponse.class),
+              examples = {
+                  @ExampleObject(
+                      name = "잘못된 요청",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "GLB-E001",
+                            "message": "잘못된 요청입니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "일자(dayNumber) 중복",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "COURSE-E004",
+                            "message": "일자(dayNumber)가 중복되었습니다.",
+                            "data": null
+                          }
+                          """
+                  )
+              }
+          )
+      ),
       @ApiResponse(responseCode = "404", description = "국가, 도시, 태그 또는 사용자를 찾을 수 없음")
   })
-  @InvalidRequestResponse
   @CommonErrorResponses
   @PostMapping
   public ResponseEntity<BaseResponse<CreateCourseResponse>> createCourse(
