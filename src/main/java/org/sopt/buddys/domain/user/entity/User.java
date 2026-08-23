@@ -25,6 +25,7 @@ import lombok.experimental.SuperBuilder;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
 import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
+import org.sopt.buddys.domain.location.entity.University;
 import org.sopt.buddys.global.common.entity.BaseEntity;
 import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
@@ -88,6 +89,10 @@ public class User extends BaseEntity {
   @Enumerated(EnumType.STRING)
   @Column(name = "account_status", nullable = false, length = 20)
   private AccountStatus accountStatus = AccountStatus.ACTIVE;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "university_id")
+  private University university;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "interest_country_id")
@@ -181,5 +186,10 @@ public class User extends BaseEntity {
     this.exchangeEndDate = exchangeEndDate;
     this.interestCountry = interestCountry;
     this.interestCity = interestCity;
+  }
+
+  public void verifyUniversity(University university) {
+    this.university = university;
+    this.universityVerified = true;
   }
 }
