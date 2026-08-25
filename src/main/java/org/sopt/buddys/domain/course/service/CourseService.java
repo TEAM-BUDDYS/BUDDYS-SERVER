@@ -50,6 +50,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -272,13 +273,22 @@ public class CourseService {
   private Place resolvePlace(CoursePlaceCommand placeCommand) {
     PlaceCategory category = parseCategory(placeCommand.category());
     return placeRepository.findByGooglePlaceId(placeCommand.googlePlaceId())
-        .orElseGet(() -> placeRepository.save(Place.builder()
-            .googlePlaceId(placeCommand.googlePlaceId())
-            .name(placeCommand.name())
-            .category(category)
-            .latitude(placeCommand.latitude())
-            .longitude(placeCommand.longitude())
-            .build()));
+        .orElseGet(() -> createPlace(placeCommand, category));
+  }
+
+  private Place createPlace(CoursePlaceCommand placeCommand, PlaceCategory category) {
+    try {
+      return placeRepository.save(Place.builder()
+          .googlePlaceId(placeCommand.googlePlaceId())
+          .name(placeCommand.name())
+          .category(category)
+          .latitude(placeCommand.latitude())
+          .longitude(placeCommand.longitude())
+          .build());
+    } catch (DataIntegrityViolationException e) {
+      return placeRepository.findByGooglePlaceId(placeCommand.googlePlaceId())
+          .orElseThrow(() -> e);
+    }
   }
 
   private PlaceCategory parseCategory(String categoryRaw) {
