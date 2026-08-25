@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.course.service;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -237,12 +238,16 @@ public class CourseService {
   }
 
   private void saveCourseDays(Course course, List<CourseDayCommand> days) {
-    for (CourseDayCommand dayCommand : days) {
-      CourseDay courseDay = courseDayRepository.save(
-          new CourseDay(course, dayCommand.dayNumber(), dayCommand.date()));
-      saveCourseImages(courseDay, dayCommand.imageUrls());
-      saveCoursePlaces(courseDay, dayCommand.places());
+    List<CourseDay> courseDays = days.stream()
+        .map(dayCommand -> courseDayRepository.save(
+            new CourseDay(course, dayCommand.dayNumber(), dayCommand.date())))
+        .toList();
+
+    for (int i = 0; i < days.size(); i++) {
+      saveCourseImages(courseDays.get(i), days.get(i).imageUrls());
     }
+
+    saveCoursePlaces(courseDays, days);
   }
 
   private void saveCourseImages(CourseDay courseDay, List<String> imageUrls) {
@@ -254,25 +259,55 @@ public class CourseService {
         .toList());
   }
 
-  private void saveCoursePlaces(CourseDay courseDay, List<CoursePlaceCommand> places) {
-    if (places == null || places.isEmpty()) {
+  private void saveCoursePlaces(List<CourseDay> courseDays, List<CourseDayCommand> days) {
+    Map<String, Place> placesByGooglePlaceId = resolvePlaces(days);
+    if (placesByGooglePlaceId.isEmpty()) {
       return;
     }
-    List<CoursePlace> coursePlaces = IntStream.range(0, places.size())
-        .mapToObj(index -> {
-          CoursePlaceCommand placeCommand = places.get(index);
-          Place place = resolvePlace(placeCommand);
-          Short orderNo = placeCommand.orderNo() != null ? placeCommand.orderNo() : (short) index;
-          return new CoursePlace(courseDay, place, orderNo, placeCommand.memo(), placeCommand.cost());
-        })
-        .toList();
+
+    List<CoursePlace> coursePlaces = new ArrayList<>();
+    for (int i = 0; i < days.size(); i++) {
+      List<CoursePlaceCommand> placeCommands = days.get(i).places();
+      if (placeCommands == null || placeCommands.isEmpty()) {
+        continue;
+      }
+      CourseDay courseDay = courseDays.get(i);
+      for (int index = 0; index < placeCommands.size(); index++) {
+        CoursePlaceCommand placeCommand = placeCommands.get(index);
+        Place place = placesByGooglePlaceId.get(placeCommand.googlePlaceId());
+        Short orderNo = placeCommand.orderNo() != null ? placeCommand.orderNo() : (short) index;
+        coursePlaces.add(new CoursePlace(courseDay, place, orderNo, placeCommand.memo(), placeCommand.cost()));
+      }
+    }
     coursePlaceRepository.saveAll(coursePlaces);
   }
 
-  private Place resolvePlace(CoursePlaceCommand placeCommand) {
-    PlaceCategory category = parseCategory(placeCommand.category());
-    return placeRepository.findByGooglePlaceId(placeCommand.googlePlaceId())
-        .orElseGet(() -> createPlace(placeCommand, category));
+  private Map<String, Place> resolvePlaces(List<CourseDayCommand> days) {
+    List<CoursePlaceCommand> allPlaceCommands = days.stream()
+        .filter(day -> day.places() != null)
+        .flatMap(day -> day.places().stream())
+        .toList();
+    if (allPlaceCommands.isEmpty()) {
+      return Map.of();
+    }
+
+    allPlaceCommands.forEach(command -> parseCategory(command.category()));
+
+    Map<String, CoursePlaceCommand> firstCommandByGooglePlaceId = new LinkedHashMap<>();
+    allPlaceCommands.forEach(command ->
+        firstCommandByGooglePlaceId.putIfAbsent(command.googlePlaceId(), command));
+
+    Map<String, Place> resolvedPlaces = new LinkedHashMap<>();
+    placeRepository.findByGooglePlaceIdIn(firstCommandByGooglePlaceId.keySet())
+        .forEach(place -> resolvedPlaces.put(place.getGooglePlaceId(), place));
+
+    firstCommandByGooglePlaceId.forEach((googlePlaceId, command) -> {
+      if (!resolvedPlaces.containsKey(googlePlaceId)) {
+        resolvedPlaces.put(googlePlaceId, createPlace(command, parseCategory(command.category())));
+      }
+    });
+
+    return resolvedPlaces;
   }
 
   private Place createPlace(CoursePlaceCommand placeCommand, PlaceCategory category) {
