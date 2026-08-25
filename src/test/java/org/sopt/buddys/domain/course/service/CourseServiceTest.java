@@ -15,7 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.code.CourseErrorCode;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
+import org.sopt.buddys.domain.course.repository.CourseCityRepository;
 import org.sopt.buddys.domain.course.repository.CourseCompanionRepository;
+import org.sopt.buddys.domain.course.repository.CourseCountryRepository;
 import org.sopt.buddys.domain.course.repository.CourseDayRepository;
 import org.sopt.buddys.domain.course.repository.CourseFlightRepository;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
@@ -27,6 +29,7 @@ import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
+import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.place.entity.Place;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
@@ -59,6 +62,12 @@ class CourseServiceTest {
 
   @Autowired
   private CourseRepository courseRepository;
+
+  @Autowired
+  private CourseCountryRepository courseCountryRepository;
+
+  @Autowired
+  private CourseCityRepository courseCityRepository;
 
   @Autowired
   private CourseTagRepository courseTagRepository;
@@ -100,19 +109,21 @@ class CourseServiceTest {
     cleanUp();
   }
 
-  @DisplayName("코스 작성 시 태그, 일자, 장소, 사진, 항공편, 동행자가 함께 저장된다")
+  @DisplayName("코스 작성 시 국가/도시(N:M), 태그, 일자, 장소, 사진, 항공편, 동행자가 함께 저장된다")
   @Test
   void createCourse_savesCourseWithAllDetails() {
     // given
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
-    Long countryId = insertCountry("프랑스", "FR");
-    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long franceId = insertCountry("프랑스", "FR");
+    Long belgiumId = insertCountry("벨기에", "BE");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long brusselsId = insertCity(belgiumId, "Brussels", "브뤼셀", 1_200_000L);
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId,
-        cityId,
+        List.of(franceId, belgiumId),
+        List.of(parisId, brusselsId),
         " 파리 5일 코스 ",
         " 루브르부터... ",
         "https://example.com/thumbnail.jpg",
@@ -153,6 +164,8 @@ class CourseServiceTest {
     assertThat(savedCourse.getTitle()).isEqualTo("파리 5일 코스");
     assertThat(savedCourse.getContent()).isEqualTo("루브르부터...");
     assertThat(savedCourse.getThumbnailImageUrl()).isEqualTo("https://example.com/thumbnail.jpg");
+    assertThat(courseCountryRepository.findAll()).hasSize(2);
+    assertThat(courseCityRepository.findAll()).hasSize(2);
     assertThat(courseTagRepository.findAll()).hasSize(1);
     assertThat(courseCompanionRepository.findAll()).hasSize(1);
     assertThat(courseDayRepository.findAll()).hasSize(1);
@@ -173,7 +186,7 @@ class CourseServiceTest {
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(new CourseDayCommand((short) 1, null, null, null)),
@@ -213,7 +226,7 @@ class CourseServiceTest {
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(
@@ -230,25 +243,6 @@ class CourseServiceTest {
         );
   }
 
-  @DisplayName("도시가 요청 국가에 속하지 않으면 예외가 발생한다")
-  @Test
-  void createCourse_cityNotInCountry_throwsException() {
-    // given
-    Long countryId = insertCountry("프랑스", "FR");
-    Long otherCountryId = insertCountry("대한민국", "KR");
-    Long cityId = insertCity(otherCountryId, "Seoul", "서울특별시", 10_000_000L);
-    Long tagId = insertTag("도보여행", "ACTIVITY");
-
-    CreateCourseCommand command = createDefaultCommand(
-        countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId);
-
-    // when, then
-    assertThatThrownBy(() -> courseService.createCourse(1L, command))
-        .isInstanceOfSatisfying(BaseException.class, exception ->
-            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.CITY_NOT_IN_COUNTRY)
-        );
-  }
-
   @DisplayName("존재하지 않는 동행자 ID가 있으면 예외가 발생한다")
   @Test
   void createCourse_companionUserNotFound_throwsException() {
@@ -259,7 +253,7 @@ class CourseServiceTest {
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(999_999L),
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
@@ -273,6 +267,54 @@ class CourseServiceTest {
         );
   }
 
+  @DisplayName("존재하지 않는 국가 ID가 있으면 예외가 발생한다")
+  @Test
+  void createCourse_countryNotFound_throwsException() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId, 999_999L), List.of(cityId), "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(LocationErrorCode.COUNTRY_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("존재하지 않는 도시 ID가 있으면 예외가 발생한다")
+  @Test
+  void createCourse_cityNotFound_throwsException() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId), List.of(cityId, 999_999L), "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(LocationErrorCode.CITY_NOT_FOUND)
+        );
+  }
+
   @DisplayName("활동 태그가 하나도 없으면 예외가 발생한다")
   @Test
   void createCourse_noActivityTag_throwsException() {
@@ -283,7 +325,7 @@ class CourseServiceTest {
     Long interestTagId = insertTag("맛집", "INTEREST");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(interestTagId), null,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
@@ -312,7 +354,7 @@ class CourseServiceTest {
     );
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         activityTagIds, null,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
@@ -336,7 +378,7 @@ class CourseServiceTest {
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(author.getId()),
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
@@ -350,19 +392,21 @@ class CourseServiceTest {
         );
   }
 
-  @DisplayName("코스 상세 조회 시 태그, 일자, 장소, 항공편, 동행자 정보를 함께 반환한다")
+  @DisplayName("코스 상세 조회 시 국가/도시(N:M), 태그, 일자, 장소, 항공편, 동행자 정보를 함께 반환한다")
   @Test
   void getCourseDetail_returnsCourseWithAllDetails() {
     // given
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
-    Long countryId = insertCountry("프랑스", "FR");
-    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long franceId = insertCountry("프랑스", "FR");
+    Long belgiumId = insertCountry("벨기에", "BE");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long brusselsId = insertCity(belgiumId, "Brussels", "브뤼셀", 1_200_000L);
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId,
-        cityId,
+        List.of(franceId, belgiumId),
+        List.of(parisId, brusselsId),
         " 파리 5일 코스 ",
         " 루브르부터... ",
         "https://example.com/thumbnail.jpg",
@@ -405,6 +449,8 @@ class CourseServiceTest {
     assertThat(result.thumbnailImageUrl()).isEqualTo("https://example.com/thumbnail.jpg");
     assertThat(result.isMine()).isTrue();
     assertThat(result.author().userId()).isEqualTo(author.getId());
+    assertThat(result.countries()).extracting("countryId").containsExactlyInAnyOrder(franceId, belgiumId);
+    assertThat(result.cities()).extracting("cityId").containsExactlyInAnyOrder(parisId, brusselsId);
     assertThat(result.tags()).hasSize(1);
     assertThat(result.companions()).extracting("userId").containsExactly(companion.getId());
     assertThat(result.flights()).hasSize(1);
@@ -567,7 +613,7 @@ class CourseServiceTest {
       Long countryId, Long cityId, LocalDate startDate, LocalDate endDate, Long tagId
   ) {
     return new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
         startDate, endDate,
         List.of(tagId), null,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
@@ -642,6 +688,8 @@ class CourseServiceTest {
     jdbcTemplate.update("DELETE FROM course_image");
     jdbcTemplate.update("DELETE FROM course_day");
     jdbcTemplate.update("DELETE FROM course_tag");
+    jdbcTemplate.update("DELETE FROM course_country");
+    jdbcTemplate.update("DELETE FROM course_city");
     jdbcTemplate.update("DELETE FROM course");
     jdbcTemplate.update("DELETE FROM place_bookmark");
     jdbcTemplate.update("DELETE FROM place");

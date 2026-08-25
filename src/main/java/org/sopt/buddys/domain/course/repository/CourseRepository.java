@@ -14,8 +14,6 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
       from Course c
       join fetch c.author author
       left join fetch author.exchangeCountry
-      join fetch c.country
-      join fetch c.city
       where c.id = :courseId
         and c.deletedAt is null
       """)

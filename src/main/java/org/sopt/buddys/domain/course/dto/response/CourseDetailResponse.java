@@ -28,11 +28,11 @@ public record CourseDetailResponse(
     @Schema(description = "대표 사진 URL", example = "https://example.com/thumbnail.jpg", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
     String thumbnailImageUrl,
 
-    @Schema(description = "여행 국가", requiredMode = Schema.RequiredMode.REQUIRED)
-    CourseCountryResponse country,
+    @Schema(description = "여행 국가 목록", requiredMode = Schema.RequiredMode.REQUIRED)
+    List<CourseCountryResponse> countries,
 
-    @Schema(description = "여행 도시", requiredMode = Schema.RequiredMode.REQUIRED)
-    CourseCityResponse city,
+    @Schema(description = "여행 도시 목록", requiredMode = Schema.RequiredMode.REQUIRED)
+    List<CourseCityResponse> cities,
 
     @Schema(description = "출발일", example = "2026-09-01", requiredMode = Schema.RequiredMode.REQUIRED)
     LocalDate startDate,
@@ -60,6 +60,8 @@ public record CourseDetailResponse(
 ) {
 
   public CourseDetailResponse {
+    countries = List.copyOf(countries);
+    cities = List.copyOf(cities);
     tags = List.copyOf(tags);
     companions = List.copyOf(companions);
     flights = List.copyOf(flights);
@@ -74,8 +76,8 @@ public record CourseDetailResponse(
         result.title(),
         result.content(),
         result.thumbnailImageUrl(),
-        CourseCountryResponse.from(result.country()),
-        CourseCityResponse.from(result.city()),
+        result.countries().stream().map(CourseCountryResponse::from).toList(),
+        result.cities().stream().map(CourseCityResponse::from).toList(),
         result.startDate(),
         result.endDate(),
         result.tags().stream().map(CourseTagResponse::from).toList(),

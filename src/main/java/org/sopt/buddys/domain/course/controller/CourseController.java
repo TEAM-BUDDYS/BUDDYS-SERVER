@@ -200,8 +200,8 @@ public class CourseController {
 
   private CreateCourseCommand toCommand(CreateCourseRequest request) {
     return new CreateCourseCommand(
-        request.countryId(),
-        request.cityId(),
+        request.countryIds(),
+        request.cityIds(),
         request.title(),
         request.content(),
         request.thumbnailImageUrl(),

@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.sopt.buddys.domain.location.entity.City;
-import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.common.entity.BaseEntity;
 
@@ -32,14 +30,6 @@ public class Course extends BaseEntity {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "author_id", nullable = false)
   private User author;
-
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "country_id", nullable = false)
-  private Country country;
-
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "city_id", nullable = false)
-  private City city;
 
   @Column(nullable = false, length = 120)
   private String title;
@@ -64,8 +54,6 @@ public class Course extends BaseEntity {
 
   public Course(
       User author,
-      Country country,
-      City city,
       String title,
       String content,
       String thumbnailImageUrl,
@@ -73,8 +61,6 @@ public class Course extends BaseEntity {
       LocalDate endDate
   ) {
     this.author = author;
-    this.country = country;
-    this.city = city;
     this.title = title;
     this.content = content;
     this.thumbnailImageUrl = thumbnailImageUrl;

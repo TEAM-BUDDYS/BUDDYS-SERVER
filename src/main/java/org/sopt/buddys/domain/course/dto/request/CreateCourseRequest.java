@@ -10,13 +10,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record CreateCourseRequest(
-    @Schema(description = "국가 ID", example = "240")
-    @NotNull
-    Long countryId,
+    @Schema(description = "국가 ID 목록", example = "[240]")
+    @NotEmpty
+    List<@NotNull Long> countryIds,
 
-    @Schema(description = "도시 ID", example = "11160")
-    @NotNull
-    Long cityId,
+    @Schema(description = "도시 ID 목록", example = "[11160]")
+    @NotEmpty
+    List<@NotNull Long> cityIds,
 
     @Schema(description = "코스 제목", example = "여유로운 파리 미술관 코스")
     @NotBlank
@@ -43,8 +43,8 @@ public record CreateCourseRequest(
     @Size(max = 10)
     List<@NotNull Long> tagIds,
 
-    @Schema(description = "함께한 유저 ID 목록 (최대 20명)", example = "[12, 30]")
-    @Size(max = 20)
+    @Schema(description = "함께한 유저 ID 목록 (최대 11명)", example = "[12, 30]")
+    @Size(max = 11)
     List<@NotNull Long> companionUserIds,
 
     @Schema(description = "일자별 코스 목록 (최대 30일)")

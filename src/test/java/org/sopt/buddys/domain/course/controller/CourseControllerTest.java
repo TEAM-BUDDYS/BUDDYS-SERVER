@@ -82,8 +82,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": %d,
-                  "cityId": %d,
+                  "countryIds": [%d],
+                  "cityIds": [%d],
                   "title": "파리 5일 코스",
                   "content": "루브르부터...",
                   "startDate": "2026-09-01",
@@ -151,8 +151,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": 1,
-                  "cityId": 1,
+                  "countryIds": [1],
+                  "cityIds": [1],
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "days": []
@@ -178,8 +178,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": %d,
-                  "cityId": %d,
+                  "countryIds": [%d],
+                  "cityIds": [%d],
                   "title": "파리 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
@@ -210,8 +210,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": %d,
-                  "cityId": %d,
+                  "countryIds": [%d],
+                  "cityIds": [%d],
                   "title": "파리 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
@@ -238,8 +238,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": %d,
-                  "cityId": %d,
+                  "countryIds": [%d],
+                  "cityIds": [%d],
                   "title": "파리 5일 코스",
                   "content": "루브르부터...",
                   "thumbnailImageUrl": "https://example.com/thumbnail.jpg",
@@ -265,6 +265,8 @@ class CourseControllerTest {
         .andExpect(jsonPath("$.data.title").value("파리 5일 코스"))
         .andExpect(jsonPath("$.data.thumbnailImageUrl").value("https://example.com/thumbnail.jpg"))
         .andExpect(jsonPath("$.data.isMine").value(true))
+        .andExpect(jsonPath("$.data.countries[0].countryId").value(countryId))
+        .andExpect(jsonPath("$.data.cities[0].cityId").value(cityId))
         .andExpect(jsonPath("$.data.days[0].dayNumber").value(1))
         .andExpect(jsonPath("$.data.days[0].imageUrls[0]").value("https://example.com/day1.jpg"));
   }
@@ -297,8 +299,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": %d,
-                  "cityId": %d,
+                  "countryIds": [%d],
+                  "cityIds": [%d],
                   "title": "파리 5일 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
@@ -338,8 +340,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": %d,
-                  "cityId": %d,
+                  "countryIds": [%d],
+                  "cityIds": [%d],
                   "title": "파리 5일 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
@@ -386,8 +388,8 @@ class CourseControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "countryId": %d,
-                  "cityId": %d,
+                  "countryIds": [%d],
+                  "cityIds": [%d],
                   "title": "파리 5일 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
@@ -512,6 +514,8 @@ class CourseControllerTest {
     jdbcTemplate.update("DELETE FROM course_image");
     jdbcTemplate.update("DELETE FROM course_day");
     jdbcTemplate.update("DELETE FROM course_tag");
+    jdbcTemplate.update("DELETE FROM course_country");
+    jdbcTemplate.update("DELETE FROM course_city");
     jdbcTemplate.update("DELETE FROM course");
     jdbcTemplate.update("DELETE FROM place_bookmark");
     jdbcTemplate.update("DELETE FROM place");

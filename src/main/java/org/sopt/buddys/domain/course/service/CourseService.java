@@ -14,14 +14,18 @@ import org.sopt.buddys.domain.course.code.CourseErrorCode;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
 import org.sopt.buddys.domain.course.entity.CourseBookmarkId;
+import org.sopt.buddys.domain.course.entity.CourseCity;
 import org.sopt.buddys.domain.course.entity.CourseCompanion;
+import org.sopt.buddys.domain.course.entity.CourseCountry;
 import org.sopt.buddys.domain.course.entity.CourseDay;
 import org.sopt.buddys.domain.course.entity.CourseFlight;
 import org.sopt.buddys.domain.course.entity.CourseImage;
 import org.sopt.buddys.domain.course.entity.CoursePlace;
 import org.sopt.buddys.domain.course.entity.CourseTag;
 import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
+import org.sopt.buddys.domain.course.repository.CourseCityRepository;
 import org.sopt.buddys.domain.course.repository.CourseCompanionRepository;
+import org.sopt.buddys.domain.course.repository.CourseCountryRepository;
 import org.sopt.buddys.domain.course.repository.CourseDayRepository;
 import org.sopt.buddys.domain.course.repository.CourseFlightRepository;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
@@ -66,6 +70,8 @@ public class CourseService {
   private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 2;
 
   private final CourseRepository courseRepository;
+  private final CourseCountryRepository courseCountryRepository;
+  private final CourseCityRepository courseCityRepository;
   private final CourseTagRepository courseTagRepository;
   private final CourseDayRepository courseDayRepository;
   private final CourseImageRepository courseImageRepository;
@@ -87,14 +93,9 @@ public class CourseService {
 
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    Country country = countryRepository.findById(command.countryId())
-        .orElseThrow(() -> new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND));
-    City city = getCity(command.countryId(), command.cityId());
 
     Course course = courseRepository.save(new Course(
         author,
-        country,
-        city,
         command.title().trim(),
         command.content() != null ? command.content().trim() : null,
         command.thumbnailImageUrl() != null ? command.thumbnailImageUrl().trim() : null,
@@ -102,6 +103,8 @@ public class CourseService {
         command.endDate()
     ));
 
+    saveCourseCountries(course, command.countryIds());
+    saveCourseCities(course, command.cityIds());
     saveCourseTags(course, command.tagIds());
     saveCourseCompanions(course, command.companionUserIds());
     saveCourseDays(course, command.days());
@@ -155,18 +158,9 @@ public class CourseService {
     courseBookmarkRepository.deleteById(new CourseBookmarkId(userId, courseId));
   }
 
-  private City getCity(Long countryId, Long cityId) {
-    City city = cityRepository.findById(cityId)
-        .orElseThrow(() -> new BaseException(LocationErrorCode.CITY_NOT_FOUND));
-    if (!city.getCountry().getId().equals(countryId)) {
-      throw new BaseException(CourseErrorCode.CITY_NOT_IN_COUNTRY);
-    }
-    return city;
-  }
-
   private void validateRequiredFields(CreateCourseCommand command) {
-    if (command.countryId() == null
-        || command.cityId() == null
+    if (command.countryIds() == null || command.countryIds().isEmpty()
+        || command.cityIds() == null || command.cityIds().isEmpty()
         || command.title() == null || command.title().isBlank()
         || command.startDate() == null
         || command.endDate() == null
@@ -215,6 +209,28 @@ public class CourseService {
         throw new BaseException(CourseErrorCode.DAY_NUMBER_DUPLICATED);
       }
     }
+  }
+
+  private void saveCourseCountries(Course course, List<Long> countryIds) {
+    Set<Long> distinctCountryIds = new LinkedHashSet<>(countryIds);
+    List<Country> countries = countryRepository.findAllById(distinctCountryIds);
+    if (countries.size() != distinctCountryIds.size()) {
+      throw new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND);
+    }
+    courseCountryRepository.saveAll(countries.stream()
+        .map(country -> new CourseCountry(course, country))
+        .toList());
+  }
+
+  private void saveCourseCities(Course course, List<Long> cityIds) {
+    Set<Long> distinctCityIds = new LinkedHashSet<>(cityIds);
+    List<City> cities = cityRepository.findAllById(distinctCityIds);
+    if (cities.size() != distinctCityIds.size()) {
+      throw new BaseException(LocationErrorCode.CITY_NOT_FOUND);
+    }
+    courseCityRepository.saveAll(cities.stream()
+        .map(city -> new CourseCity(course, city))
+        .toList());
   }
 
   private void saveCourseTags(Course course, List<Long> tagIds) {
@@ -395,8 +411,8 @@ public class CourseService {
         course.getTitle(),
         course.getContent(),
         course.getThumbnailImageUrl(),
-        toCourseCountryResult(course.getCountry()),
-        toCourseCityResult(course.getCity()),
+        getCourseCountryResults(course.getId()),
+        getCourseCityResults(course.getId()),
         course.getStartDate(),
         course.getEndDate(),
         getCourseTagResults(course.getId()),
@@ -421,12 +437,25 @@ public class CourseService {
     );
   }
 
-  private CourseDetailResult.CountryResult toCourseCountryResult(Country country) {
-    return new CourseDetailResult.CountryResult(country.getId(), country.getName());
+  private List<CourseDetailResult.CountryResult> getCourseCountryResults(Long courseId) {
+    return courseCountryRepository.findAllByCourseIdWithCountry(courseId)
+        .stream()
+        .map(courseCountry -> new CourseDetailResult.CountryResult(
+            courseCountry.getCountry().getId(),
+            courseCountry.getCountry().getName()
+        ))
+        .toList();
   }
 
-  private CourseDetailResult.CityResult toCourseCityResult(City city) {
-    return new CourseDetailResult.CityResult(city.getId(), city.getName(), getCityKoreanName(city));
+  private List<CourseDetailResult.CityResult> getCourseCityResults(Long courseId) {
+    return courseCityRepository.findAllByCourseIdWithCity(courseId)
+        .stream()
+        .map(courseCity -> new CourseDetailResult.CityResult(
+            courseCity.getCity().getId(),
+            courseCity.getCity().getName(),
+            getCityKoreanName(courseCity.getCity())
+        ))
+        .toList();
   }
 
   private String getCityKoreanName(City city) {

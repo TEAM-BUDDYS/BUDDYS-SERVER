@@ -4,8 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record CreateCourseCommand(
-    Long countryId,
-    Long cityId,
+    List<Long> countryIds,
+    List<Long> cityIds,
     String title,
     String content,
     String thumbnailImageUrl,

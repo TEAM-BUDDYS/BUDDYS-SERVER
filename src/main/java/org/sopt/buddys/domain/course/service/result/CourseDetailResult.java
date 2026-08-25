@@ -15,8 +15,8 @@ public record CourseDetailResult(
     String title,
     String content,
     String thumbnailImageUrl,
-    CountryResult country,
-    CityResult city,
+    List<CountryResult> countries,
+    List<CityResult> cities,
     LocalDate startDate,
     LocalDate endDate,
     List<TagResult> tags,
@@ -28,6 +28,8 @@ public record CourseDetailResult(
 ) {
 
   public CourseDetailResult {
+    countries = List.copyOf(countries);
+    cities = List.copyOf(cities);
     tags = List.copyOf(tags);
     companions = List.copyOf(companions);
     flights = List.copyOf(flights);
