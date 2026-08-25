@@ -1,7 +1,5 @@
 package org.sopt.buddys.domain.course.service;
 
-import java.time.LocalDate;
-import java.time.Period;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -50,6 +48,8 @@ import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.AuthorProfileMapper;
+import org.sopt.buddys.domain.user.service.result.AuthorProfile;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -406,15 +406,15 @@ public class CourseService {
   }
 
   private CourseDetailResult.AuthorResult toAuthorResult(User author) {
-    Country exchangeCountry = author.getExchangeCountry();
+    AuthorProfile profile = AuthorProfileMapper.toAuthorProfile(author);
     return new CourseDetailResult.AuthorResult(
-        author.getId(),
-        author.getNickname(),
-        author.getProfileImageUrl(),
-        exchangeCountry == null ? null : exchangeCountry.getName(),
-        toAge(author.getBirthDate()),
-        toAgeRange(author.getBirthDate()),
-        author.getGender()
+        profile.userId(),
+        profile.nickname(),
+        profile.profileImageUrl(),
+        profile.country(),
+        profile.age(),
+        profile.ageRange(),
+        profile.gender()
     );
   }
 
@@ -524,23 +524,5 @@ public class CourseService {
         coursePlace.getMemo(),
         coursePlace.getCost()
     );
-  }
-
-  private String toAgeRange(LocalDate birthDate) {
-    Integer age = toAge(birthDate);
-    if (age == null) {
-      return null;
-    }
-    if (age < 10) {
-      return "10대 미만";
-    }
-    return "%d0대".formatted(age / 10);
-  }
-
-  private Integer toAge(LocalDate birthDate) {
-    if (birthDate == null) {
-      return null;
-    }
-    return Period.between(birthDate, LocalDate.now()).getYears();
   }
 }
