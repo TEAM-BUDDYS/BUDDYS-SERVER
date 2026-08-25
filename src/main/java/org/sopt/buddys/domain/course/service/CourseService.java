@@ -251,6 +251,9 @@ public class CourseService {
       return;
     }
     Set<Long> distinctUserIds = new LinkedHashSet<>(companionUserIds);
+    if (distinctUserIds.contains(course.getAuthor().getId())) {
+      throw new BaseException(CourseErrorCode.AUTHOR_CANNOT_BE_COMPANION);
+    }
     List<User> users = userRepository.findAllById(distinctUserIds);
     if (users.size() != distinctUserIds.size()) {
       throw new BaseException(CourseErrorCode.COMPANION_USER_NOT_FOUND);

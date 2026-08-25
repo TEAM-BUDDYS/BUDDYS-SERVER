@@ -301,6 +301,30 @@ class CourseServiceTest {
         );
   }
 
+  @DisplayName("작성자 본인을 동행자로 추가하면 예외가 발생한다")
+  @Test
+  void createCourse_authorAsCompanion_throwsException() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        countryId, cityId, "파리 코스", null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), List.of(author.getId()),
+        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.AUTHOR_CANNOT_BE_COMPANION)
+        );
+  }
+
   @DisplayName("코스 상세 조회 시 태그, 일자, 장소, 항공편, 동행자 정보를 함께 반환한다")
   @Test
   void getCourseDetail_returnsCourseWithAllDetails() {
