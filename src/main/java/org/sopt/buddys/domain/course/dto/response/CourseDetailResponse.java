@@ -10,49 +10,49 @@ import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.user.entity.Gender;
 
 public record CourseDetailResponse(
-    @Schema(description = "코스 ID", example = "1")
+    @Schema(description = "코스 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     Long courseId,
 
-    @Schema(description = "작성자 정보")
+    @Schema(description = "작성자 정보", requiredMode = Schema.RequiredMode.REQUIRED)
     AuthorResponse author,
 
-    @Schema(description = "로그인 사용자의 코스 여부", example = "false")
+    @Schema(description = "로그인 사용자의 코스 여부", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
     boolean isMine,
 
-    @Schema(description = "코스 제목", example = "파리 5일 코스")
+    @Schema(description = "코스 제목", example = "파리 5일 코스", requiredMode = Schema.RequiredMode.REQUIRED)
     String title,
 
-    @Schema(description = "코스 소개", example = "루브르부터...")
+    @Schema(description = "코스 소개", example = "루브르부터...", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
     String content,
 
-    @Schema(description = "여행 국가")
+    @Schema(description = "여행 국가", requiredMode = Schema.RequiredMode.REQUIRED)
     CourseCountryResponse country,
 
-    @Schema(description = "여행 도시")
+    @Schema(description = "여행 도시", requiredMode = Schema.RequiredMode.REQUIRED)
     CourseCityResponse city,
 
-    @Schema(description = "출발일", example = "2026-09-01")
+    @Schema(description = "출발일", example = "2026-09-01", requiredMode = Schema.RequiredMode.REQUIRED)
     LocalDate startDate,
 
-    @Schema(description = "도착일", example = "2026-09-05")
+    @Schema(description = "도착일", example = "2026-09-05", requiredMode = Schema.RequiredMode.REQUIRED)
     LocalDate endDate,
 
-    @Schema(description = "연결된 태그 목록")
+    @Schema(description = "연결된 태그 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<CourseTagResponse> tags,
 
-    @Schema(description = "함께한 유저 목록")
+    @Schema(description = "함께한 유저 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<CompanionResponse> companions,
 
-    @Schema(description = "항공편 목록")
+    @Schema(description = "항공편 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<FlightResponse> flights,
 
-    @Schema(description = "일자별 코스 목록")
+    @Schema(description = "일자별 코스 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<DayResponse> days,
 
-    @Schema(description = "조회수", example = "11")
+    @Schema(description = "조회수", example = "11", requiredMode = Schema.RequiredMode.REQUIRED)
     Long viewCount,
 
-    @Schema(description = "코스 생성일시", example = "2026-08-20T14:30:00")
+    @Schema(description = "코스 생성일시", example = "2026-08-20T14:30:00", requiredMode = Schema.RequiredMode.REQUIRED)
     LocalDateTime createdAt
 ) {
 
@@ -84,25 +84,25 @@ public record CourseDetailResponse(
   }
 
   public record AuthorResponse(
-      @Schema(description = "작성자 ID", example = "10")
+      @Schema(description = "작성자 ID", example = "10", requiredMode = Schema.RequiredMode.REQUIRED)
       Long userId,
 
-      @Schema(description = "작성자 닉네임", example = "김가윤")
+      @Schema(description = "작성자 닉네임", example = "버디즈", requiredMode = Schema.RequiredMode.REQUIRED)
       String nickname,
 
-      @Schema(description = "작성자 프로필 이미지 URL", example = "https://example.com/profile.png")
+      @Schema(description = "작성자 프로필 이미지 URL", example = "https://example.com/profile.png", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       String profileImageUrl,
 
-      @Schema(description = "작성자 국가", example = "대한민국")
+      @Schema(description = "작성자 국가", example = "대한민국", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       String country,
 
-      @Schema(description = "작성자 나이", example = "24")
+      @Schema(description = "작성자 나이", example = "24", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       Integer age,
 
-      @Schema(description = "작성자 나이대", example = "20대")
+      @Schema(description = "작성자 나이대", example = "20대", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       String ageRange,
 
-      @Schema(description = "작성자 성별", example = "FEMALE")
+      @Schema(description = "작성자 성별", example = "FEMALE", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       Gender gender
   ) {
 
@@ -120,10 +120,10 @@ public record CourseDetailResponse(
   }
 
   public record CourseCountryResponse(
-      @Schema(description = "국가 ID", example = "3")
+      @Schema(description = "국가 ID", example = "240", requiredMode = Schema.RequiredMode.REQUIRED)
       Long countryId,
 
-      @Schema(description = "국가 이름", example = "France")
+      @Schema(description = "국가 이름", example = "France", requiredMode = Schema.RequiredMode.REQUIRED)
       String name
   ) {
 
@@ -133,13 +133,13 @@ public record CourseDetailResponse(
   }
 
   public record CourseCityResponse(
-      @Schema(description = "도시 ID", example = "21")
+      @Schema(description = "도시 ID", example = "11160", requiredMode = Schema.RequiredMode.REQUIRED)
       Long cityId,
 
-      @Schema(description = "도시 이름", example = "Paris")
+      @Schema(description = "도시 이름", example = "Paris", requiredMode = Schema.RequiredMode.REQUIRED)
       String name,
 
-      @Schema(description = "도시 한글 이름", example = "파리")
+      @Schema(description = "도시 한글 이름", example = "파리", requiredMode = Schema.RequiredMode.REQUIRED)
       String koreanName
   ) {
 
@@ -149,10 +149,10 @@ public record CourseDetailResponse(
   }
 
   public record CourseTagResponse(
-      @Schema(description = "태그 ID", example = "1")
+      @Schema(description = "태그 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
       Long tagId,
 
-      @Schema(description = "태그 이름", example = "맛집")
+      @Schema(description = "태그 이름", example = "맛집", requiredMode = Schema.RequiredMode.REQUIRED)
       String name
   ) {
 
@@ -162,13 +162,13 @@ public record CourseDetailResponse(
   }
 
   public record CompanionResponse(
-      @Schema(description = "동행 유저 ID", example = "12")
+      @Schema(description = "동행 유저 ID", example = "12", requiredMode = Schema.RequiredMode.REQUIRED)
       Long userId,
 
-      @Schema(description = "동행 유저 닉네임", example = "이버디")
+      @Schema(description = "동행 유저 닉네임", example = "이버디", requiredMode = Schema.RequiredMode.REQUIRED)
       String nickname,
 
-      @Schema(description = "동행 유저 프로필 이미지 URL", example = "https://example.com/profile2.png")
+      @Schema(description = "동행 유저 프로필 이미지 URL", example = "https://example.com/profile2.png", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       String profileImageUrl
   ) {
 
@@ -178,22 +178,22 @@ public record CourseDetailResponse(
   }
 
   public record FlightResponse(
-      @Schema(description = "항공사", example = "대한항공")
+      @Schema(description = "항공사", example = "대한항공", requiredMode = Schema.RequiredMode.REQUIRED)
       String airline,
 
-      @Schema(description = "항공편명", example = "KE901")
+      @Schema(description = "항공편명", example = "KE901", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       String flightNumber,
 
-      @Schema(description = "출발 공항", example = "ICN")
+      @Schema(description = "출발 공항", example = "ICN", requiredMode = Schema.RequiredMode.REQUIRED)
       String departureAirport,
 
-      @Schema(description = "출발일시", example = "2026-09-01T13:00:00")
+      @Schema(description = "출발일시", example = "2026-09-01T13:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
       LocalDateTime departureAt,
 
-      @Schema(description = "도착 공항", example = "CDG")
+      @Schema(description = "도착 공항", example = "CDG", requiredMode = Schema.RequiredMode.REQUIRED)
       String arrivalAirport,
 
-      @Schema(description = "도착일시", example = "2026-09-01T18:30:00")
+      @Schema(description = "도착일시", example = "2026-09-01T18:30:00", requiredMode = Schema.RequiredMode.REQUIRED)
       LocalDateTime arrivalAt
   ) {
 
@@ -210,16 +210,16 @@ public record CourseDetailResponse(
   }
 
   public record DayResponse(
-      @Schema(description = "일차 (1부터 시작)", example = "1")
+      @Schema(description = "일차 (1부터 시작)", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
       Short dayNumber,
 
-      @Schema(description = "해당 일자의 실제 날짜", example = "2026-09-01")
+      @Schema(description = "해당 일자의 실제 날짜", example = "2026-09-01", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       LocalDate date,
 
-      @Schema(description = "해당 일자의 사진 목록")
+      @Schema(description = "해당 일자의 사진 목록", requiredMode = Schema.RequiredMode.REQUIRED)
       List<String> imageUrls,
 
-      @Schema(description = "해당 일자에 방문한 장소 목록")
+      @Schema(description = "해당 일자에 방문한 장소 목록", requiredMode = Schema.RequiredMode.REQUIRED)
       List<PlaceResponse> places
   ) {
 
@@ -239,28 +239,28 @@ public record CourseDetailResponse(
   }
 
   public record PlaceResponse(
-      @Schema(description = "장소 ID", example = "5")
+      @Schema(description = "장소 ID", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
       Long placeId,
 
-      @Schema(description = "구글 장소 ID", example = "ChIJ-test-place")
+      @Schema(description = "구글 장소 ID", example = "ChIJ-test-place", requiredMode = Schema.RequiredMode.REQUIRED)
       String googlePlaceId,
 
-      @Schema(description = "장소 이름", example = "루브르 박물관")
+      @Schema(description = "장소 이름", example = "루브르 박물관", requiredMode = Schema.RequiredMode.REQUIRED)
       String name,
 
-      @Schema(description = "장소 카테고리", example = "TOURISM")
+      @Schema(description = "장소 카테고리", example = "TOURISM", requiredMode = Schema.RequiredMode.REQUIRED)
       PlaceCategory category,
 
-      @Schema(description = "위도", example = "48.8606")
+      @Schema(description = "위도", example = "48.8606", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       BigDecimal latitude,
 
-      @Schema(description = "경도", example = "2.3376")
+      @Schema(description = "경도", example = "2.3376", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       BigDecimal longitude,
 
-      @Schema(description = "메모", example = "예약 필수")
+      @Schema(description = "메모", example = "예약 필수", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       String memo,
 
-      @Schema(description = "비용", example = "22000")
+      @Schema(description = "비용", example = "22000", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       BigDecimal cost
   ) {
 

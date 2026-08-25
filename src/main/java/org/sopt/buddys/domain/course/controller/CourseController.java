@@ -78,6 +78,28 @@ public class CourseController {
                             "data": null
                           }
                           """
+                  ),
+                  @ExampleObject(
+                      name = "활동 태그 누락",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "COURSE-E006",
+                            "message": "활동 태그를 하나 이상 선택해야 합니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "태그 개수 초과",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "COURSE-E007",
+                            "message": "태그 선택 개수를 초과했습니다.",
+                            "data": null
+                          }
+                          """
                   )
               }
           )

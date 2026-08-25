@@ -10,20 +10,20 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record CreateCourseRequest(
-    @Schema(description = "국가 ID", example = "3")
+    @Schema(description = "국가 ID", example = "240")
     @NotNull
     Long countryId,
 
-    @Schema(description = "도시 ID", example = "21")
+    @Schema(description = "도시 ID", example = "11160")
     @NotNull
     Long cityId,
 
-    @Schema(description = "코스 제목", example = "파리 5일 코스")
+    @Schema(description = "코스 제목", example = "여유로운 파리 미술관 코스")
     @NotBlank
     @Size(max = 120)
     String title,
 
-    @Schema(description = "코스 소개", example = "루브르부터...")
+    @Schema(description = "코스 소개", example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.")
     String content,
 
     @Schema(description = "출발일", example = "2026-09-01")
