@@ -134,11 +134,10 @@ public class CourseService {
     Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
-    CourseBookmarkId bookmarkId = new CourseBookmarkId(user.getId(), course.getId());
-    if (courseBookmarkRepository.existsById(bookmarkId)) {
-      return;
+    try {
+      courseBookmarkRepository.saveAndFlush(new CourseBookmark(user, course));
+    } catch (DataIntegrityViolationException e) {
     }
-    courseBookmarkRepository.save(new CourseBookmark(user, course));
   }
 
   @Transactional
