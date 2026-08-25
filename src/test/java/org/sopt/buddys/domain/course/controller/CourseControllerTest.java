@@ -74,6 +74,7 @@ class CourseControllerTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     // when, then
     mockMvc.perform(post("/api/v1/courses")
@@ -87,6 +88,7 @@ class CourseControllerTest {
                   "content": "루브르부터...",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
+                  "tagIds": [%d],
                   "days": [
                     {
                       "dayNumber": 1,
@@ -117,7 +119,7 @@ class CourseControllerTest {
                     }
                   ]
                 }
-                """.formatted(countryId, cityId)))
+                """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.code").value("GLB-S002"))
@@ -168,6 +170,7 @@ class CourseControllerTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     // when, then
     mockMvc.perform(post("/api/v1/courses")
@@ -180,12 +183,13 @@ class CourseControllerTest {
                   "title": "파리 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
+                  "tagIds": [%d],
                   "days": [
                     { "dayNumber": 1 },
                     { "dayNumber": 1 }
                   ]
                 }
-                """.formatted(countryId, cityId)))
+                """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("COURSE-E004"));
@@ -198,6 +202,7 @@ class CourseControllerTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     mockMvc.perform(post("/api/v1/courses")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
@@ -210,11 +215,12 @@ class CourseControllerTest {
                   "content": "루브르부터...",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
+                  "tagIds": [%d],
                   "days": [
                     { "dayNumber": 1, "date": "2026-09-01" }
                   ]
                 }
-                """.formatted(countryId, cityId)))
+                """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
 
     Long courseId = courseRepository.findAll().get(0).getId();
@@ -252,6 +258,7 @@ class CourseControllerTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     mockMvc.perform(post("/api/v1/courses")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
@@ -263,9 +270,10 @@ class CourseControllerTest {
                   "title": "파리 5일 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
+                  "tagIds": [%d],
                   "days": [ { "dayNumber": 1 } ]
                 }
-                """.formatted(countryId, cityId)))
+                """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
 
     Long courseId = courseRepository.findAll().get(0).getId();
@@ -291,6 +299,7 @@ class CourseControllerTest {
     User other = userRepository.save(createUser("other@test.com", "provider-other", "다른유저"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     mockMvc.perform(post("/api/v1/courses")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
@@ -302,9 +311,10 @@ class CourseControllerTest {
                   "title": "파리 5일 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
+                  "tagIds": [%d],
                   "days": [ { "dayNumber": 1 } ]
                 }
-                """.formatted(countryId, cityId)))
+                """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
 
     Long courseId = courseRepository.findAll().get(0).getId();
@@ -337,6 +347,7 @@ class CourseControllerTest {
     User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     mockMvc.perform(post("/api/v1/courses")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
@@ -348,9 +359,10 @@ class CourseControllerTest {
                   "title": "파리 5일 코스",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
+                  "tagIds": [%d],
                   "days": [ { "dayNumber": 1 } ]
                 }
-                """.formatted(countryId, cityId)))
+                """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
 
     Long courseId = courseRepository.findAll().get(0).getId();
@@ -437,6 +449,22 @@ class CourseControllerTest {
           preparedStatement.setString(2, name);
           preparedStatement.setString(3, koreanName);
           preparedStatement.setLong(4, population);
+          return preparedStatement;
+        },
+        keyHolder
+    );
+    return keyHolder.getKey().longValue();
+  }
+
+  private Long insertTag(String name, String tagType) {
+    KeyHolder keyHolder = new GeneratedKeyHolder();
+    jdbcTemplate.update(connection -> {
+          var preparedStatement = connection.prepareStatement(
+              "INSERT INTO tag (name, tag_type) VALUES (?, ?)",
+              Statement.RETURN_GENERATED_KEYS
+          );
+          preparedStatement.setString(1, name);
+          preparedStatement.setString(2, tagType);
           return preparedStatement;
         },
         keyHolder

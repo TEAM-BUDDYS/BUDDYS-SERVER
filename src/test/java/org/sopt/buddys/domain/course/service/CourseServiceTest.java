@@ -168,8 +168,9 @@ class CourseServiceTest {
     // given
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
     CreateCourseCommand command = createDefaultCommand(
-        countryId, cityId, LocalDate.of(2026, 9, 5), LocalDate.of(2026, 9, 1));
+        countryId, cityId, LocalDate.of(2026, 9, 5), LocalDate.of(2026, 9, 1), tagId);
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(1L, command))
@@ -184,11 +185,12 @@ class CourseServiceTest {
     // given
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
         countryId, cityId, "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
-        null, null,
+        List.of(tagId), null,
         List.of(
             new CourseDayCommand((short) 1, null, null, null),
             new CourseDayCommand((short) 1, null, null, null)
@@ -210,9 +212,10 @@ class CourseServiceTest {
     Long countryId = insertCountry("프랑스", "FR");
     Long otherCountryId = insertCountry("대한민국", "KR");
     Long cityId = insertCity(otherCountryId, "Seoul", "서울특별시", 10_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = createDefaultCommand(
-        countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5));
+        countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId);
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(1L, command))
@@ -228,11 +231,12 @@ class CourseServiceTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
         countryId, cityId, "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
-        null, List.of(999_999L),
+        List.of(tagId), List.of(999_999L),
         List.of(new CourseDayCommand((short) 1, null, null, null)),
         null
     );
@@ -241,6 +245,59 @@ class CourseServiceTest {
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COMPANION_USER_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("활동 태그가 하나도 없으면 예외가 발생한다")
+  @Test
+  void createCourse_noActivityTag_throwsException() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long interestTagId = insertTag("맛집", "INTEREST");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        countryId, cityId, "파리 코스", null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(interestTagId), null,
+        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.ACTIVITY_TAG_REQUIRED)
+        );
+  }
+
+  @DisplayName("활동 태그가 3개를 초과하면 예외가 발생한다")
+  @Test
+  void createCourse_tooManyActivityTags_throwsException() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    List<Long> activityTagIds = List.of(
+        insertTag("도보여행", "ACTIVITY"),
+        insertTag("맛집투어", "ACTIVITY"),
+        insertTag("쇼핑", "ACTIVITY"),
+        insertTag("액티비티", "ACTIVITY")
+    );
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        countryId, cityId, "파리 코스", null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        activityTagIds, null,
+        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.TAG_LIMIT_EXCEEDED)
         );
   }
 
@@ -324,8 +381,10 @@ class CourseServiceTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
     Course course = courseService.createCourse(
-        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
 
     // when
     courseService.deleteCourse(author.getId(), course.getId());
@@ -345,8 +404,10 @@ class CourseServiceTest {
     User other = userRepository.save(createUser("other@test.com", "provider-other", "다른유저"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
     Course course = courseService.createCourse(
-        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
 
     // when, then
     assertThatThrownBy(() -> courseService.deleteCourse(other.getId(), course.getId()))
@@ -373,8 +434,10 @@ class CourseServiceTest {
     User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
     Course course = courseService.createCourse(
-        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
 
     // when
     courseService.bookmarkCourse(viewer.getId(), course.getId());
@@ -405,8 +468,10 @@ class CourseServiceTest {
     User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
     Course course = courseService.createCourse(
-        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
     courseService.bookmarkCourse(viewer.getId(), course.getId());
 
     // when
@@ -424,8 +489,10 @@ class CourseServiceTest {
     User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
     Course course = courseService.createCourse(
-        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
 
     // when, then
     courseService.unbookmarkCourse(viewer.getId(), course.getId());
@@ -446,12 +513,12 @@ class CourseServiceTest {
   }
 
   private CreateCourseCommand createDefaultCommand(
-      Long countryId, Long cityId, LocalDate startDate, LocalDate endDate
+      Long countryId, Long cityId, LocalDate startDate, LocalDate endDate, Long tagId
   ) {
     return new CreateCourseCommand(
         countryId, cityId, "파리 코스", null,
         startDate, endDate,
-        null, null,
+        List.of(tagId), null,
         List.of(new CourseDayCommand((short) 1, null, null, null)),
         null
     );
