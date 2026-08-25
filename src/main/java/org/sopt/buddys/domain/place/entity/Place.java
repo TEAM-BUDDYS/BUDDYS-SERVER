@@ -70,4 +70,15 @@ public class Place {
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
+
+  public void updateFromCourse(String name, PlaceCategory category, BigDecimal latitude, BigDecimal longitude) {
+    this.name = name;
+    this.category = category;
+    if (latitude != null) {
+      this.latitude = latitude;
+    }
+    if (longitude != null) {
+      this.longitude = longitude;
+    }
+  }
 }

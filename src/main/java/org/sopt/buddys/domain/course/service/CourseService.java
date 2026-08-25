@@ -302,8 +302,12 @@ public class CourseService {
         .forEach(place -> resolvedPlaces.put(place.getGooglePlaceId(), place));
 
     firstCommandByGooglePlaceId.forEach((googlePlaceId, command) -> {
-      if (!resolvedPlaces.containsKey(googlePlaceId)) {
-        resolvedPlaces.put(googlePlaceId, createPlace(command, parseCategory(command.category())));
+      PlaceCategory category = parseCategory(command.category());
+      Place existingPlace = resolvedPlaces.get(googlePlaceId);
+      if (existingPlace != null) {
+        existingPlace.updateFromCourse(command.name(), category, command.latitude(), command.longitude());
+      } else {
+        resolvedPlaces.put(googlePlaceId, createPlace(command, category));
       }
     });
 
