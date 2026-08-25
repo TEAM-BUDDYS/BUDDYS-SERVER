@@ -14,6 +14,7 @@ public record CourseDetailResult(
     boolean isMine,
     String title,
     String content,
+    String thumbnailImageUrl,
     CountryResult country,
     CityResult city,
     LocalDate startDate,

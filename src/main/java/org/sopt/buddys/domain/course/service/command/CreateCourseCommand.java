@@ -8,6 +8,7 @@ public record CreateCourseCommand(
     Long cityId,
     String title,
     String content,
+    String thumbnailImageUrl,
     LocalDate startDate,
     LocalDate endDate,
     List<Long> tagIds,

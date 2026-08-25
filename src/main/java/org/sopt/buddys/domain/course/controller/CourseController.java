@@ -204,6 +204,7 @@ public class CourseController {
         request.cityId(),
         request.title(),
         request.content(),
+        request.thumbnailImageUrl(),
         request.startDate(),
         request.endDate(),
         request.tagIds(),

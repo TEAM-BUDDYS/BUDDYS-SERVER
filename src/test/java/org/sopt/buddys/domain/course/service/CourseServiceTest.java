@@ -115,6 +115,7 @@ class CourseServiceTest {
         cityId,
         " 파리 5일 코스 ",
         " 루브르부터... ",
+        "https://example.com/thumbnail.jpg",
         LocalDate.of(2026, 9, 1),
         LocalDate.of(2026, 9, 5),
         List.of(tagId),
@@ -151,6 +152,7 @@ class CourseServiceTest {
     Course savedCourse = courseRepository.findById(course.getId()).orElseThrow();
     assertThat(savedCourse.getTitle()).isEqualTo("파리 5일 코스");
     assertThat(savedCourse.getContent()).isEqualTo("루브르부터...");
+    assertThat(savedCourse.getThumbnailImageUrl()).isEqualTo("https://example.com/thumbnail.jpg");
     assertThat(courseTagRepository.findAll()).hasSize(1);
     assertThat(courseCompanionRepository.findAll()).hasSize(1);
     assertThat(courseDayRepository.findAll()).hasSize(1);
@@ -160,6 +162,29 @@ class CourseServiceTest {
 
     Place place = placeRepository.findByGooglePlaceId("ChIJ-place-1").orElseThrow();
     assertThat(place.getName()).isEqualTo("루브르 박물관");
+  }
+
+  @DisplayName("일자에 사진이 하나도 없으면 예외가 발생한다")
+  @Test
+  void createCourse_dayWithoutImage_throwsException() {
+    // given
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        countryId, cityId, "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(1L, command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
+        );
   }
 
   @DisplayName("도착일이 출발일보다 빠르면 예외가 발생한다")
@@ -188,12 +213,12 @@ class CourseServiceTest {
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null,
+        countryId, cityId, "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(
-            new CourseDayCommand((short) 1, null, null, null),
-            new CourseDayCommand((short) 1, null, null, null)
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null),
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)
         ),
         null
     );
@@ -234,10 +259,10 @@ class CourseServiceTest {
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null,
+        countryId, cityId, "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(999_999L),
-        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
         null
     );
 
@@ -258,10 +283,10 @@ class CourseServiceTest {
     Long interestTagId = insertTag("맛집", "INTEREST");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null,
+        countryId, cityId, "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(interestTagId), null,
-        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
         null
     );
 
@@ -287,10 +312,10 @@ class CourseServiceTest {
     );
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null,
+        countryId, cityId, "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         activityTagIds, null,
-        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
         null
     );
 
@@ -311,10 +336,10 @@ class CourseServiceTest {
     Long tagId = insertTag("도보여행", "ACTIVITY");
 
     CreateCourseCommand command = new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null,
+        countryId, cityId, "파리 코스", null, null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(author.getId()),
-        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
         null
     );
 
@@ -340,6 +365,7 @@ class CourseServiceTest {
         cityId,
         " 파리 5일 코스 ",
         " 루브르부터... ",
+        "https://example.com/thumbnail.jpg",
         LocalDate.of(2026, 9, 1),
         LocalDate.of(2026, 9, 5),
         List.of(tagId),
@@ -376,6 +402,7 @@ class CourseServiceTest {
     // then
     assertThat(result.title()).isEqualTo("파리 5일 코스");
     assertThat(result.content()).isEqualTo("루브르부터...");
+    assertThat(result.thumbnailImageUrl()).isEqualTo("https://example.com/thumbnail.jpg");
     assertThat(result.isMine()).isTrue();
     assertThat(result.author().userId()).isEqualTo(author.getId());
     assertThat(result.tags()).hasSize(1);
@@ -540,10 +567,10 @@ class CourseServiceTest {
       Long countryId, Long cityId, LocalDate startDate, LocalDate endDate, Long tagId
   ) {
     return new CreateCourseCommand(
-        countryId, cityId, "파리 코스", null,
+        countryId, cityId, "파리 코스", null, null,
         startDate, endDate,
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, null, null)),
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
         null
     );
   }

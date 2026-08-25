@@ -47,6 +47,9 @@ public class Course extends BaseEntity {
   @Column(columnDefinition = "TEXT")
   private String content;
 
+  @Column(name = "thumbnail_image_url", length = 512)
+  private String thumbnailImageUrl;
+
   @Column(name = "start_date", nullable = false)
   private LocalDate startDate;
 
@@ -65,6 +68,7 @@ public class Course extends BaseEntity {
       City city,
       String title,
       String content,
+      String thumbnailImageUrl,
       LocalDate startDate,
       LocalDate endDate
   ) {
@@ -73,6 +77,7 @@ public class Course extends BaseEntity {
     this.city = city;
     this.title = title;
     this.content = content;
+    this.thumbnailImageUrl = thumbnailImageUrl;
     this.startDate = startDate;
     this.endDate = endDate;
     this.viewCount = 0L;

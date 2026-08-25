@@ -97,6 +97,7 @@ public class CourseService {
         city,
         command.title().trim(),
         command.content() != null ? command.content().trim() : null,
+        command.thumbnailImageUrl() != null ? command.thumbnailImageUrl().trim() : null,
         command.startDate(),
         command.endDate()
     ));
@@ -174,7 +175,8 @@ public class CourseService {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     for (CourseDayCommand day : command.days()) {
-      if (day.dayNumber() == null) {
+      if (day.dayNumber() == null
+          || day.imageUrls() == null || day.imageUrls().isEmpty()) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
     }
@@ -392,6 +394,7 @@ public class CourseService {
         course.getAuthor().getId().equals(userId),
         course.getTitle(),
         course.getContent(),
+        course.getThumbnailImageUrl(),
         toCourseCountryResult(course.getCountry()),
         toCourseCityResult(course.getCity()),
         course.getStartDate(),

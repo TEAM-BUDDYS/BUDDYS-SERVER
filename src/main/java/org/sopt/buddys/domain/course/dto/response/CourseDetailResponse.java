@@ -25,6 +25,9 @@ public record CourseDetailResponse(
     @Schema(description = "코스 소개", example = "루브르부터...", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
     String content,
 
+    @Schema(description = "대표 사진 URL", example = "https://example.com/thumbnail.jpg", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
+    String thumbnailImageUrl,
+
     @Schema(description = "여행 국가", requiredMode = Schema.RequiredMode.REQUIRED)
     CourseCountryResponse country,
 
@@ -70,6 +73,7 @@ public record CourseDetailResponse(
         result.isMine(),
         result.title(),
         result.content(),
+        result.thumbnailImageUrl(),
         CourseCountryResponse.from(result.country()),
         CourseCityResponse.from(result.city()),
         result.startDate(),

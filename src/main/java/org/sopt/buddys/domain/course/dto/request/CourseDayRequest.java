@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.course.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -18,7 +19,8 @@ public record CourseDayRequest(
     @Schema(description = "해당 일자의 실제 날짜", example = "2026-09-01")
     LocalDate date,
 
-    @Schema(description = "해당 일자의 사진 목록 (최대 10장)", example = "[\"https://example.com/a.jpg\"]")
+    @Schema(description = "해당 일자의 사진 목록 (1장 이상 10장 이하)", example = "[\"https://example.com/a.jpg\"]")
+    @NotEmpty
     @Size(max = 10)
     List<@NotBlank @Size(max = 512) String> imageUrls,
 

@@ -185,14 +185,43 @@ class CourseControllerTest {
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
                   "days": [
-                    { "dayNumber": 1 },
-                    { "dayNumber": 1 }
+                    { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] },
+                    { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] }
                   ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("COURSE-E004"));
+  }
+
+  @DisplayName("일자에 사진이 없으면 실패한다")
+  @Test
+  void createCourse_dayWithoutImage_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryId": %d,
+                  "cityId": %d,
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1 } ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   @DisplayName("코스 상세를 조회한다")
@@ -213,11 +242,12 @@ class CourseControllerTest {
                   "cityId": %d,
                   "title": "파리 5일 코스",
                   "content": "루브르부터...",
+                  "thumbnailImageUrl": "https://example.com/thumbnail.jpg",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
                   "days": [
-                    { "dayNumber": 1, "date": "2026-09-01" }
+                    { "dayNumber": 1, "date": "2026-09-01", "imageUrls": ["https://example.com/day1.jpg"] }
                   ]
                 }
                 """.formatted(countryId, cityId, tagId)))
@@ -233,8 +263,10 @@ class CourseControllerTest {
         .andExpect(jsonPath("$.code").value("COURSE-S001"))
         .andExpect(jsonPath("$.data.courseId").value(courseId))
         .andExpect(jsonPath("$.data.title").value("파리 5일 코스"))
+        .andExpect(jsonPath("$.data.thumbnailImageUrl").value("https://example.com/thumbnail.jpg"))
         .andExpect(jsonPath("$.data.isMine").value(true))
-        .andExpect(jsonPath("$.data.days[0].dayNumber").value(1));
+        .andExpect(jsonPath("$.data.days[0].dayNumber").value(1))
+        .andExpect(jsonPath("$.data.days[0].imageUrls[0]").value("https://example.com/day1.jpg"));
   }
 
   @DisplayName("존재하지 않는 코스를 조회하면 실패한다")
@@ -271,7 +303,7 @@ class CourseControllerTest {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1 } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -312,7 +344,7 @@ class CourseControllerTest {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1 } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -360,7 +392,7 @@ class CourseControllerTest {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1 } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
