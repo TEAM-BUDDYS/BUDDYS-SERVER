@@ -25,6 +25,7 @@ import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
+import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.place.entity.Place;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
@@ -236,6 +237,127 @@ class CourseServiceTest {
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COMPANION_USER_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("코스 상세 조회 시 태그, 일자, 장소, 항공편, 동행자 정보를 함께 반환한다")
+  @Test
+  void getCourseDetail_returnsCourseWithAllDetails() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        countryId,
+        cityId,
+        " 파리 5일 코스 ",
+        " 루브르부터... ",
+        LocalDate.of(2026, 9, 1),
+        LocalDate.of(2026, 9, 5),
+        List.of(tagId),
+        List.of(companion.getId()),
+        List.of(new CourseDayCommand(
+            (short) 1,
+            LocalDate.of(2026, 9, 1),
+            List.of("https://example.com/a.jpg"),
+            List.of(new CoursePlaceCommand(
+                "ChIJ-place-1",
+                "루브르 박물관",
+                "TOURISM",
+                BigDecimal.valueOf(48.8606),
+                BigDecimal.valueOf(2.3376),
+                (short) 0,
+                "예약 필수",
+                BigDecimal.valueOf(22000)
+            ))
+        )),
+        List.of(new CourseFlightCommand(
+            "대한항공",
+            "KE901",
+            "ICN",
+            LocalDateTime.of(2026, 9, 1, 13, 0),
+            "CDG",
+            LocalDateTime.of(2026, 9, 1, 18, 30)
+        ))
+    );
+    Course course = courseService.createCourse(author.getId(), command);
+
+    // when
+    CourseDetailResult result = courseService.getCourseDetail(author.getId(), course.getId());
+
+    // then
+    assertThat(result.title()).isEqualTo("파리 5일 코스");
+    assertThat(result.content()).isEqualTo("루브르부터...");
+    assertThat(result.isMine()).isTrue();
+    assertThat(result.author().userId()).isEqualTo(author.getId());
+    assertThat(result.tags()).hasSize(1);
+    assertThat(result.companions()).extracting("userId").containsExactly(companion.getId());
+    assertThat(result.flights()).hasSize(1);
+    assertThat(result.days()).hasSize(1);
+    assertThat(result.days().get(0).imageUrls()).containsExactly("https://example.com/a.jpg");
+    assertThat(result.days().get(0).places()).hasSize(1);
+    assertThat(result.days().get(0).places().get(0).name()).isEqualTo("루브르 박물관");
+    assertThat(result.viewCount()).isEqualTo(1L);
+  }
+
+  @DisplayName("존재하지 않는 코스를 조회하면 예외가 발생한다")
+  @Test
+  void getCourseDetail_courseNotFound_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> courseService.getCourseDetail(1L, 999_999L))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("작성자가 코스를 삭제하면 상세 조회에서 더 이상 조회되지 않는다")
+  @Test
+  void deleteCourse_byAuthor_softDeletesCourse() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Course course = courseService.createCourse(
+        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+
+    // when
+    courseService.deleteCourse(author.getId(), course.getId());
+
+    // then
+    assertThatThrownBy(() -> courseService.getCourseDetail(author.getId(), course.getId()))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("작성자가 아닌 유저가 삭제하면 예외가 발생한다")
+  @Test
+  void deleteCourse_notAuthor_throwsForbidden() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른유저"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Course course = courseService.createCourse(
+        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.deleteCourse(other.getId(), course.getId()))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.FORBIDDEN)
+        );
+  }
+
+  @DisplayName("존재하지 않는 코스를 삭제하면 예외가 발생한다")
+  @Test
+  void deleteCourse_courseNotFound_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> courseService.deleteCourse(1L, 999_999L))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
         );
   }
 

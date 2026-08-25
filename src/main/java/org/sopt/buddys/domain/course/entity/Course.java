@@ -77,4 +77,8 @@ public class Course extends BaseEntity {
     this.endDate = endDate;
     this.viewCount = 0L;
   }
+
+  public void delete() {
+    this.deletedAt = LocalDateTime.now();
+  }
 }

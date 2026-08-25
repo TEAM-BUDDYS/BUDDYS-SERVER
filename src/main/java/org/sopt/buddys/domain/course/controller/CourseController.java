@@ -9,11 +9,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.course.code.CourseSuccessCode;
 import org.sopt.buddys.domain.course.dto.request.CourseDayRequest;
 import org.sopt.buddys.domain.course.dto.request.CourseFlightRequest;
 import org.sopt.buddys.domain.course.dto.request.CoursePlaceRequest;
 import org.sopt.buddys.domain.course.dto.request.CreateCourseRequest;
+import org.sopt.buddys.domain.course.dto.response.CourseDetailResponse;
 import org.sopt.buddys.domain.course.dto.response.CreateCourseResponse;
 import org.sopt.buddys.domain.course.service.CourseService;
 import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
@@ -26,6 +29,9 @@ import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.sopt.buddys.global.swagger.CommonErrorResponses;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -90,6 +96,45 @@ public class CourseController {
             GlobalSuccessCode.CREATED,
             CreateCourseResponse.from(courseService.createCourse(userId, toCommand(request)))
         ));
+  }
+
+  @Operation(summary = "코스 상세 조회", description = "여행 코스 게시글의 상세 정보를 조회합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음")
+  })
+  @CommonErrorResponses
+  @GetMapping("/{courseId}")
+  public BaseResponse<CourseDetailResponse> getCourseDetail(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "조회할 코스 ID", example = "1")
+      @PathVariable @Positive Long courseId
+  ) {
+    return BaseResponse.success(
+        CourseSuccessCode.COURSE_DETAIL_FOUND,
+        CourseDetailResponse.from(courseService.getCourseDetail(userId, courseId))
+    );
+  }
+
+  @Operation(summary = "코스 삭제", description = "코스 작성자가 코스를 삭제합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "204", description = "삭제 성공"),
+      @ApiResponse(responseCode = "403", description = "코스 작성자가 아님"),
+      @ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음")
+  })
+  @CommonErrorResponses
+  @DeleteMapping("/{courseId}")
+  public ResponseEntity<BaseResponse<Void>> deleteCourse(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "삭제할 코스 ID", example = "1")
+      @PathVariable @Positive Long courseId
+  ) {
+    courseService.deleteCourse(userId, courseId);
+    return ResponseEntity
+        .status(GlobalSuccessCode.NO_CONTENT.getHttpStatus())
+        .body(BaseResponse.success(GlobalSuccessCode.NO_CONTENT));
   }
 
   private CreateCourseCommand toCommand(CreateCourseRequest request) {

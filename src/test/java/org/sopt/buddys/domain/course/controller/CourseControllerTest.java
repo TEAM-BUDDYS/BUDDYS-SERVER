@@ -1,6 +1,8 @@
 package org.sopt.buddys.domain.course.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -187,6 +189,142 @@ class CourseControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("COURSE-E004"));
+  }
+
+  @DisplayName("코스 상세를 조회한다")
+  @Test
+  void getCourseDetail_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryId": %d,
+                  "cityId": %d,
+                  "title": "파리 5일 코스",
+                  "content": "루브르부터...",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "days": [
+                    { "dayNumber": 1, "date": "2026-09-01" }
+                  ]
+                }
+                """.formatted(countryId, cityId)))
+        .andExpect(status().isCreated());
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses/{courseId}", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("COURSE-S001"))
+        .andExpect(jsonPath("$.data.courseId").value(courseId))
+        .andExpect(jsonPath("$.data.title").value("파리 5일 코스"))
+        .andExpect(jsonPath("$.data.isMine").value(true))
+        .andExpect(jsonPath("$.data.days[0].dayNumber").value(1));
+  }
+
+  @DisplayName("존재하지 않는 코스를 조회하면 실패한다")
+  @Test
+  void getCourseDetail_courseNotFound_returnsNotFound() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses/{courseId}", 999_999L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("COURSE-E005"));
+  }
+
+  @DisplayName("작성자가 코스를 삭제한다")
+  @Test
+  void deleteCourse_byAuthor_returnsNoContent() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryId": %d,
+                  "cityId": %d,
+                  "title": "파리 5일 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "days": [ { "dayNumber": 1 } ]
+                }
+                """.formatted(countryId, cityId)))
+        .andExpect(status().isCreated());
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(delete("/api/v1/courses/{courseId}", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isNoContent());
+
+    mockMvc.perform(get("/api/v1/courses/{courseId}", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("COURSE-E005"));
+  }
+
+  @DisplayName("작성자가 아닌 유저가 삭제하면 실패한다")
+  @Test
+  void deleteCourse_notAuthor_returnsForbidden() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른유저"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryId": %d,
+                  "cityId": %d,
+                  "title": "파리 5일 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "days": [ { "dayNumber": 1 } ]
+                }
+                """.formatted(countryId, cityId)))
+        .andExpect(status().isCreated());
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(delete("/api/v1/courses/{courseId}", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(other.getId())))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("GLB-E003"));
+  }
+
+  @DisplayName("존재하지 않는 코스를 삭제하면 실패한다")
+  @Test
+  void deleteCourse_courseNotFound_returnsNotFound() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+
+    // when, then
+    mockMvc.perform(delete("/api/v1/courses/{courseId}", 999_999L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("COURSE-E005"));
   }
 
   private User createUser(String email, String providerId, String nickname) {

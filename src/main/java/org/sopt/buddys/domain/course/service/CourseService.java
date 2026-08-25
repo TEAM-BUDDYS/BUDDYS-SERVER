@@ -1,9 +1,14 @@
 package org.sopt.buddys.domain.course.service;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.code.CourseErrorCode;
@@ -25,6 +30,7 @@ import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
+import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
@@ -90,6 +96,30 @@ public class CourseService {
     saveCourseFlights(course, command.flights());
 
     return course;
+  }
+
+  @Transactional
+  public CourseDetailResult getCourseDetail(Long userId, Long courseId) {
+    if (courseRepository.increaseViewCount(courseId) == 0) {
+      throw new BaseException(CourseErrorCode.COURSE_NOT_FOUND);
+    }
+
+    Course course = courseRepository.findDetailById(courseId)
+        .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
+
+    return toCourseDetailResult(userId, course);
+  }
+
+  @Transactional
+  public void deleteCourse(Long userId, Long courseId) {
+    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
+        .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
+
+    if (!course.getAuthor().getId().equals(userId)) {
+      throw new BaseException(GlobalErrorCode.FORBIDDEN);
+    }
+
+    course.delete();
   }
 
   private City getCity(Long countryId, Long cityId) {
@@ -253,5 +283,164 @@ public class CourseService {
         })
         .toList();
     courseFlightRepository.saveAll(courseFlights);
+  }
+
+  private CourseDetailResult toCourseDetailResult(Long userId, Course course) {
+    return new CourseDetailResult(
+        course.getId(),
+        toAuthorResult(course.getAuthor()),
+        course.getAuthor().getId().equals(userId),
+        course.getTitle(),
+        course.getContent(),
+        toCourseCountryResult(course.getCountry()),
+        toCourseCityResult(course.getCity()),
+        course.getStartDate(),
+        course.getEndDate(),
+        getCourseTagResults(course.getId()),
+        getCompanionResults(course.getId()),
+        getFlightResults(course.getId()),
+        getDayResults(course.getId()),
+        course.getViewCount(),
+        course.getCreatedAt()
+    );
+  }
+
+  private CourseDetailResult.AuthorResult toAuthorResult(User author) {
+    Country exchangeCountry = author.getExchangeCountry();
+    return new CourseDetailResult.AuthorResult(
+        author.getId(),
+        author.getNickname(),
+        author.getProfileImageUrl(),
+        exchangeCountry == null ? null : exchangeCountry.getName(),
+        toAge(author.getBirthDate()),
+        toAgeRange(author.getBirthDate()),
+        author.getGender()
+    );
+  }
+
+  private CourseDetailResult.CountryResult toCourseCountryResult(Country country) {
+    return new CourseDetailResult.CountryResult(country.getId(), country.getName());
+  }
+
+  private CourseDetailResult.CityResult toCourseCityResult(City city) {
+    return new CourseDetailResult.CityResult(city.getId(), city.getName(), getCityKoreanName(city));
+  }
+
+  private String getCityKoreanName(City city) {
+    if (city.getKoreanName() == null || city.getKoreanName().isBlank()) {
+      return city.getName();
+    }
+    return city.getKoreanName();
+  }
+
+  private List<CourseDetailResult.TagResult> getCourseTagResults(Long courseId) {
+    return courseTagRepository.findAllByCourseIdWithTag(courseId)
+        .stream()
+        .map(courseTag -> new CourseDetailResult.TagResult(
+            courseTag.getTag().getId(),
+            courseTag.getTag().getName(),
+            courseTag.getTag().getTagType()
+        ))
+        .toList();
+  }
+
+  private List<CourseDetailResult.CompanionResult> getCompanionResults(Long courseId) {
+    return courseCompanionRepository.findAllByCourseIdWithUser(courseId)
+        .stream()
+        .map(companion -> new CourseDetailResult.CompanionResult(
+            companion.getUser().getId(),
+            companion.getUser().getNickname(),
+            companion.getUser().getProfileImageUrl()
+        ))
+        .toList();
+  }
+
+  private List<CourseDetailResult.FlightResult> getFlightResults(Long courseId) {
+    return courseFlightRepository.findAllByCourseIdOrderByOrderNoAsc(courseId)
+        .stream()
+        .map(flight -> new CourseDetailResult.FlightResult(
+            flight.getAirline(),
+            flight.getFlightNumber(),
+            flight.getDepartureAirport(),
+            flight.getDepartureAt(),
+            flight.getArrivalAirport(),
+            flight.getArrivalAt()
+        ))
+        .toList();
+  }
+
+  private List<CourseDetailResult.DayResult> getDayResults(Long courseId) {
+    List<CourseDay> days = courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(courseId);
+    List<Long> dayIds = days.stream().map(CourseDay::getId).toList();
+
+    Map<Long, List<String>> imageUrlsByDayId = groupImageUrlsByDayId(dayIds);
+    Map<Long, List<CourseDetailResult.PlaceResult>> placesByDayId = groupPlacesByDayId(dayIds);
+
+    return days.stream()
+        .map(day -> new CourseDetailResult.DayResult(
+            day.getDayNumber(),
+            day.getDate(),
+            imageUrlsByDayId.getOrDefault(day.getId(), List.of()),
+            placesByDayId.getOrDefault(day.getId(), List.of())
+        ))
+        .toList();
+  }
+
+  private Map<Long, List<String>> groupImageUrlsByDayId(List<Long> dayIds) {
+    if (dayIds.isEmpty()) {
+      return Map.of();
+    }
+    return courseImageRepository.findAllByCourseDayIdIn(dayIds)
+        .stream()
+        .collect(Collectors.groupingBy(
+            image -> image.getCourseDay().getId(),
+            LinkedHashMap::new,
+            Collectors.mapping(CourseImage::getImageUrl, Collectors.toList())
+        ));
+  }
+
+  private Map<Long, List<CourseDetailResult.PlaceResult>> groupPlacesByDayId(List<Long> dayIds) {
+    if (dayIds.isEmpty()) {
+      return Map.of();
+    }
+    return coursePlaceRepository.findAllByCourseDayIdInWithPlace(dayIds)
+        .stream()
+        .collect(Collectors.groupingBy(
+            coursePlace -> coursePlace.getCourseDay().getId(),
+            LinkedHashMap::new,
+            Collectors.mapping(this::toCoursePlaceResult, Collectors.toList())
+        ));
+  }
+
+  private CourseDetailResult.PlaceResult toCoursePlaceResult(CoursePlace coursePlace) {
+    Place place = coursePlace.getPlace();
+    return new CourseDetailResult.PlaceResult(
+        place.getId(),
+        place.getGooglePlaceId(),
+        place.getName(),
+        place.getCategory(),
+        place.getLatitude(),
+        place.getLongitude(),
+        coursePlace.getMemo(),
+        coursePlace.getCost()
+    );
+  }
+
+  private String toAgeRange(LocalDate birthDate) {
+    Integer age = toAge(birthDate);
+    if (age == null) {
+      return null;
+    }
+    if (age < 10) {
+      return "10대 미만";
+    }
+    return "%d0대".formatted(age / 10);
+  }
+
+  private Integer toAge(LocalDate birthDate) {
+    if (birthDate == null) {
+      return null;
+    }
+    return Period.between(birthDate, LocalDate.now()).getYears();
   }
 }
