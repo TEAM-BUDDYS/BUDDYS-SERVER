@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.code.CourseErrorCode;
 import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
 import org.sopt.buddys.domain.course.repository.CourseCompanionRepository;
 import org.sopt.buddys.domain.course.repository.CourseDayRepository;
 import org.sopt.buddys.domain.course.repository.CourseFlightRepository;
@@ -76,6 +77,9 @@ class CourseServiceTest {
 
   @Autowired
   private CourseFlightRepository courseFlightRepository;
+
+  @Autowired
+  private CourseBookmarkRepository courseBookmarkRepository;
 
   @Autowired
   private UserRepository userRepository;
@@ -361,6 +365,86 @@ class CourseServiceTest {
         );
   }
 
+  @DisplayName("코스를 저장하면 북마크가 생성되고, 같은 유저가 다시 저장해도 중복 생성되지 않는다")
+  @Test
+  void bookmarkCourse_savesBookmarkIdempotently() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Course course = courseService.createCourse(
+        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+
+    // when
+    courseService.bookmarkCourse(viewer.getId(), course.getId());
+    courseService.bookmarkCourse(viewer.getId(), course.getId());
+
+    // then
+    assertThat(courseBookmarkRepository.findAll()).hasSize(1);
+  }
+
+  @DisplayName("존재하지 않는 코스를 저장하면 예외가 발생한다")
+  @Test
+  void bookmarkCourse_courseNotFound_throwsException() {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.bookmarkCourse(viewer.getId(), 999_999L))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("저장한 코스를 저장 취소하면 북마크가 삭제된다")
+  @Test
+  void unbookmarkCourse_removesBookmark() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Course course = courseService.createCourse(
+        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+    courseService.bookmarkCourse(viewer.getId(), course.getId());
+
+    // when
+    courseService.unbookmarkCourse(viewer.getId(), course.getId());
+
+    // then
+    assertThat(courseBookmarkRepository.findAll()).isEmpty();
+  }
+
+  @DisplayName("저장하지 않은 코스를 저장 취소해도 예외 없이 처리된다")
+  @Test
+  void unbookmarkCourse_notBookmarked_doesNothing() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Course course = courseService.createCourse(
+        author.getId(), createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
+
+    // when, then
+    courseService.unbookmarkCourse(viewer.getId(), course.getId());
+    assertThat(courseBookmarkRepository.findAll()).isEmpty();
+  }
+
+  @DisplayName("존재하지 않는 코스를 저장 취소하면 예외가 발생한다")
+  @Test
+  void unbookmarkCourse_courseNotFound_throwsException() {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.unbookmarkCourse(viewer.getId(), 999_999L))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
+        );
+  }
+
   private CreateCourseCommand createDefaultCommand(
       Long countryId, Long cityId, LocalDate startDate, LocalDate endDate
   ) {
@@ -433,6 +517,7 @@ class CourseServiceTest {
   }
 
   private void cleanUp() {
+    jdbcTemplate.update("DELETE FROM course_bookmark");
     jdbcTemplate.update("DELETE FROM course_flight");
     jdbcTemplate.update("DELETE FROM course_companion");
     jdbcTemplate.update("DELETE FROM course_place");

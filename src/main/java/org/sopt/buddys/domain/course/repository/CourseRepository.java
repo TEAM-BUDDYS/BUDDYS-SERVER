@@ -23,6 +23,8 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 
   Optional<Course> findByIdAndDeletedAtIsNull(Long id);
 
+  boolean existsByIdAndDeletedAtIsNull(Long id);
+
   @Modifying
   @Query("""
       update Course c

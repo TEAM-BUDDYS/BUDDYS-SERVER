@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.course.dto.request.CourseDayRequest;
 import org.sopt.buddys.domain.course.dto.request.CourseFlightRequest;
 import org.sopt.buddys.domain.course.dto.request.CoursePlaceRequest;
 import org.sopt.buddys.domain.course.dto.request.CreateCourseRequest;
+import org.sopt.buddys.domain.course.dto.response.CourseBookmarkResponse;
 import org.sopt.buddys.domain.course.dto.response.CourseDetailResponse;
 import org.sopt.buddys.domain.course.dto.response.CreateCourseResponse;
 import org.sopt.buddys.domain.course.service.CourseService;
@@ -135,6 +136,46 @@ public class CourseController {
     return ResponseEntity
         .status(GlobalSuccessCode.NO_CONTENT.getHttpStatus())
         .body(BaseResponse.success(GlobalSuccessCode.NO_CONTENT));
+  }
+
+  @Operation(summary = "코스 저장", description = "로그인한 사용자가 코스를 저장합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "저장 성공"),
+      @ApiResponse(responseCode = "404", description = "존재하지 않거나 삭제된 코스")
+  })
+  @CommonErrorResponses
+  @PostMapping("/{courseId}/bookmark")
+  public BaseResponse<CourseBookmarkResponse> bookmarkCourse(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "저장할 코스 ID", example = "1")
+      @PathVariable @Positive Long courseId
+  ) {
+    courseService.bookmarkCourse(userId, courseId);
+    return BaseResponse.success(
+        CourseSuccessCode.COURSE_BOOKMARKED,
+        new CourseBookmarkResponse(courseId, true)
+    );
+  }
+
+  @Operation(summary = "코스 저장 취소", description = "로그인한 사용자가 코스 저장을 취소합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "저장 취소 성공"),
+      @ApiResponse(responseCode = "404", description = "존재하지 않거나 삭제된 코스")
+  })
+  @CommonErrorResponses
+  @DeleteMapping("/{courseId}/bookmark")
+  public BaseResponse<CourseBookmarkResponse> unbookmarkCourse(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "저장 취소할 코스 ID", example = "1")
+      @PathVariable @Positive Long courseId
+  ) {
+    courseService.unbookmarkCourse(userId, courseId);
+    return BaseResponse.success(
+        CourseSuccessCode.COURSE_BOOKMARK_CANCELLED,
+        new CourseBookmarkResponse(courseId, false)
+    );
   }
 
   private CreateCourseCommand toCommand(CreateCourseRequest request) {

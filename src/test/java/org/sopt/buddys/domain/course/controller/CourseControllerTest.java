@@ -327,6 +327,74 @@ class CourseControllerTest {
         .andExpect(jsonPath("$.code").value("COURSE-E005"));
   }
 
+  @DisplayName("코스를 저장하고, DELETE 요청으로 저장을 취소한다")
+  @Test
+  void bookmarkAndUnbookmarkCourse_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryId": %d,
+                  "cityId": %d,
+                  "title": "파리 5일 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "days": [ { "dayNumber": 1 } ]
+                }
+                """.formatted(countryId, cityId)))
+        .andExpect(status().isCreated());
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses/{courseId}/bookmark", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("COURSE-S002"))
+        .andExpect(jsonPath("$.data.courseId").value(courseId))
+        .andExpect(jsonPath("$.data.bookmarked").value(true));
+
+    mockMvc.perform(delete("/api/v1/courses/{courseId}/bookmark", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("COURSE-S003"))
+        .andExpect(jsonPath("$.data.bookmarked").value(false));
+  }
+
+  @DisplayName("존재하지 않는 코스를 저장하면 실패한다")
+  @Test
+  void bookmarkCourse_courseNotFound_returnsNotFound() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses/{courseId}/bookmark", 999_999L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("COURSE-E005"));
+  }
+
+  @DisplayName("존재하지 않는 코스를 저장 취소하면 실패한다")
+  @Test
+  void unbookmarkCourse_courseNotFound_returnsNotFound() throws Exception {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    // when, then
+    mockMvc.perform(delete("/api/v1/courses/{courseId}/bookmark", 999_999L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("COURSE-E005"));
+  }
+
   private User createUser(String email, String providerId, String nickname) {
     return User.builder()
         .email(email)
@@ -375,6 +443,7 @@ class CourseControllerTest {
   }
 
   private void cleanUp() {
+    jdbcTemplate.update("DELETE FROM course_bookmark");
     jdbcTemplate.update("DELETE FROM course_flight");
     jdbcTemplate.update("DELETE FROM course_companion");
     jdbcTemplate.update("DELETE FROM course_place");

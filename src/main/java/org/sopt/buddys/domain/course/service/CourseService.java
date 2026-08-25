@@ -13,12 +13,15 @@ import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.code.CourseErrorCode;
 import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.entity.CourseBookmark;
+import org.sopt.buddys.domain.course.entity.CourseBookmarkId;
 import org.sopt.buddys.domain.course.entity.CourseCompanion;
 import org.sopt.buddys.domain.course.entity.CourseDay;
 import org.sopt.buddys.domain.course.entity.CourseFlight;
 import org.sopt.buddys.domain.course.entity.CourseImage;
 import org.sopt.buddys.domain.course.entity.CoursePlace;
 import org.sopt.buddys.domain.course.entity.CourseTag;
+import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
 import org.sopt.buddys.domain.course.repository.CourseCompanionRepository;
 import org.sopt.buddys.domain.course.repository.CourseDayRepository;
 import org.sopt.buddys.domain.course.repository.CourseFlightRepository;
@@ -62,6 +65,7 @@ public class CourseService {
   private final CoursePlaceRepository coursePlaceRepository;
   private final CourseCompanionRepository courseCompanionRepository;
   private final CourseFlightRepository courseFlightRepository;
+  private final CourseBookmarkRepository courseBookmarkRepository;
   private final UserRepository userRepository;
   private final CountryRepository countryRepository;
   private final CityRepository cityRepository;
@@ -120,6 +124,28 @@ public class CourseService {
     }
 
     course.delete();
+  }
+
+  @Transactional
+  public void bookmarkCourse(Long userId, Long courseId) {
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
+        .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
+
+    CourseBookmarkId bookmarkId = new CourseBookmarkId(user.getId(), course.getId());
+    if (courseBookmarkRepository.existsById(bookmarkId)) {
+      return;
+    }
+    courseBookmarkRepository.save(new CourseBookmark(user, course));
+  }
+
+  @Transactional
+  public void unbookmarkCourse(Long userId, Long courseId) {
+    if (!courseRepository.existsByIdAndDeletedAtIsNull(courseId)) {
+      throw new BaseException(CourseErrorCode.COURSE_NOT_FOUND);
+    }
+    courseBookmarkRepository.deleteById(new CourseBookmarkId(userId, courseId));
   }
 
   private City getCity(Long countryId, Long cityId) {
