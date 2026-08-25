@@ -120,22 +120,20 @@ public class CourseController {
 
   @Operation(summary = "코스 삭제", description = "코스 작성자가 코스를 삭제합니다.")
   @ApiResponses({
-      @ApiResponse(responseCode = "204", description = "삭제 성공"),
+      @ApiResponse(responseCode = "200", description = "삭제 성공"),
       @ApiResponse(responseCode = "403", description = "코스 작성자가 아님"),
       @ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음")
   })
   @CommonErrorResponses
   @DeleteMapping("/{courseId}")
-  public ResponseEntity<BaseResponse<Void>> deleteCourse(
+  public BaseResponse<Void> deleteCourse(
       @Parameter(hidden = true)
       @LoginUser Long userId,
       @Parameter(description = "삭제할 코스 ID", example = "1")
       @PathVariable @Positive Long courseId
   ) {
     courseService.deleteCourse(userId, courseId);
-    return ResponseEntity
-        .status(GlobalSuccessCode.NO_CONTENT.getHttpStatus())
-        .body(BaseResponse.success(GlobalSuccessCode.NO_CONTENT));
+    return BaseResponse.success(GlobalSuccessCode.OK);
   }
 
   @Operation(summary = "코스 저장", description = "로그인한 사용자가 코스를 저장합니다.")

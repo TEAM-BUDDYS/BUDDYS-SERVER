@@ -273,7 +273,9 @@ class CourseControllerTest {
     // when, then
     mockMvc.perform(delete("/api/v1/courses/{courseId}", courseId)
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
-        .andExpect(status().isNoContent());
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("GLB-S001"));
 
     mockMvc.perform(get("/api/v1/courses/{courseId}", courseId)
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
