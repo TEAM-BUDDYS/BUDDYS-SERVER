@@ -370,8 +370,12 @@ public class CourseService {
     allPlaceCommands.forEach(command -> parseCategory(command.category()));
 
     Map<String, CoursePlaceCommand> firstCommandByGooglePlaceId = new LinkedHashMap<>();
-    allPlaceCommands.forEach(command ->
-        firstCommandByGooglePlaceId.putIfAbsent(command.googlePlaceId(), command));
+    for (CoursePlaceCommand command : allPlaceCommands) {
+      CoursePlaceCommand firstCommand = firstCommandByGooglePlaceId.putIfAbsent(command.googlePlaceId(), command);
+      if (firstCommand != null) {
+        validateSamePlaceInfo(firstCommand, command);
+      }
+    }
 
     Map<String, Place> resolvedPlaces = new LinkedHashMap<>();
     placeRepository.findByGooglePlaceIdIn(firstCommandByGooglePlaceId.keySet())
@@ -384,6 +388,13 @@ public class CourseService {
     });
 
     return resolvedPlaces;
+  }
+
+  private void validateSamePlaceInfo(CoursePlaceCommand first, CoursePlaceCommand other) {
+    if (!first.name().equals(other.name())
+        || parseCategory(first.category()) != parseCategory(other.category())) {
+      throw new BaseException(CourseErrorCode.PLACE_INFO_CONFLICT);
+    }
   }
 
   private Place createPlace(CoursePlaceCommand placeCommand, PlaceCategory category) {

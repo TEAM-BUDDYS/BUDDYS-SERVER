@@ -224,6 +224,41 @@ class CourseServiceTest {
     assertThat(placeRepository.findAll()).hasSize(1);
   }
 
+  @DisplayName("같은 요청 안에서 동일 googlePlaceId에 서로 다른 이름/카테고리가 섞여 있으면 예외가 발생한다")
+  @Test
+  void createCourse_conflictingPlaceInfoForSameGooglePlaceId_throwsException() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(
+            new CourseDayCommand(
+                (short) 1, null, List.of("https://example.com/day1.jpg"),
+                List.of(new CoursePlaceCommand(
+                    "ChIJ-conflict", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null))
+            ),
+            new CourseDayCommand(
+                (short) 2, null, List.of("https://example.com/day2.jpg"),
+                List.of(new CoursePlaceCommand(
+                    "ChIJ-conflict", "루브르 카페", "CAFE", null, null, (short) 0, null, null))
+            )
+        ),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.PLACE_INFO_CONFLICT)
+        );
+  }
+
   @DisplayName("일자에 사진이 하나도 없으면 예외가 발생한다")
   @Test
   void createCourse_dayWithoutImage_throwsException() {
