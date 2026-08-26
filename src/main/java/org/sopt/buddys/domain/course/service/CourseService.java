@@ -189,6 +189,9 @@ public class CourseService {
     try {
       courseBookmarkRepository.saveAndFlush(new CourseBookmark(user, course));
     } catch (DataIntegrityViolationException e) {
+      if (!courseBookmarkRepository.existsById(new CourseBookmarkId(userId, courseId))) {
+        throw e;
+      }
     }
   }
 
