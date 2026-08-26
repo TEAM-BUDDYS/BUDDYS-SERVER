@@ -653,6 +653,7 @@ class CourseControllerTest {
     jdbcTemplate.update("DELETE FROM tag");
     jdbcTemplate.update("DELETE FROM `user`");
     jdbcTemplate.update("DELETE FROM city");
+    jdbcTemplate.update("DELETE FROM university");
     jdbcTemplate.update("DELETE FROM country");
   }
 }

@@ -1,8 +1,10 @@
+ALTER TABLE course
+    DROP FOREIGN KEY fk_course_country,
+    DROP FOREIGN KEY fk_course_city;
+
 DROP INDEX idx_course_country_created_at ON course;
 
 ALTER TABLE course
-    DROP FOREIGN KEY fk_course_country,
-    DROP FOREIGN KEY fk_course_city,
     DROP COLUMN country_id,
     DROP COLUMN city_id;
 
