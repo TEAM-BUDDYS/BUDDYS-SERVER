@@ -32,6 +32,7 @@ import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.place.entity.Place;
+import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -176,6 +177,51 @@ class CourseServiceTest {
 
     Place place = placeRepository.findByGooglePlaceId("ChIJ-place-1").orElseThrow();
     assertThat(place.getName()).isEqualTo("루브르 박물관");
+  }
+
+  @DisplayName("다른 유저가 이미 등록된 googlePlaceId를 다른 정보로 제출해도 기존 공유 장소 정보는 바뀌지 않는다")
+  @Test
+  void createCourse_existingGooglePlaceId_doesNotOverwriteSharedPlace() {
+    // given
+    User firstAuthor = userRepository.save(createUser("first@test.com", "provider-first", "첫작성자"));
+    User secondAuthor = userRepository.save(createUser("second@test.com", "provider-second", "두번째작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    courseService.createCourse(firstAuthor.getId(), new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand(
+            (short) 1, null, List.of("https://example.com/day1.jpg"),
+            List.of(new CoursePlaceCommand(
+                "ChIJ-shared", "루브르 박물관", "TOURISM",
+                BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0, null, null))
+        )),
+        null
+    ));
+
+    // when
+    courseService.createCourse(secondAuthor.getId(), new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "다른 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand(
+            (short) 1, null, List.of("https://example.com/day1.jpg"),
+            List.of(new CoursePlaceCommand(
+                "ChIJ-shared", "가짜 이름", "RESTAURANT",
+                BigDecimal.valueOf(0), BigDecimal.valueOf(0), (short) 0, null, null))
+        )),
+        null
+    ));
+
+    // then
+    Place place = placeRepository.findByGooglePlaceId("ChIJ-shared").orElseThrow();
+    assertThat(place.getName()).isEqualTo("루브르 박물관");
+    assertThat(place.getCategory()).isEqualTo(PlaceCategory.TOURISM);
+    assertThat(place.getLatitude()).isEqualByComparingTo(BigDecimal.valueOf(48.8606));
+    assertThat(placeRepository.findAll()).hasSize(1);
   }
 
   @DisplayName("일자에 사진이 하나도 없으면 예외가 발생한다")
