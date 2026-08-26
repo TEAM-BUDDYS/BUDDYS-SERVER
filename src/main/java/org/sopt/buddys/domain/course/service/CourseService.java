@@ -454,11 +454,14 @@ public class CourseService {
   }
 
   private CourseDetailResult toCourseDetailResult(Long userId, Course course) {
+    CourseBookmarkRepository.BookmarkSummary bookmarkSummary =
+        courseBookmarkRepository.findBookmarkSummary(userId, course.getId());
+
     return new CourseDetailResult(
         course.getId(),
         toAuthorResult(course.getAuthor()),
         course.getAuthor().getId().equals(userId),
-        courseBookmarkRepository.existsById(new CourseBookmarkId(userId, course.getId())),
+        bookmarkSummary.getBookmarkedCount() > 0,
         course.getTitle(),
         course.getContent(),
         course.getThumbnailImageUrl(),
@@ -472,7 +475,7 @@ public class CourseService {
         getDayResults(course.getId()),
         course.getViewCount(),
         course.getCommentCount(),
-        courseBookmarkRepository.countByCourseId(course.getId()),
+        bookmarkSummary.getTotalCount(),
         course.getCreatedAt()
     );
   }

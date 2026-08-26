@@ -8,6 +8,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface CourseBookmarkRepository extends JpaRepository<CourseBookmark, CourseBookmarkId> {
 
-  @Query("select count(cb) from CourseBookmark cb where cb.course.id = :courseId")
-  long countByCourseId(@Param("courseId") Long courseId);
+  @Query("""
+      select count(cb) as totalCount,
+             count(case when cb.user.id = :userId then 1 end) as bookmarkedCount
+      from CourseBookmark cb
+      where cb.course.id = :courseId
+      """)
+  BookmarkSummary findBookmarkSummary(@Param("userId") Long userId, @Param("courseId") Long courseId);
+
+  interface BookmarkSummary {
+    long getTotalCount();
+    long getBookmarkedCount();
+  }
 }
