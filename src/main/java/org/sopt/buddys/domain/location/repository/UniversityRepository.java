@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.location.repository;
 
+import java.util.Optional;
 import org.sopt.buddys.domain.location.entity.University;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -17,4 +18,6 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
   Slice<University> search(
       @Param("countryId") Long countryId, @Param("keyword") String keyword, Pageable pageable
   );
+
+  Optional<University> findFirstByDomainIgnoreCase(String domain);
 }
