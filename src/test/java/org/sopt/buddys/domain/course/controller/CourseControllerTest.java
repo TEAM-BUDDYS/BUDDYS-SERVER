@@ -396,6 +396,9 @@ class CourseControllerTest {
         .andExpect(jsonPath("$.data.title").value("파리 5일 코스"))
         .andExpect(jsonPath("$.data.thumbnailImageUrl").value("https://example.com/thumbnail.jpg"))
         .andExpect(jsonPath("$.data.isMine").value(true))
+        .andExpect(jsonPath("$.data.isBookmarked").value(false))
+        .andExpect(jsonPath("$.data.commentCount").value(0))
+        .andExpect(jsonPath("$.data.bookmarkCount").value(0))
         .andExpect(jsonPath("$.data.countries[0].countryId").value(countryId))
         .andExpect(jsonPath("$.data.cities[0].cityId").value(cityId))
         .andExpect(jsonPath("$.data.days[0].dayNumber").value(1))
@@ -638,6 +641,7 @@ class CourseControllerTest {
   }
 
   private void cleanUp() {
+    jdbcTemplate.update("DELETE FROM course_comment");
     jdbcTemplate.update("DELETE FROM course_bookmark");
     jdbcTemplate.update("DELETE FROM course_flight");
     jdbcTemplate.update("DELETE FROM course_companion");

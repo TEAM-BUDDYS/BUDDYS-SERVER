@@ -569,6 +569,34 @@ class CourseServiceTest {
     assertThat(result.days().get(0).places()).hasSize(1);
     assertThat(result.days().get(0).places().get(0).name()).isEqualTo("루브르 박물관");
     assertThat(result.viewCount()).isEqualTo(1L);
+    assertThat(result.isBookmarked()).isFalse();
+    assertThat(result.commentCount()).isEqualTo(0L);
+    assertThat(result.bookmarkCount()).isEqualTo(0L);
+  }
+
+  @DisplayName("코스를 저장한 뒤 상세 조회하면 isBookmarked와 bookmarkCount가 반영된다")
+  @Test
+  void getCourseDetail_afterBookmarked_reflectsBookmarkState() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+    courseService.bookmarkCourse(viewer.getId(), course.getId());
+
+    // when
+    CourseDetailResult viewerResult = courseService.getCourseDetail(viewer.getId(), course.getId());
+    CourseDetailResult authorResult = courseService.getCourseDetail(author.getId(), course.getId());
+
+    // then
+    assertThat(viewerResult.isBookmarked()).isTrue();
+    assertThat(viewerResult.bookmarkCount()).isEqualTo(1L);
+    assertThat(authorResult.isBookmarked()).isFalse();
+    assertThat(authorResult.bookmarkCount()).isEqualTo(1L);
   }
 
   @DisplayName("존재하지 않는 코스를 조회하면 예외가 발생한다")
@@ -803,6 +831,7 @@ class CourseServiceTest {
   }
 
   private void cleanUp() {
+    jdbcTemplate.update("DELETE FROM course_comment");
     jdbcTemplate.update("DELETE FROM course_bookmark");
     jdbcTemplate.update("DELETE FROM course_flight");
     jdbcTemplate.update("DELETE FROM course_companion");

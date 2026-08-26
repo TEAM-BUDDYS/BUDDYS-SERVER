@@ -49,6 +49,9 @@ public class Course extends BaseEntity {
   @Column(name = "view_count", nullable = false)
   private Long viewCount = 0L;
 
+  @Column(name = "comment_count", nullable = false)
+  private Long commentCount = 0L;
+
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
 
@@ -67,6 +70,7 @@ public class Course extends BaseEntity {
     this.startDate = startDate;
     this.endDate = endDate;
     this.viewCount = 0L;
+    this.commentCount = 0L;
   }
 
   public void delete() {

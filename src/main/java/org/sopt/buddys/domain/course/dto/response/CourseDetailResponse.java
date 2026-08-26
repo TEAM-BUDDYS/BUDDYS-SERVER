@@ -19,6 +19,9 @@ public record CourseDetailResponse(
     @Schema(description = "로그인 사용자의 코스 여부", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
     boolean isMine,
 
+    @Schema(description = "로그인 사용자의 코스 저장 여부", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
+    boolean isBookmarked,
+
     @Schema(description = "코스 제목", example = "파리 5일 코스", requiredMode = Schema.RequiredMode.REQUIRED)
     String title,
 
@@ -55,6 +58,12 @@ public record CourseDetailResponse(
     @Schema(description = "조회수", example = "11", requiredMode = Schema.RequiredMode.REQUIRED)
     Long viewCount,
 
+    @Schema(description = "댓글 수", example = "3", requiredMode = Schema.RequiredMode.REQUIRED)
+    Long commentCount,
+
+    @Schema(description = "저장 수", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
+    Long bookmarkCount,
+
     @Schema(description = "코스 생성일시", example = "2026-08-20T14:30:00", requiredMode = Schema.RequiredMode.REQUIRED)
     LocalDateTime createdAt
 ) {
@@ -73,6 +82,7 @@ public record CourseDetailResponse(
         result.courseId(),
         AuthorResponse.from(result.author()),
         result.isMine(),
+        result.isBookmarked(),
         result.title(),
         result.content(),
         result.thumbnailImageUrl(),
@@ -85,6 +95,8 @@ public record CourseDetailResponse(
         result.flights().stream().map(FlightResponse::from).toList(),
         result.days().stream().map(DayResponse::from).toList(),
         result.viewCount(),
+        result.commentCount(),
+        result.bookmarkCount(),
         result.createdAt()
     );
   }

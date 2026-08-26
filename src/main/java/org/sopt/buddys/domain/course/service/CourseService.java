@@ -459,6 +459,7 @@ public class CourseService {
         course.getId(),
         toAuthorResult(course.getAuthor()),
         course.getAuthor().getId().equals(userId),
+        courseBookmarkRepository.existsById(new CourseBookmarkId(userId, course.getId())),
         course.getTitle(),
         course.getContent(),
         course.getThumbnailImageUrl(),
@@ -471,6 +472,8 @@ public class CourseService {
         getFlightResults(course.getId()),
         getDayResults(course.getId()),
         course.getViewCount(),
+        course.getCommentCount(),
+        courseBookmarkRepository.countByCourseId(course.getId()),
         course.getCreatedAt()
     );
   }

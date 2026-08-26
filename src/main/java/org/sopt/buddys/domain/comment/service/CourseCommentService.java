@@ -3,13 +3,13 @@ package org.sopt.buddys.domain.comment.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.sopt.buddys.domain.comment.entity.Comment;
-import org.sopt.buddys.domain.comment.repository.CommentRepository;
-import org.sopt.buddys.domain.comment.service.result.CommentListResult;
-import org.sopt.buddys.domain.comment.service.result.CommentListResult.CommentResult;
-import org.sopt.buddys.domain.post.code.PostErrorCode;
-import org.sopt.buddys.domain.post.entity.Post;
-import org.sopt.buddys.domain.post.repository.PostRepository;
+import org.sopt.buddys.domain.comment.entity.CourseComment;
+import org.sopt.buddys.domain.comment.repository.CourseCommentRepository;
+import org.sopt.buddys.domain.comment.service.result.CourseCommentListResult;
+import org.sopt.buddys.domain.comment.service.result.CourseCommentListResult.CourseCommentResult;
+import org.sopt.buddys.domain.course.code.CourseErrorCode;
+import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -26,26 +26,26 @@ import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class CommentService {
+public class CourseCommentService {
 
-  private final CommentRepository commentRepository;
-  private final PostRepository postRepository;
+  private final CourseCommentRepository courseCommentRepository;
+  private final CourseRepository courseRepository;
   private final UserRepository userRepository;
 
-  public CommentListResult getComments(Long postId, int page, int size) {
+  public CourseCommentListResult getComments(Long courseId, int page, int size) {
     validatePageRequest(page, size);
-    if (!postRepository.existsById(postId)) {
-      throw new BaseException(PostErrorCode.POST_NOT_FOUND);
+    if (!courseRepository.existsByIdAndDeletedAtIsNull(courseId)) {
+      throw new BaseException(CourseErrorCode.COURSE_NOT_FOUND);
     }
 
     LocalDateTime now = LocalDateTime.now();
-    Slice<Comment> commentSlice = commentRepository.findAllByPostIdWithAuthorOrderByCreatedAtAsc(
-        postId,
+    Slice<CourseComment> commentSlice = courseCommentRepository.findAllByCourseIdWithAuthorOrderByCreatedAtAsc(
+        courseId,
         PageRequest.of(page, size)
     );
-    List<CommentResult> comments = commentSlice.getContent()
+    List<CourseCommentResult> comments = commentSlice.getContent()
         .stream()
-        .map(comment -> new CommentResult(
+        .map(comment -> new CourseCommentResult(
             comment.getId(),
             comment.getAuthor().getId(),
             comment.getAuthor().getNickname(),
@@ -56,7 +56,7 @@ public class CommentService {
         ))
         .toList();
 
-    return new CommentListResult(
+    return new CourseCommentListResult(
         comments,
         commentSlice.getNumber(),
         commentSlice.getSize(),
@@ -65,22 +65,22 @@ public class CommentService {
   }
 
   @Transactional
-  public Comment createComment(
+  public CourseComment createComment(
       Long userId,
-      Long postId,
+      Long courseId,
       String content
   ) {
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    Post post = postRepository.findById(postId)
-        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
+    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
+        .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
-    Comment comment = commentRepository.save(new Comment(
-        post,
+    CourseComment comment = courseCommentRepository.save(new CourseComment(
+        course,
         author,
         content.trim()
     ));
-    postRepository.increaseCommentCount(postId);
+    courseRepository.increaseCommentCount(courseId);
     return comment;
   }
 

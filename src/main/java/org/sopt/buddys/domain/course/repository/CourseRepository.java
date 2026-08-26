@@ -31,4 +31,12 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
         and c.deletedAt is null
       """)
   int increaseViewCount(@Param("courseId") Long courseId);
+
+  @Modifying(flushAutomatically = true)
+  @Query("""
+      update Course c
+      set c.commentCount = c.commentCount + 1
+      where c.id = :courseId
+      """)
+  int increaseCommentCount(@Param("courseId") Long courseId);
 }

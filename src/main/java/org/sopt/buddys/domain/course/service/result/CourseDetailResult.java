@@ -12,6 +12,7 @@ public record CourseDetailResult(
     Long courseId,
     AuthorResult author,
     boolean isMine,
+    boolean isBookmarked,
     String title,
     String content,
     String thumbnailImageUrl,
@@ -24,6 +25,8 @@ public record CourseDetailResult(
     List<FlightResult> flights,
     List<DayResult> days,
     Long viewCount,
+    Long commentCount,
+    Long bookmarkCount,
     LocalDateTime createdAt
 ) {
 
