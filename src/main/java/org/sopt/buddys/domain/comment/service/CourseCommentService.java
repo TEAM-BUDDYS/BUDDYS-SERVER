@@ -80,7 +80,9 @@ public class CourseCommentService {
         author,
         content.trim()
     ));
-    courseRepository.increaseCommentCount(courseId);
+    if (courseRepository.increaseCommentCount(courseId) == 0) {
+      throw new BaseException(CourseErrorCode.COURSE_NOT_FOUND);
+    }
     return comment;
   }
 
