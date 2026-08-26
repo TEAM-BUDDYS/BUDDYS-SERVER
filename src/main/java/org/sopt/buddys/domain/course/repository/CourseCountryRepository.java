@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.course.repository;
 
+import java.util.Collection;
 import java.util.List;
 import org.sopt.buddys.domain.course.entity.CourseCountry;
 import org.sopt.buddys.domain.course.entity.CourseCountryId;
@@ -19,7 +20,20 @@ public interface CourseCountryRepository extends JpaRepository<CourseCountry, Co
       """)
   List<CourseCountry> findAllByCourseIdWithCountry(@Param("courseId") Long courseId);
 
+  @Query("""
+      select cc.course.id as courseId, cc.country.name as name
+      from CourseCountry cc
+      where cc.course.id in :courseIds
+      order by cc.course.id asc, cc.country.id asc
+      """)
+  List<CourseNameProjection> findCountryNamesByCourseIdIn(@Param("courseIds") Collection<Long> courseIds);
+
   @Modifying
   @Query("delete from CourseCountry cc where cc.course.id = :courseId")
   void deleteAllByCourseId(@Param("courseId") Long courseId);
+
+  interface CourseNameProjection {
+    Long getCourseId();
+    String getName();
+  }
 }

@@ -68,6 +68,67 @@ class CourseControllerTest {
     cleanUp();
   }
 
+  @DisplayName("코스 목록을 국가로 필터링하여 조회한다")
+  @Test
+  void getCourses_filteredByCountry_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long franceId = insertCountry("프랑스", "FR");
+    Long japanId = insertCountry("일본", "JP");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long tokyoId = insertCity(japanId, "Tokyo", "도쿄", 14_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    createCourseViaApi(author, franceId, parisId, tagId, "파리 코스");
+    createCourseViaApi(author, japanId, tokyoId, tagId, "도쿄 코스");
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses")
+            .queryParam("countryId", String.valueOf(franceId))
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("COURSE-S005"))
+        .andExpect(jsonPath("$.data.content.length()").value(1))
+        .andExpect(jsonPath("$.data.content[0].title").value("파리 코스"))
+        .andExpect(jsonPath("$.data.content[0].countries").value("프랑스"))
+        .andExpect(jsonPath("$.data.content[0].cities").value("파리"))
+        .andExpect(jsonPath("$.data.content[0].images[0]").value("https://example.com/thumbnail.jpg"))
+        .andExpect(jsonPath("$.data.content[0].isBookmarked").value(false))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
+  @DisplayName("저장한 코스 목록을 조회한다")
+  @Test
+  void getBookmarkedCourses_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    createCourseViaApi(author, countryId, cityId, tagId, "저장할 코스");
+    createCourseViaApi(author, countryId, cityId, tagId, "저장 안 할 코스");
+    Long bookmarkedCourseId = courseRepository.findAll().stream()
+        .filter(course -> course.getTitle().equals("저장할 코스"))
+        .findFirst().orElseThrow().getId();
+
+    mockMvc.perform(post("/api/v1/courses/{courseId}/bookmark", bookmarkedCourseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk());
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("COURSE-S006"))
+        .andExpect(jsonPath("$.data.content.length()").value(1))
+        .andExpect(jsonPath("$.data.content[0].courseId").value(bookmarkedCourseId))
+        .andExpect(jsonPath("$.data.content[0].isBookmarked").value(true));
+  }
+
   @DisplayName("코스 게시글을 작성한다")
   @Test
   void createCourse_returnsCreated() throws Exception {
@@ -575,6 +636,25 @@ class CourseControllerTest {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("COURSE-E005"));
+  }
+
+  private void createCourseViaApi(User author, Long countryId, Long cityId, Long tagId, String title) throws Exception {
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "%s",
+                  "thumbnailImageUrl": "https://example.com/thumbnail.jpg",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                }
+                """.formatted(countryId, cityId, title, tagId)))
+        .andExpect(status().isCreated());
   }
 
   private User createUser(String email, String providerId, String nickname) {

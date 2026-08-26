@@ -27,9 +27,11 @@ import org.sopt.buddys.domain.course.repository.CourseTagRepository;
 import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
+import org.sopt.buddys.domain.course.service.command.CourseSearchCondition;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
 import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
+import org.sopt.buddys.domain.course.service.result.CourseListResult;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.place.entity.Place;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
@@ -887,6 +889,96 @@ class CourseServiceTest {
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
         );
+  }
+
+  @DisplayName("코스 목록을 조회하면 대표사진+일자별사진, 국가/도시 표시 문자열, 저장 여부가 함께 반환된다")
+  @Test
+  void getCourses_returnsImagesCountriesCitiesAndBookmarkStatus() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long franceId = insertCountry("프랑스", "FR");
+    Long germanyId = insertCountry("독일", "DE");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long berlinId = insertCity(germanyId, "Berlin", "베를린", 3_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(franceId, germanyId), List.of(parisId, berlinId), "유럽 코스", "내용", "https://example.com/thumb.jpg",
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
+        null
+    );
+    Course course = courseService.createCourse(author.getId(), command);
+    courseService.bookmarkCourse(viewer.getId(), course.getId());
+
+    // when
+    CourseListResult result = courseService.getCourses(viewer.getId(), new CourseSearchCondition(null), 0, 20);
+
+    // then
+    assertThat(result.content()).hasSize(1);
+    CourseListResult.CourseSummaryResult summary = result.content().get(0);
+    assertThat(summary.courseId()).isEqualTo(course.getId());
+    assertThat(summary.title()).isEqualTo("유럽 코스");
+    assertThat(summary.content()).isEqualTo("내용");
+    assertThat(summary.isBookmarked()).isTrue();
+    assertThat(summary.images()).containsExactly("https://example.com/thumb.jpg", "https://example.com/day1.jpg");
+    assertThat(summary.countries()).isEqualTo("프랑스, 독일");
+    assertThat(summary.cities()).isEqualTo("파리, 베를린");
+  }
+
+  @DisplayName("국가로 필터링하면 해당 국가를 포함하는 코스만 반환된다")
+  @Test
+  void getCourses_filtersByCountryId() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long franceId = insertCountry("프랑스", "FR");
+    Long japanId = insertCountry("일본", "JP");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long tokyoId = insertCity(japanId, "Tokyo", "도쿄", 14_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    Course franceCourse = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(franceId, parisId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+    courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(japanId, tokyoId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+
+    // when
+    CourseListResult result = courseService.getCourses(author.getId(), new CourseSearchCondition(franceId), 0, 20);
+
+    // then
+    assertThat(result.content()).hasSize(1);
+    assertThat(result.content().get(0).courseId()).isEqualTo(franceCourse.getId());
+  }
+
+  @DisplayName("저장한 코스 목록을 조회하면 저장한 코스만 반환되고 isBookmarked는 항상 true다")
+  @Test
+  void getBookmarkedCourses_returnsOnlyBookmarkedCourses() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    Course bookmarkedCourse = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+    courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+    courseService.bookmarkCourse(viewer.getId(), bookmarkedCourse.getId());
+
+    // when
+    CourseListResult result = courseService.getBookmarkedCourses(viewer.getId(), 0, 20);
+
+    // then
+    assertThat(result.content()).hasSize(1);
+    assertThat(result.content().get(0).courseId()).isEqualTo(bookmarkedCourse.getId());
+    assertThat(result.content().get(0).isBookmarked()).isTrue();
   }
 
   private CreateCourseCommand createDefaultCommand(

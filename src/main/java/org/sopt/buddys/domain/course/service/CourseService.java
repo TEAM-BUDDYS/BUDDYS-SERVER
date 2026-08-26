@@ -36,9 +36,11 @@ import org.sopt.buddys.domain.course.repository.CourseTagRepository;
 import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
+import org.sopt.buddys.domain.course.service.command.CourseSearchCondition;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
 import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
+import org.sopt.buddys.domain.course.service.result.CourseListResult;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
@@ -59,8 +61,12 @@ import org.sopt.buddys.domain.user.service.result.AuthorProfile;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @Service
 @RequiredArgsConstructor
@@ -149,6 +155,18 @@ public class CourseService {
     saveCourseFlights(course, command.flights());
 
     return course;
+  }
+
+  public CourseListResult getCourses(Long userId, CourseSearchCondition condition, int page, int size) {
+    validatePageRequest(page, size);
+    Slice<Course> courses = courseRepository.searchCourses(condition, PageRequest.of(page, size));
+    return toCourseListResult(userId, courses);
+  }
+
+  public CourseListResult getBookmarkedCourses(Long userId, int page, int size) {
+    validatePageRequest(page, size);
+    Slice<Course> courses = courseBookmarkRepository.findBookmarkedCoursesByUserId(userId, PageRequest.of(page, size));
+    return toBookmarkedCourseListResult(courses);
   }
 
   @Transactional
@@ -440,6 +458,100 @@ public class CourseService {
         })
         .toList();
     courseFlightRepository.saveAll(courseFlights);
+  }
+
+  private void validatePageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
+  private CourseListResult toCourseListResult(Long userId, Slice<Course> courses) {
+    List<Long> courseIds = courses.getContent().stream().map(Course::getId).toList();
+    Set<Long> bookmarkedCourseIds = courseIds.isEmpty()
+        ? Set.of()
+        : courseBookmarkRepository.findBookmarkedCourseIds(userId, courseIds);
+    return buildCourseListResult(courses, courseIds, bookmarkedCourseIds);
+  }
+
+  private CourseListResult toBookmarkedCourseListResult(Slice<Course> courses) {
+    List<Long> courseIds = courses.getContent().stream().map(Course::getId).toList();
+    return buildCourseListResult(courses, courseIds, Set.copyOf(courseIds));
+  }
+
+  private CourseListResult buildCourseListResult(
+      Slice<Course> courses,
+      List<Long> courseIds,
+      Set<Long> bookmarkedCourseIds
+  ) {
+    Map<Long, String> countriesByCourseId = getCourseCountriesDisplay(courseIds);
+    Map<Long, String> citiesByCourseId = getCourseCitiesDisplay(courseIds);
+    Map<Long, List<String>> dayImagesByCourseId = getCourseDayImages(courseIds);
+
+    List<CourseListResult.CourseSummaryResult> content = courses.getContent().stream()
+        .map(course -> new CourseListResult.CourseSummaryResult(
+            course.getId(),
+            course.getTitle(),
+            course.getContent(),
+            bookmarkedCourseIds.contains(course.getId()),
+            toImages(course.getThumbnailImageUrl(), dayImagesByCourseId.getOrDefault(course.getId(), List.of())),
+            countriesByCourseId.getOrDefault(course.getId(), ""),
+            citiesByCourseId.getOrDefault(course.getId(), "")
+        ))
+        .toList();
+
+    return new CourseListResult(content, courses.getNumber(), courses.getSize(), courses.hasNext());
+  }
+
+  private List<String> toImages(String thumbnailImageUrl, List<String> dayImageUrls) {
+    List<String> images = new ArrayList<>();
+    if (thumbnailImageUrl != null) {
+      images.add(thumbnailImageUrl);
+    }
+    images.addAll(dayImageUrls);
+    return images;
+  }
+
+  private Map<Long, String> getCourseCountriesDisplay(List<Long> courseIds) {
+    if (courseIds.isEmpty()) {
+      return Map.of();
+    }
+    return courseCountryRepository.findCountryNamesByCourseIdIn(courseIds).stream()
+        .collect(Collectors.groupingBy(
+            CourseCountryRepository.CourseNameProjection::getCourseId,
+            LinkedHashMap::new,
+            Collectors.mapping(CourseCountryRepository.CourseNameProjection::getName, Collectors.joining(", "))
+        ));
+  }
+
+  private Map<Long, String> getCourseCitiesDisplay(List<Long> courseIds) {
+    if (courseIds.isEmpty()) {
+      return Map.of();
+    }
+    return courseCityRepository.findCityNamesByCourseIdIn(courseIds).stream()
+        .collect(Collectors.groupingBy(
+            CourseCityRepository.CourseCityNameProjection::getCourseId,
+            LinkedHashMap::new,
+            Collectors.mapping(this::getCityDisplayName, Collectors.joining(", "))
+        ));
+  }
+
+  private String getCityDisplayName(CourseCityRepository.CourseCityNameProjection projection) {
+    return projection.getKoreanName() == null || projection.getKoreanName().isBlank()
+        ? projection.getName()
+        : projection.getKoreanName();
+  }
+
+  private Map<Long, List<String>> getCourseDayImages(List<Long> courseIds) {
+    if (courseIds.isEmpty()) {
+      return Map.of();
+    }
+    return courseImageRepository.findImageUrlsByCourseIdIn(courseIds).stream()
+        .collect(Collectors.groupingBy(
+            CourseImageRepository.CourseImageUrlProjection::getCourseId,
+            LinkedHashMap::new,
+            Collectors.mapping(CourseImageRepository.CourseImageUrlProjection::getImageUrl, Collectors.toList())
+        ));
   }
 
   private CourseDetailResult toCourseDetailResult(Long userId, Course course) {

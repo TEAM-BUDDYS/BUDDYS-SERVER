@@ -18,6 +18,14 @@ public interface CourseImageRepository extends JpaRepository<CourseImage, Long> 
       """)
   List<CourseImage> findAllByCourseDayIdIn(@Param("courseDayIds") Collection<Long> courseDayIds);
 
+  @Query("""
+      select ci.courseDay.course.id as courseId, ci.imageUrl as imageUrl
+      from CourseImage ci
+      where ci.courseDay.course.id in :courseIds
+      order by ci.courseDay.course.id asc, ci.courseDay.dayNumber asc, ci.orderNo asc, ci.id asc
+      """)
+  List<CourseImageUrlProjection> findImageUrlsByCourseIdIn(@Param("courseIds") Collection<Long> courseIds);
+
   @Modifying
   @Query("""
       delete from CourseImage ci
@@ -26,4 +34,9 @@ public interface CourseImageRepository extends JpaRepository<CourseImage, Long> 
       )
       """)
   void deleteAllByCourseId(@Param("courseId") Long courseId);
+
+  interface CourseImageUrlProjection {
+    Long getCourseId();
+    String getImageUrl();
+  }
 }
