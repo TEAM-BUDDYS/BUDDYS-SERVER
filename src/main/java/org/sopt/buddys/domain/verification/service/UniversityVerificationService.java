@@ -25,7 +25,7 @@ public class UniversityVerificationService {
   private final UserRepository userRepository;
   private final UniversityVerificationProperties universityVerificationProperties;
   private final UniversityVerificationMailSender mailSender;
-현
+
   @Transactional
   public void sendVerification(Long userId, String email) {
     userRepository.findByIdAndDeletedAtIsNull(userId)
