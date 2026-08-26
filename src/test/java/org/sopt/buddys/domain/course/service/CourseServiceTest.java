@@ -676,6 +676,36 @@ class CourseServiceTest {
     assertThat(authorResult.bookmarkCount()).isEqualTo(1L);
   }
 
+  @DisplayName("탈퇴한 동행자는 코스 상세 조회 시 닉네임과 프로필 이미지가 가려진다")
+  @Test
+  void getCourseDetail_withdrawnCompanion_masksNicknameAndProfileImage() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), List.of(companion.getId()),
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
+        null
+    );
+    Course course = courseService.createCourse(author.getId(), command);
+    jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), companion.getId());
+
+    // when
+    CourseDetailResult result = courseService.getCourseDetail(author.getId(), course.getId());
+
+    // then
+    assertThat(result.companions()).hasSize(1);
+    assertThat(result.companions().get(0).userId()).isEqualTo(companion.getId());
+    assertThat(result.companions().get(0).nickname()).isEqualTo("탈퇴한 사용자");
+    assertThat(result.companions().get(0).profileImageUrl()).isNull();
+  }
+
   @DisplayName("존재하지 않는 코스를 조회하면 예외가 발생한다")
   @Test
   void getCourseDetail_courseNotFound_throwsException() {

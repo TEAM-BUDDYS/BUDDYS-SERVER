@@ -8,15 +8,18 @@ import org.sopt.buddys.domain.user.service.result.AuthorProfile;
 
 public final class AuthorProfileMapper {
 
+  public static final String WITHDRAWN_USER_NICKNAME = "탈퇴한 사용자";
+
   private AuthorProfileMapper() {
   }
 
   public static AuthorProfile toAuthorProfile(User author) {
+    boolean withdrawn = author.getDeletedAt() != null;
     Country exchangeCountry = author.getExchangeCountry();
     return new AuthorProfile(
         author.getId(),
-        author.getNickname(),
-        author.getProfileImageUrl(),
+        withdrawn ? WITHDRAWN_USER_NICKNAME : author.getNickname(),
+        withdrawn ? null : author.getProfileImageUrl(),
         exchangeCountry == null ? null : exchangeCountry.getName(),
         toAge(author.getBirthDate()),
         toAgeRange(author.getBirthDate()),

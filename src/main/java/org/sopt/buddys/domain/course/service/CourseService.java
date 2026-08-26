@@ -529,12 +529,15 @@ public class CourseService {
   private List<CourseDetailResult.CompanionResult> getCompanionResults(Long courseId) {
     return courseCompanionRepository.findAllByCourseIdWithUser(courseId)
         .stream()
-        .map(companion -> new CourseDetailResult.CompanionResult(
-            companion.getUser().getId(),
-            companion.getUser().getNickname(),
-            companion.getUser().getProfileImageUrl()
-        ))
+        .map(companion -> toCompanionResult(companion.getUser()))
         .toList();
+  }
+
+  private CourseDetailResult.CompanionResult toCompanionResult(User user) {
+    if (user.getDeletedAt() != null) {
+      return new CourseDetailResult.CompanionResult(user.getId(), AuthorProfileMapper.WITHDRAWN_USER_NICKNAME, null);
+    }
+    return new CourseDetailResult.CompanionResult(user.getId(), user.getNickname(), user.getProfileImageUrl());
   }
 
   private List<CourseDetailResult.FlightResult> getFlightResults(Long courseId) {
