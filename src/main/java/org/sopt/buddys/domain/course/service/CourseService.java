@@ -49,8 +49,8 @@ import org.sopt.buddys.domain.place.entity.Place;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.tag.entity.Tag;
-import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
+import org.sopt.buddys.domain.tag.service.TagTypeCountValidator;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -66,10 +66,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CourseService {
-
-  private static final int MAX_ACTIVITY_TAG_COUNT = 3;
-  private static final int MAX_INTEREST_TAG_COUNT = 2;
-  private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 2;
 
   private final CourseRepository courseRepository;
   private final CourseCountryRepository courseCountryRepository;
@@ -293,29 +289,11 @@ public class CourseService {
     if (tags.size() != distinctTagIds.size()) {
       throw new BaseException(CourseErrorCode.TAG_NOT_FOUND);
     }
-    validateTagTypeCounts(tags);
+    TagTypeCountValidator.validate(tags, CourseErrorCode.ACTIVITY_TAG_REQUIRED, CourseErrorCode.TAG_LIMIT_EXCEEDED);
 
     courseTagRepository.saveAll(tags.stream()
         .map(tag -> new CourseTag(course, tag))
         .toList());
-  }
-
-  private void validateTagTypeCounts(List<Tag> tags) {
-    long activityTagCount = countTagsByType(tags, TagType.ACTIVITY);
-    if (activityTagCount == 0) {
-      throw new BaseException(CourseErrorCode.ACTIVITY_TAG_REQUIRED);
-    }
-    if (activityTagCount > MAX_ACTIVITY_TAG_COUNT
-        || countTagsByType(tags, TagType.INTEREST) > MAX_INTEREST_TAG_COUNT
-        || countTagsByType(tags, TagType.TRAVEL_STYLE) > MAX_TRAVEL_STYLE_TAG_COUNT) {
-      throw new BaseException(CourseErrorCode.TAG_LIMIT_EXCEEDED);
-    }
-  }
-
-  private long countTagsByType(List<Tag> tags, TagType tagType) {
-    return tags.stream()
-        .filter(tag -> tag.getTagType() == tagType)
-        .count();
   }
 
   private void saveCourseCompanions(Course course, List<Long> companionUserIds) {

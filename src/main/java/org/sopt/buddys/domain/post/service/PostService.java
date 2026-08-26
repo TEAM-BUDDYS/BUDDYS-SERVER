@@ -35,8 +35,8 @@ import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult.PostSummaryResult;
 import org.sopt.buddys.domain.tag.entity.Tag;
-import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
+import org.sopt.buddys.domain.tag.service.TagTypeCountValidator;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -53,10 +53,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
-
-  private static final int MAX_ACTIVITY_TAG_COUNT = 3;
-  private static final int MAX_INTEREST_TAG_COUNT = 2;
-  private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 2;
 
   private final PostRepository postRepository;
   private final PostAgeConditionRepository postAgeConditionRepository;
@@ -288,29 +284,11 @@ public class PostService {
     if (tags.size() != distinctTagIds.size()) {
       throw new BaseException(PostErrorCode.TAG_NOT_FOUND);
     }
-    validateTagTypeCounts(tags);
+    TagTypeCountValidator.validate(tags, PostErrorCode.ACTIVITY_TAG_REQUIRED, PostErrorCode.TAG_LIMIT_EXCEEDED);
 
     postTagRepository.saveAll(tags.stream()
         .map(tag -> new PostTag(post, tag))
         .toList());
-  }
-
-  private void validateTagTypeCounts(List<Tag> tags) {
-    long activityTagCount = countTagsByType(tags, TagType.ACTIVITY);
-    if (activityTagCount == 0) {
-      throw new BaseException(PostErrorCode.ACTIVITY_TAG_REQUIRED);
-    }
-    if (activityTagCount > MAX_ACTIVITY_TAG_COUNT
-        || countTagsByType(tags, TagType.INTEREST) > MAX_INTEREST_TAG_COUNT
-        || countTagsByType(tags, TagType.TRAVEL_STYLE) > MAX_TRAVEL_STYLE_TAG_COUNT) {
-      throw new BaseException(PostErrorCode.TAG_LIMIT_EXCEEDED);
-    }
-  }
-
-  private long countTagsByType(List<Tag> tags, TagType tagType) {
-    return tags.stream()
-        .filter(tag -> tag.getTagType() == tagType)
-        .count();
   }
 
   private void savePostImages(Post post, List<String> imageUrls) {
