@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.course.service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -36,6 +37,7 @@ import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
+import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.location.entity.City;
@@ -87,8 +89,9 @@ public class CourseService {
 
   @Transactional
   public Course createCourse(Long userId, CreateCourseCommand command) {
-    validateRequiredFields(command);
-    validateDateRanges(command);
+    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
+        command.endDate(), command.tagIds(), command.days(), command.flights());
+    validateDateRanges(command.startDate(), command.endDate(), command.flights());
     validateDayNumbersUnique(command.days());
 
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
@@ -107,6 +110,45 @@ public class CourseService {
     saveCourseCities(course, command.cityIds());
     saveCourseTags(course, command.tagIds());
     saveCourseCompanions(course, command.companionUserIds());
+    saveCourseDays(course, command.days());
+    saveCourseFlights(course, command.flights());
+
+    return course;
+  }
+
+  @Transactional
+  public Course updateCourse(Long userId, Long courseId, UpdateCourseCommand command) {
+    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
+        command.endDate(), command.tagIds(), command.days(), command.flights());
+    validateDateRanges(command.startDate(), command.endDate(), command.flights());
+    validateDayNumbersUnique(command.days());
+
+    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
+        .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
+
+    if (!course.getAuthor().getId().equals(userId)) {
+      throw new BaseException(GlobalErrorCode.FORBIDDEN);
+    }
+
+    course.update(
+        command.title().trim(),
+        command.content() != null ? command.content().trim() : null,
+        command.thumbnailImageUrl() != null ? command.thumbnailImageUrl().trim() : null,
+        command.startDate(),
+        command.endDate()
+    );
+
+    courseCountryRepository.deleteAllByCourseId(courseId);
+    courseCityRepository.deleteAllByCourseId(courseId);
+    courseTagRepository.deleteAllByCourseId(courseId);
+    courseFlightRepository.deleteAllByCourseId(courseId);
+    coursePlaceRepository.deleteAllByCourseId(courseId);
+    courseImageRepository.deleteAllByCourseId(courseId);
+    courseDayRepository.deleteAllByCourseId(courseId);
+
+    saveCourseCountries(course, command.countryIds());
+    saveCourseCities(course, command.cityIds());
+    saveCourseTags(course, command.tagIds());
     saveCourseDays(course, command.days());
     saveCourseFlights(course, command.flights());
 
@@ -158,26 +200,35 @@ public class CourseService {
     courseBookmarkRepository.deleteById(new CourseBookmarkId(userId, courseId));
   }
 
-  private void validateRequiredFields(CreateCourseCommand command) {
-    if (command.countryIds() == null || command.countryIds().isEmpty()
-        || command.cityIds() == null || command.cityIds().isEmpty()
-        || command.title() == null || command.title().isBlank()
-        || command.startDate() == null
-        || command.endDate() == null
-        || command.tagIds() == null || command.tagIds().isEmpty()
-        || command.days() == null || command.days().isEmpty()) {
+  private void validateRequiredFields(
+      List<Long> countryIds,
+      List<Long> cityIds,
+      String title,
+      LocalDate startDate,
+      LocalDate endDate,
+      List<Long> tagIds,
+      List<CourseDayCommand> days,
+      List<CourseFlightCommand> flights
+  ) {
+    if (countryIds == null || countryIds.isEmpty()
+        || cityIds == null || cityIds.isEmpty()
+        || title == null || title.isBlank()
+        || startDate == null
+        || endDate == null
+        || tagIds == null || tagIds.isEmpty()
+        || days == null || days.isEmpty()) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
-    for (CourseDayCommand day : command.days()) {
+    for (CourseDayCommand day : days) {
       if (day.dayNumber() == null
           || day.imageUrls() == null || day.imageUrls().isEmpty()) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
     }
-    if (command.flights() == null) {
+    if (flights == null) {
       return;
     }
-    for (CourseFlightCommand flight : command.flights()) {
+    for (CourseFlightCommand flight : flights) {
       if (flight.airline() == null || flight.airline().isBlank()
           || flight.departureAirport() == null || flight.departureAirport().isBlank()
           || flight.departureAt() == null
@@ -188,14 +239,14 @@ public class CourseService {
     }
   }
 
-  private void validateDateRanges(CreateCourseCommand command) {
-    if (command.endDate().isBefore(command.startDate())) {
+  private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseFlightCommand> flights) {
+    if (endDate.isBefore(startDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
-    if (command.flights() == null) {
+    if (flights == null) {
       return;
     }
-    for (CourseFlightCommand flight : command.flights()) {
+    for (CourseFlightCommand flight : flights) {
       if (flight.arrivalAt().isBefore(flight.departureAt())) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }

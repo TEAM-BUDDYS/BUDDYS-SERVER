@@ -4,6 +4,7 @@ import java.util.List;
 import org.sopt.buddys.domain.course.entity.CourseTag;
 import org.sopt.buddys.domain.course.entity.CourseTagId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,4 +18,8 @@ public interface CourseTagRepository extends JpaRepository<CourseTag, CourseTagI
       order by ct.tag.id asc
       """)
   List<CourseTag> findAllByCourseIdWithTag(@Param("courseId") Long courseId);
+
+  @Modifying
+  @Query("delete from CourseTag ct where ct.course.id = :courseId")
+  void deleteAllByCourseId(@Param("courseId") Long courseId);
 }

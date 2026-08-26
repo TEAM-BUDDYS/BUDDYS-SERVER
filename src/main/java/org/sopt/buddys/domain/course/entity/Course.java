@@ -72,4 +72,18 @@ public class Course extends BaseEntity {
   public void delete() {
     this.deletedAt = LocalDateTime.now();
   }
+
+  public void update(
+      String title,
+      String content,
+      String thumbnailImageUrl,
+      LocalDate startDate,
+      LocalDate endDate
+  ) {
+    this.title = title;
+    this.content = content;
+    this.thumbnailImageUrl = thumbnailImageUrl;
+    this.startDate = startDate;
+    this.endDate = endDate;
+  }
 }

@@ -16,14 +16,17 @@ import org.sopt.buddys.domain.course.dto.request.CourseDayRequest;
 import org.sopt.buddys.domain.course.dto.request.CourseFlightRequest;
 import org.sopt.buddys.domain.course.dto.request.CoursePlaceRequest;
 import org.sopt.buddys.domain.course.dto.request.CreateCourseRequest;
+import org.sopt.buddys.domain.course.dto.request.UpdateCourseRequest;
 import org.sopt.buddys.domain.course.dto.response.CourseBookmarkResponse;
 import org.sopt.buddys.domain.course.dto.response.CourseDetailResponse;
 import org.sopt.buddys.domain.course.dto.response.CreateCourseResponse;
+import org.sopt.buddys.domain.course.dto.response.UpdateCourseResponse;
 import org.sopt.buddys.domain.course.service.CourseService;
 import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
+import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
@@ -34,6 +37,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -119,6 +123,81 @@ public class CourseController {
             GlobalSuccessCode.CREATED,
             CreateCourseResponse.from(courseService.createCourse(userId, toCommand(request)))
         ));
+  }
+
+  @Operation(summary = "코스 수정", description = "코스 작성자가 코스 정보를 수정합니다. 요청 본문으로 국가/도시/날짜/제목/내용/태그/일자별 사진·장소·메모·비용/항공편 정보 전체를 대체합니다.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "수정 성공"),
+      @ApiResponse(
+          responseCode = "400",
+          description = "잘못된 요청",
+          content = @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = BaseResponse.class),
+              examples = {
+                  @ExampleObject(
+                      name = "잘못된 요청",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "GLB-E001",
+                            "message": "잘못된 요청입니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "일자(dayNumber) 중복",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "COURSE-E004",
+                            "message": "일자(dayNumber)가 중복되었습니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "활동 태그 누락",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "COURSE-E006",
+                            "message": "활동 태그를 하나 이상 선택해야 합니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "태그 개수 초과",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "COURSE-E007",
+                            "message": "태그 선택 개수를 초과했습니다.",
+                            "data": null
+                          }
+                          """
+                  )
+              }
+          )
+      ),
+      @ApiResponse(responseCode = "403", description = "코스 작성자가 아님"),
+      @ApiResponse(responseCode = "404", description = "코스, 국가, 도시 또는 태그를 찾을 수 없음")
+  })
+  @CommonErrorResponses
+  @PutMapping("/{courseId}")
+  public BaseResponse<UpdateCourseResponse> updateCourse(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "수정할 코스 ID", example = "1")
+      @PathVariable @Positive Long courseId,
+      @RequestBody @Valid UpdateCourseRequest request
+  ) {
+    return BaseResponse.success(
+        CourseSuccessCode.COURSE_UPDATED,
+        UpdateCourseResponse.from(courseService.updateCourse(userId, courseId, toCommand(request)))
+    );
   }
 
   @Operation(summary = "코스 상세 조회", description = "여행 코스 게시글의 상세 정보를 조회합니다.")
@@ -209,6 +288,21 @@ public class CourseController {
         request.endDate(),
         request.tagIds(),
         request.companionUserIds(),
+        request.days() == null ? null : request.days().stream().map(this::toCommand).toList(),
+        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
+    );
+  }
+
+  private UpdateCourseCommand toCommand(UpdateCourseRequest request) {
+    return new UpdateCourseCommand(
+        request.countryIds(),
+        request.cityIds(),
+        request.title(),
+        request.content(),
+        request.thumbnailImageUrl(),
+        request.startDate(),
+        request.endDate(),
+        request.tagIds(),
         request.days() == null ? null : request.days().stream().map(this::toCommand).toList(),
         request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
     );

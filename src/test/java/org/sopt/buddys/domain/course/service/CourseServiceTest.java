@@ -28,6 +28,7 @@ import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
+import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.place.entity.Place;
@@ -392,6 +393,115 @@ class CourseServiceTest {
         );
   }
 
+  @DisplayName("작성자가 코스를 수정하면 국가/도시/태그/일자/장소/항공편이 대체되고 동행자는 유지된다")
+  @Test
+  void updateCourse_byAuthor_replacesDetailsAndKeepsCompanions() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
+    Long franceId = insertCountry("프랑스", "FR");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long activityTagId = insertTag("도보여행", "ACTIVITY");
+    Long newActivityTagId = insertTag("맛집투어", "ACTIVITY");
+    Long italyId = insertCountry("이탈리아", "IT");
+    Long romeId = insertCity(italyId, "Rome", "로마", 2_800_000L);
+
+    CreateCourseCommand createCommand = new CreateCourseCommand(
+        List.of(franceId), List.of(parisId), "파리 코스", "설명", "https://example.com/old.jpg",
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(activityTagId), List.of(companion.getId()),
+        List.of(new CourseDayCommand(
+            (short) 1, LocalDate.of(2026, 9, 1), List.of("https://example.com/old-day.jpg"),
+            List.of(new CoursePlaceCommand(
+                "ChIJ-old", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null))
+        )),
+        List.of(new CourseFlightCommand(
+            "대한항공", "KE901", "ICN", LocalDateTime.of(2026, 9, 1, 13, 0),
+            "CDG", LocalDateTime.of(2026, 9, 1, 18, 30)))
+    );
+    Course course = courseService.createCourse(author.getId(), createCommand);
+
+    UpdateCourseCommand updateCommand = new UpdateCourseCommand(
+        List.of(italyId), List.of(romeId), " 로마 코스 ", " 새로운 설명 ", "https://example.com/new.jpg",
+        LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3),
+        List.of(newActivityTagId),
+        List.of(new CourseDayCommand(
+            (short) 1, LocalDate.of(2026, 10, 1), List.of("https://example.com/new-day.jpg"),
+            List.of(new CoursePlaceCommand(
+                "ChIJ-new", "콜로세움", "TOURISM", null, null, (short) 0, "예약 필수", BigDecimal.valueOf(16000)))
+        )),
+        List.of(new CourseFlightCommand(
+            "아시아나항공", "OZ501", "ICN", LocalDateTime.of(2026, 10, 1, 9, 0),
+            "FCO", LocalDateTime.of(2026, 10, 1, 16, 0)))
+    );
+
+    // when
+    courseService.updateCourse(author.getId(), course.getId(), updateCommand);
+
+    // then
+    Course updatedCourse = courseRepository.findById(course.getId()).orElseThrow();
+    assertThat(updatedCourse.getTitle()).isEqualTo("로마 코스");
+    assertThat(updatedCourse.getContent()).isEqualTo("새로운 설명");
+    assertThat(updatedCourse.getThumbnailImageUrl()).isEqualTo("https://example.com/new.jpg");
+    assertThat(updatedCourse.getStartDate()).isEqualTo(LocalDate.of(2026, 10, 1));
+    assertThat(updatedCourse.getEndDate()).isEqualTo(LocalDate.of(2026, 10, 3));
+
+    assertThat(courseCountryRepository.findAllByCourseIdWithCountry(course.getId()))
+        .extracting(cc -> cc.getCountry().getId()).containsExactly(italyId);
+    assertThat(courseCityRepository.findAllByCourseIdWithCity(course.getId()))
+        .extracting(cc -> cc.getCity().getId()).containsExactly(romeId);
+    assertThat(courseTagRepository.findAllByCourseIdWithTag(course.getId()))
+        .extracting(ct -> ct.getTag().getId()).containsExactly(newActivityTagId);
+    assertThat(courseFlightRepository.findAllByCourseIdOrderByOrderNoAsc(course.getId()))
+        .extracting("airline").containsExactly("아시아나항공");
+    assertThat(courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(course.getId())).hasSize(1);
+    assertThat(courseImageRepository.findAll())
+        .extracting("imageUrl").containsExactly("https://example.com/new-day.jpg");
+    assertThat(coursePlaceRepository.findAll())
+        .extracting(cp -> cp.getPlace().getName()).containsExactly("콜로세움");
+    assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
+        .extracting(cc -> cc.getUser().getId()).containsExactly(companion.getId());
+  }
+
+  @DisplayName("작성자가 아닌 유저가 코스를 수정하면 예외가 발생한다")
+  @Test
+  void updateCourse_notAuthor_throwsForbidden() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른유저"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+    UpdateCourseCommand updateCommand = createDefaultUpdateCommand(
+        countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId);
+
+    // when, then
+    assertThatThrownBy(() -> courseService.updateCourse(other.getId(), course.getId(), updateCommand))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.FORBIDDEN)
+        );
+  }
+
+  @DisplayName("존재하지 않는 코스를 수정하면 예외가 발생한다")
+  @Test
+  void updateCourse_courseNotFound_throwsException() {
+    // given
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    UpdateCourseCommand updateCommand = createDefaultUpdateCommand(
+        countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId);
+
+    // when, then
+    assertThatThrownBy(() -> courseService.updateCourse(1L, 999_999L, updateCommand))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
+        );
+  }
+
   @DisplayName("코스 상세 조회 시 국가/도시(N:M), 태그, 일자, 장소, 항공편, 동행자 정보를 함께 반환한다")
   @Test
   void getCourseDetail_returnsCourseWithAllDetails() {
@@ -616,6 +726,18 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null, null,
         startDate, endDate,
         List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
+        null
+    );
+  }
+
+  private UpdateCourseCommand createDefaultUpdateCommand(
+      Long countryId, Long cityId, LocalDate startDate, LocalDate endDate, Long tagId
+  ) {
+    return new UpdateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        startDate, endDate,
+        List.of(tagId),
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
         null
     );
