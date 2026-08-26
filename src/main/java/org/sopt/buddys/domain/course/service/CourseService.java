@@ -118,17 +118,17 @@ public class CourseService {
 
   @Transactional
   public Course updateCourse(Long userId, Long courseId, UpdateCourseCommand command) {
-    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
-        command.endDate(), command.tagIds(), command.days(), command.flights());
-    validateDateRanges(command.startDate(), command.endDate(), command.flights());
-    validateDayNumbersUnique(command.days());
-
     Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     if (!course.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
+        command.endDate(), command.tagIds(), command.days(), command.flights());
+    validateDateRanges(command.startDate(), command.endDate(), command.flights());
+    validateDayNumbersUnique(command.days());
 
     course.update(
         command.title().trim(),

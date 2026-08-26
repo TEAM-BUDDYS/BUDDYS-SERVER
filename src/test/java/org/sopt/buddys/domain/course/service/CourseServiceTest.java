@@ -531,6 +531,37 @@ class CourseServiceTest {
         );
   }
 
+  @DisplayName("작성자가 아닌 유저가 잘못된 요청 본문으로 수정을 시도해도 검증보다 인가가 먼저 이루어진다")
+  @Test
+  void updateCourse_notAuthorWithInvalidBody_throwsForbiddenNotValidation() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른유저"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+
+    UpdateCourseCommand invalidUpdateCommand = new UpdateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId),
+        List.of(
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null),
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)
+        ),
+        null
+    );
+
+    // when, then
+    assertThatThrownBy(() -> courseService.updateCourse(other.getId(), course.getId(), invalidUpdateCommand))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.FORBIDDEN)
+        );
+  }
+
   @DisplayName("존재하지 않는 코스를 수정하면 예외가 발생한다")
   @Test
   void updateCourse_courseNotFound_throwsException() {
