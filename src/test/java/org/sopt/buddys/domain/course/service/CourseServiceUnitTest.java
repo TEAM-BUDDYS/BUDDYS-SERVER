@@ -7,7 +7,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
 
+import java.sql.SQLException;
 import java.util.Optional;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,8 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
-import org.sopt.buddys.domain.course.entity.CourseBookmarkId;
-import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -36,9 +36,9 @@ class CourseServiceUnitTest {
   private CourseRepository courseRepository;
 
   @Mock
-  private CourseBookmarkRepository courseBookmarkRepository;
+  private CourseBookmarkTransactionService courseBookmarkTransactionService;
 
-  @DisplayName("북마크 저장이 중복 제약 위반이면 이미 저장된 상태이므로 예외 없이 무시된다")
+  @DisplayName("북마크 저장이 PRIMARY 키 중복 위반이면 이미 저장된 상태이므로 예외 없이 무시된다")
   @Test
   void bookmarkCourse_duplicateBookmarkRace_isIgnored() {
     // given
@@ -49,15 +49,17 @@ class CourseServiceUnitTest {
 
     given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
     given(courseRepository.findByIdAndDeletedAtIsNull(courseId)).willReturn(Optional.of(course));
-    willThrow(new DataIntegrityViolationException("duplicate"))
-        .given(courseBookmarkRepository).saveAndFlush(any(CourseBookmark.class));
-    given(courseBookmarkRepository.existsById(new CourseBookmarkId(userId, courseId))).willReturn(true);
+    ConstraintViolationException primaryKeyViolation = new ConstraintViolationException(
+        "duplicate", new SQLException("duplicate"), "PRIMARY"
+    );
+    willThrow(new DataIntegrityViolationException("duplicate", primaryKeyViolation))
+        .given(courseBookmarkTransactionService).create(any(CourseBookmark.class));
 
     // when, then
     assertThatCode(() -> courseService.bookmarkCourse(userId, courseId)).doesNotThrowAnyException();
   }
 
-  @DisplayName("북마크 저장이 중복 제약이 아닌 다른 무결성 위반이면 예외가 그대로 전파된다")
+  @DisplayName("북마크 저장이 PRIMARY 키 위반이 아닌 다른 무결성 위반(예: FK 위반)이면 예외가 그대로 전파된다")
   @Test
   void bookmarkCourse_nonDuplicateIntegrityViolation_propagatesException() {
     // given
@@ -68,9 +70,11 @@ class CourseServiceUnitTest {
 
     given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
     given(courseRepository.findByIdAndDeletedAtIsNull(courseId)).willReturn(Optional.of(course));
-    willThrow(new DataIntegrityViolationException("fk violation"))
-        .given(courseBookmarkRepository).saveAndFlush(any(CourseBookmark.class));
-    given(courseBookmarkRepository.existsById(new CourseBookmarkId(userId, courseId))).willReturn(false);
+    ConstraintViolationException fkViolation = new ConstraintViolationException(
+        "fk violation", new SQLException("fk violation"), "fk_course_bookmark_course"
+    );
+    willThrow(new DataIntegrityViolationException("fk violation", fkViolation))
+        .given(courseBookmarkTransactionService).create(any(CourseBookmark.class));
 
     // when, then
     assertThatThrownBy(() -> courseService.bookmarkCourse(userId, courseId))

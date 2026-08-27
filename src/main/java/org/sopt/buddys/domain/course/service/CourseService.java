@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
 import org.sopt.buddys.domain.course.code.CourseErrorCode;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
@@ -73,6 +74,8 @@ import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 @Transactional(readOnly = true)
 public class CourseService {
 
+  private static final String COURSE_BOOKMARK_PRIMARY_KEY_CONSTRAINT = "PRIMARY";
+
   private final CourseRepository courseRepository;
   private final CourseCountryRepository courseCountryRepository;
   private final CourseCityRepository courseCityRepository;
@@ -83,6 +86,7 @@ public class CourseService {
   private final CourseCompanionRepository courseCompanionRepository;
   private final CourseFlightRepository courseFlightRepository;
   private final CourseBookmarkRepository courseBookmarkRepository;
+  private final CourseBookmarkTransactionService courseBookmarkTransactionService;
   private final UserRepository userRepository;
   private final CountryRepository countryRepository;
   private final CityRepository cityRepository;
@@ -201,12 +205,25 @@ public class CourseService {
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     try {
-      courseBookmarkRepository.saveAndFlush(new CourseBookmark(user, course));
+      courseBookmarkTransactionService.create(new CourseBookmark(user, course));
     } catch (DataIntegrityViolationException e) {
-      if (!courseBookmarkRepository.existsById(new CourseBookmarkId(userId, courseId))) {
+      if (!isConstraintViolation(e, COURSE_BOOKMARK_PRIMARY_KEY_CONSTRAINT)) {
         throw e;
       }
     }
+  }
+
+  private boolean isConstraintViolation(DataIntegrityViolationException exception, String constraintName) {
+    Throwable cause = exception;
+    while (cause != null) {
+      if (cause instanceof ConstraintViolationException constraintViolationException) {
+        String actualConstraintName = constraintViolationException.getConstraintName();
+        return actualConstraintName != null
+            && (actualConstraintName.equals(constraintName) || actualConstraintName.endsWith("." + constraintName));
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 
   @Transactional
