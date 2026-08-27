@@ -332,10 +332,9 @@ public class CourseService {
   }
 
   private void saveCourseDays(Course course, List<CourseDayCommand> days) {
-    List<CourseDay> courseDays = days.stream()
-        .map(dayCommand -> courseDayRepository.save(
-            new CourseDay(course, dayCommand.dayNumber(), dayCommand.date())))
-        .toList();
+    List<CourseDay> courseDays = courseDayRepository.saveAll(days.stream()
+        .map(dayCommand -> new CourseDay(course, dayCommand.dayNumber(), dayCommand.date()))
+        .toList());
 
     for (int i = 0; i < days.size(); i++) {
       saveCourseImages(courseDays.get(i), days.get(i).imageUrls());
