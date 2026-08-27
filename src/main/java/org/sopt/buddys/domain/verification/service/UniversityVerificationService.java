@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.verification.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.location.entity.University;
 import org.sopt.buddys.domain.location.repository.UniversityRepository;
@@ -14,7 +15,10 @@ import org.sopt.buddys.domain.verification.repository.UniversityVerificationRepo
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -33,13 +37,18 @@ public class UniversityVerificationService {
 
     University university = resolveUniversityByEmail(email);
 
-    UniversityVerification verification = UniversityVerification.of(
-        userId, university.getId(), email, universityVerificationProperties.tokenExpiration()
+    UniversityVerification verification = UniversityVerification.issue(userId, university.getId(), email);
+    universityVerificationRepository.save(
+        verification,
+        universityVerificationProperties.tokenExpiration()
     );
-    universityVerificationRepository.deleteById(userId);
-    universityVerificationRepository.save(verification);
 
-    mailSender.send(email, university.getName(), verification.getToken());
+    try {
+      mailSender.send(email, university.getName(), verification.token());
+    } catch (RuntimeException e) {
+      deleteAfterMailFailure(verification, e);
+      throw e;
+    }
   }
 
   @Transactional
@@ -47,22 +56,45 @@ public class UniversityVerificationService {
     UniversityVerification verification = universityVerificationRepository.findByToken(token)
         .orElseThrow(() -> new BaseException(UniversityVerificationErrorCode.VERIFICATION_TOKEN_NOT_FOUND));
 
-    if (verification.isExpired()) {
-      throw new BaseException(UniversityVerificationErrorCode.VERIFICATION_TOKEN_EXPIRED);
-    }
-
-    User user = userRepository.findByIdAndDeletedAtIsNull(verification.getUserId())
+    User user = userRepository.findByIdAndDeletedAtIsNull(verification.userId())
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    University university = universityRepository.findById(verification.getUniversityId())
+    University university = universityRepository.findById(verification.universityId())
         .orElseThrow(() -> new BaseException(LocationErrorCode.UNIVERSITY_NOT_FOUND));
 
     user.verifyUniversity(university);
-    universityVerificationRepository.delete(verification);
+    deleteAfterCommit(verification);
   }
 
   private University resolveUniversityByEmail(String email) {
     String emailDomain = email.substring(email.indexOf('@') + 1);
     return universityRepository.findFirstByDomainIgnoreCase(emailDomain)
         .orElseThrow(() -> new BaseException(LocationErrorCode.UNIVERSITY_NOT_FOUND));
+  }
+
+  private void deleteAfterMailFailure(UniversityVerification verification, RuntimeException cause) {
+    try {
+      universityVerificationRepository.deleteIfTokenMatches(verification);
+    } catch (RuntimeException cleanupException) {
+      cause.addSuppressed(cleanupException);
+      log.error("Failed to clean up university verification token after mail failure", cleanupException);
+    }
+  }
+
+  private void deleteAfterCommit(UniversityVerification verification) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      universityVerificationRepository.deleteIfTokenMatches(verification);
+      return;
+    }
+
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override
+      public void afterCommit() {
+        try {
+          universityVerificationRepository.deleteIfTokenMatches(verification);
+        } catch (RuntimeException e) {
+          log.error("Failed to delete consumed university verification token", e);
+        }
+      }
+    });
   }
 }

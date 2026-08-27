@@ -44,7 +44,7 @@ mail:
 
 verification:
   university-email:
-    token-expiration: 900000
+    token-expiration: 15m
     confirm-url: http://localhost:8080/api/v1/verifications/university/email/confirm
 
 buddys:
