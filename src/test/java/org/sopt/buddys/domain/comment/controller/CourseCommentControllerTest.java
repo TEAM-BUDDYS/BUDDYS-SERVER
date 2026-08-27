@@ -10,8 +10,6 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.comment.entity.CourseComment;
@@ -24,37 +22,14 @@ import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
-import org.sopt.buddys.global.security.jwt.JwtProvider;
+import org.sopt.buddys.support.IntegrationTestSupport;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Testcontainers
-@AutoConfigureMockMvc
-class CourseCommentControllerTest {
-
-  @Container
-  @ServiceConnection
-  static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
-
-  @Autowired
-  private MockMvc mockMvc;
-
-  @Autowired
-  private JwtProvider jwtProvider;
+class CourseCommentControllerTest extends IntegrationTestSupport {
 
   @Autowired
   private CourseCommentRepository courseCommentRepository;
@@ -67,19 +42,6 @@ class CourseCommentControllerTest {
 
   @Autowired
   private UserRepository userRepository;
-
-  @Autowired
-  private JdbcTemplate jdbcTemplate;
-
-  @BeforeEach
-  void setUp() {
-    cleanUp();
-  }
-
-  @AfterEach
-  void tearDown() {
-    cleanUp();
-  }
 
   @DisplayName("로그인한 사용자는 코스에 댓글을 작성할 수 있다")
   @Test
@@ -322,10 +284,6 @@ class CourseCommentControllerTest {
         .build();
   }
 
-  private String bearerToken(Long userId) {
-    return "Bearer " + jwtProvider.generateToken(userId);
-  }
-
   private Long insertCountry(String name, String isoCode) {
     KeyHolder keyHolder = new GeneratedKeyHolder();
     jdbcTemplate.update(connection -> {
@@ -374,26 +332,5 @@ class CourseCommentControllerTest {
         keyHolder
     );
     return keyHolder.getKey().longValue();
-  }
-
-  private void cleanUp() {
-    jdbcTemplate.update("DELETE FROM course_comment");
-    jdbcTemplate.update("DELETE FROM course_bookmark");
-    jdbcTemplate.update("DELETE FROM course_flight");
-    jdbcTemplate.update("DELETE FROM course_companion");
-    jdbcTemplate.update("DELETE FROM course_place");
-    jdbcTemplate.update("DELETE FROM course_image");
-    jdbcTemplate.update("DELETE FROM course_day");
-    jdbcTemplate.update("DELETE FROM course_tag");
-    jdbcTemplate.update("DELETE FROM course_country");
-    jdbcTemplate.update("DELETE FROM course_city");
-    jdbcTemplate.update("DELETE FROM course");
-    jdbcTemplate.update("DELETE FROM place_bookmark");
-    jdbcTemplate.update("DELETE FROM place");
-    jdbcTemplate.update("DELETE FROM tag");
-    jdbcTemplate.update("DELETE FROM `user`");
-    jdbcTemplate.update("DELETE FROM university");
-    jdbcTemplate.update("DELETE FROM city");
-    jdbcTemplate.update("DELETE FROM country");
   }
 }
