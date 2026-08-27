@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.code.CourseErrorCode;
 import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.entity.CourseDay;
 import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
 import org.sopt.buddys.domain.course.repository.CourseCityRepository;
 import org.sopt.buddys.domain.course.repository.CourseCompanionRepository;
@@ -168,14 +169,17 @@ class CourseServiceTest {
     assertThat(savedCourse.getTitle()).isEqualTo("파리 5일 코스");
     assertThat(savedCourse.getContent()).isEqualTo("루브르부터...");
     assertThat(savedCourse.getThumbnailImageUrl()).isEqualTo("https://example.com/thumbnail.jpg");
-    assertThat(courseCountryRepository.findAll()).hasSize(2);
-    assertThat(courseCityRepository.findAll()).hasSize(2);
-    assertThat(courseTagRepository.findAll()).hasSize(1);
-    assertThat(courseCompanionRepository.findAll()).hasSize(1);
-    assertThat(courseDayRepository.findAll()).hasSize(1);
-    assertThat(courseImageRepository.findAll()).hasSize(2);
-    assertThat(coursePlaceRepository.findAll()).hasSize(1);
-    assertThat(courseFlightRepository.findAll()).hasSize(1);
+    List<CourseDay> courseDays = courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(course.getId());
+    List<Long> courseDayIds = courseDays.stream().map(CourseDay::getId).toList();
+
+    assertThat(courseCountryRepository.findAllByCourseIdWithCountry(course.getId())).hasSize(2);
+    assertThat(courseCityRepository.findAllByCourseIdWithCity(course.getId())).hasSize(2);
+    assertThat(courseTagRepository.findAllByCourseIdWithTag(course.getId())).hasSize(1);
+    assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId())).hasSize(1);
+    assertThat(courseDays).hasSize(1);
+    assertThat(courseImageRepository.findImageUrlsByCourseIdIn(List.of(course.getId()))).hasSize(2);
+    assertThat(coursePlaceRepository.findAllByCourseDayIdInWithPlace(courseDayIds)).hasSize(1);
+    assertThat(courseFlightRepository.findAllByCourseIdOrderByOrderNoAsc(course.getId())).hasSize(1);
 
     Place place = placeRepository.findByGooglePlaceId("ChIJ-place-1").orElseThrow();
     assertThat(place.getName()).isEqualTo("루브르 박물관");
