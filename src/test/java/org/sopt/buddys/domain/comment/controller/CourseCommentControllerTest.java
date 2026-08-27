@@ -194,6 +194,39 @@ class CourseCommentControllerTest {
         .andExpect(jsonPath("$.data.comments[1].timeAgo").value("3분 전"));
   }
 
+  @DisplayName("작성 시간이 같은 댓글이 여러 개여도 페이지 경계에서 중복이나 누락 없이 안정적으로 정렬된다")
+  @Test
+  void getComments_sameCreatedAt_stablePaginationById() throws Exception {
+    // given
+    User courseAuthor = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User commentAuthor = userRepository.save(createUser("commenter@test.com", "provider-commenter", "댓글작성자"));
+    Course course = createCourse(courseAuthor);
+
+    LocalDateTime sameCreatedAt = LocalDateTime.now().minusHours(1);
+    CourseComment first = saveComment(course, commentAuthor, "댓글1", sameCreatedAt);
+    CourseComment second = saveComment(course, commentAuthor, "댓글2", sameCreatedAt);
+    CourseComment third = saveComment(course, commentAuthor, "댓글3", sameCreatedAt);
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses/{courseId}/comments", course.getId())
+            .queryParam("page", "0")
+            .queryParam("size", "2")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments[0].commentId").value(first.getId()))
+        .andExpect(jsonPath("$.data.comments[1].commentId").value(second.getId()))
+        .andExpect(jsonPath("$.data.hasNext").value(true));
+
+    mockMvc.perform(get("/api/v1/courses/{courseId}/comments", course.getId())
+            .queryParam("page", "1")
+            .queryParam("size", "2")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments.length()").value(1))
+        .andExpect(jsonPath("$.data.comments[0].commentId").value(third.getId()))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
   @DisplayName("댓글이 없는 코스는 빈 댓글 배열을 반환한다")
   @Test
   void getComments_emptyCourse_returnsEmptyArray() throws Exception {

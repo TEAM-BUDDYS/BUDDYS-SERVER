@@ -14,7 +14,7 @@ public interface CourseCommentRepository extends JpaRepository<CourseComment, Lo
       from CourseComment cc
       join fetch cc.author
       where cc.course.id = :courseId
-      order by cc.createdAt asc
+      order by cc.createdAt asc, cc.id asc
       """)
   Slice<CourseComment> findAllByCourseIdWithAuthorOrderByCreatedAtAsc(
       @Param("courseId") Long courseId,

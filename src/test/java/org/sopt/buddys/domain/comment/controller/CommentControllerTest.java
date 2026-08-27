@@ -203,6 +203,39 @@ class CommentControllerTest {
         .andExpect(jsonPath("$.data.hasNext").value(false));
   }
 
+  @DisplayName("작성 시간이 같은 댓글이 여러 개여도 페이지 경계에서 중복이나 누락 없이 안정적으로 정렬된다")
+  @Test
+  void getComments_sameCreatedAt_stablePaginationById() throws Exception {
+    // given
+    User postAuthor = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User commentAuthor = userRepository.save(createUser("commenter@test.com", "provider-commenter", "댓글작성자"));
+    Post post = createPost(postAuthor);
+
+    LocalDateTime sameCreatedAt = LocalDateTime.now().minusHours(1);
+    Comment first = saveComment(post, commentAuthor, "댓글1", sameCreatedAt);
+    Comment second = saveComment(post, commentAuthor, "댓글2", sameCreatedAt);
+    Comment third = saveComment(post, commentAuthor, "댓글3", sameCreatedAt);
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .queryParam("page", "0")
+            .queryParam("size", "2")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments[0].commentId").value(first.getId()))
+        .andExpect(jsonPath("$.data.comments[1].commentId").value(second.getId()))
+        .andExpect(jsonPath("$.data.hasNext").value(true));
+
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .queryParam("page", "1")
+            .queryParam("size", "2")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(commentAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments.length()").value(1))
+        .andExpect(jsonPath("$.data.comments[0].commentId").value(third.getId()))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
   @DisplayName("댓글 목록 조회 시 30일 이상은 월 단위, 1년 이상은 년 단위로 상대 시간을 반환한다")
   @Test
   void getComments_returnsMonthAndYearTimeAgo() throws Exception {
