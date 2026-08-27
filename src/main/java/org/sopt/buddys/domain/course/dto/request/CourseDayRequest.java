@@ -26,6 +26,6 @@ public record CourseDayRequest(
 
     @Schema(description = "해당 일자에 방문한 장소 목록 (최대 20곳)")
     @Size(max = 20)
-    List<@Valid CoursePlaceRequest> places
+    List<@NotNull @Valid CoursePlaceRequest> places
 ) {
 }

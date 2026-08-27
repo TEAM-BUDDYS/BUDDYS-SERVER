@@ -301,6 +301,94 @@ class CourseControllerTest {
         .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
+  @DisplayName("days 목록에 null 요소가 있으면 실패한다")
+  @Test
+  void createCourse_nullElementInDays_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [ null ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("flights 목록에 null 요소가 있으면 실패한다")
+  @Test
+  void createCourse_nullElementInFlights_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ],
+                  "flights": [ null ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("places 목록에 null 요소가 있으면 실패한다")
+  @Test
+  void createCourse_nullElementInPlaces_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"], "places": [ null ] } ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
   @DisplayName("작성자가 코스를 수정한다")
   @Test
   void updateCourse_byAuthor_returnsOk() throws Exception {

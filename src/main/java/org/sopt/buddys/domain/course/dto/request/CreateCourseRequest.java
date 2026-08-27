@@ -50,10 +50,10 @@ public record CreateCourseRequest(
     @Schema(description = "일자별 코스 목록 (최대 30일)")
     @NotEmpty
     @Size(max = 30)
-    List<@Valid CourseDayRequest> days,
+    List<@NotNull @Valid CourseDayRequest> days,
 
     @Schema(description = "항공편 목록 (최대 10개)")
     @Size(max = 10)
-    List<@Valid CourseFlightRequest> flights
+    List<@NotNull @Valid CourseFlightRequest> flights
 ) {
 }

@@ -46,10 +46,10 @@ public record UpdateCourseRequest(
     @Schema(description = "일자별 코스 목록 (최대 30일). 기존 일자/장소/사진 정보를 모두 대체합니다.")
     @NotEmpty
     @Size(max = 30)
-    List<@Valid CourseDayRequest> days,
+    List<@NotNull @Valid CourseDayRequest> days,
 
     @Schema(description = "항공편 목록 (최대 10개). 기존 항공편 정보를 모두 대체합니다.")
     @Size(max = 10)
-    List<@Valid CourseFlightRequest> flights
+    List<@NotNull @Valid CourseFlightRequest> flights
 ) {
 }
