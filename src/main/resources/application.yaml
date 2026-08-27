@@ -17,6 +17,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  data:
+    redis:
+      repositories:
+        enabled: false
+
   security:
     jwt:
       secret: ${JWT_SECRET}
@@ -62,6 +67,17 @@ verification:
   university-email:
     token-expiration: 900000 # 15분
     confirm-url: ${SERVER_BASE_URL:http://localhost:8080}/api/v1/verifications/university/email/confirm
+
+buddys:
+  redis:
+    mode: ${REDIS_MODE:standalone}
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:}
+    ssl-enabled: ${REDIS_SSL_ENABLED:false}
+    connect-timeout: ${REDIS_CONNECT_TIMEOUT:3s}
+    command-timeout: ${REDIS_COMMAND_TIMEOUT:3s}
 
 management:
   endpoints:

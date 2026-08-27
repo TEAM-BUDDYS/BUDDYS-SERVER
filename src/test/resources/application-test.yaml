@@ -1,4 +1,9 @@
 spring:
+  data:
+    redis:
+      repositories:
+        enabled: false
+
   security:
     jwt:
       secret: test-secret-key-for-testing-purposes-minimum-32-chars
@@ -41,3 +46,12 @@ verification:
   university-email:
     token-expiration: 900000
     confirm-url: http://localhost:8080/api/v1/verifications/university/email/confirm
+
+buddys:
+  redis:
+    mode: standalone
+    host: localhost
+    port: 6379
+    ssl-enabled: false
+    connect-timeout: 3s
+    command-timeout: 3s
