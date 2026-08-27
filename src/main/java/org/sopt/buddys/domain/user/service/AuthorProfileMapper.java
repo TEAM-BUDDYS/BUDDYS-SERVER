@@ -14,17 +14,24 @@ public final class AuthorProfileMapper {
   }
 
   public static AuthorProfile toAuthorProfile(User author) {
-    boolean withdrawn = author.getDeletedAt() != null;
     Country exchangeCountry = author.getExchangeCountry();
     return new AuthorProfile(
         author.getId(),
-        withdrawn ? WITHDRAWN_USER_NICKNAME : author.getNickname(),
-        withdrawn ? null : author.getProfileImageUrl(),
+        maskedNickname(author),
+        maskedProfileImageUrl(author),
         exchangeCountry == null ? null : exchangeCountry.getName(),
         toAge(author.getBirthDate()),
         toAgeRange(author.getBirthDate()),
         author.getGender()
     );
+  }
+
+  public static String maskedNickname(User user) {
+    return user.getDeletedAt() != null ? WITHDRAWN_USER_NICKNAME : user.getNickname();
+  }
+
+  public static String maskedProfileImageUrl(User user) {
+    return user.getDeletedAt() != null ? null : user.getProfileImageUrl();
   }
 
   private static String toAgeRange(LocalDate birthDate) {

@@ -260,6 +260,26 @@ class CommentControllerTest {
         .andExpect(jsonPath("$.data.comments[2].timeAgo").value("2개월 전"));
   }
 
+  @DisplayName("탈퇴한 유저가 작성한 댓글은 목록 조회 시 닉네임과 프로필 이미지가 가려진다")
+  @Test
+  void getComments_withdrawnCommentAuthor_masksNicknameAndProfileImage() throws Exception {
+    // given
+    User postAuthor = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User commentAuthor = userRepository.save(createUser(
+        "commenter@test.com", "provider-commenter", "댓글작성자", "https://example.com/commenter.png"));
+    Post post = createPost(postAuthor);
+    Comment comment = saveComment(post, commentAuthor, "댓글", LocalDateTime.now().minusMinutes(1));
+    jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), commentAuthor.getId());
+
+    // when, then
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(postAuthor.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.comments[0].commentId").value(comment.getId()))
+        .andExpect(jsonPath("$.data.comments[0].writerName").value("탈퇴한 사용자"))
+        .andExpect(jsonPath("$.data.comments[0].writerProfileImageUrl").doesNotExist());
+  }
+
   @DisplayName("댓글이 없는 게시글은 빈 댓글 배열을 반환한다")
   @Test
   void getComments_emptyPost_returnsEmptyArray() throws Exception {

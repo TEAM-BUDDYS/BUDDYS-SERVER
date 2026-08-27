@@ -641,10 +641,11 @@ public class CourseService {
   }
 
   private CourseDetailResult.CompanionResult toCompanionResult(User user) {
-    if (user.getDeletedAt() != null) {
-      return new CourseDetailResult.CompanionResult(user.getId(), AuthorProfileMapper.WITHDRAWN_USER_NICKNAME, null);
-    }
-    return new CourseDetailResult.CompanionResult(user.getId(), user.getNickname(), user.getProfileImageUrl());
+    return new CourseDetailResult.CompanionResult(
+        user.getId(),
+        AuthorProfileMapper.maskedNickname(user),
+        AuthorProfileMapper.maskedProfileImageUrl(user)
+    );
   }
 
   private List<CourseDetailResult.FlightResult> getFlightResults(Long courseId) {

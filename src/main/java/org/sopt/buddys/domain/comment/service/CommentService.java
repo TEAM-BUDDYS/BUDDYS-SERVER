@@ -13,6 +13,7 @@ import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.AuthorProfileMapper;
 import org.sopt.buddys.global.common.TimeAgoFormatter;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
@@ -48,8 +49,8 @@ public class CommentService {
         .map(comment -> new CommentResult(
             comment.getId(),
             comment.getAuthor().getId(),
-            comment.getAuthor().getNickname(),
-            comment.getAuthor().getProfileImageUrl(),
+            AuthorProfileMapper.maskedNickname(comment.getAuthor()),
+            AuthorProfileMapper.maskedProfileImageUrl(comment.getAuthor()),
             comment.getContent(),
             comment.getCreatedAt(),
             TimeAgoFormatter.format(comment.getCreatedAt(), now)
