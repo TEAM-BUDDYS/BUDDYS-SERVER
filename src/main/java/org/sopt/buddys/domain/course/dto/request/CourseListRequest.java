@@ -3,10 +3,12 @@ package org.sopt.buddys.domain.course.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import org.sopt.buddys.domain.course.service.command.CourseSearchCondition;
 
 public record CourseListRequest(
     @Schema(description = "국가 ID", example = "240")
+    @Positive
     Long countryId,
 
     @Schema(description = "페이지 번호. 0 이상입니다.", example = "0")

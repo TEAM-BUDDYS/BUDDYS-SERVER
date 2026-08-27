@@ -99,6 +99,21 @@ class CourseControllerTest {
         .andExpect(jsonPath("$.data.hasNext").value(false));
   }
 
+  @DisplayName("코스 목록 조회 시 countryId가 0 이하이면 실패한다")
+  @Test
+  void getCourses_nonPositiveCountryId_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses")
+            .queryParam("countryId", "-1")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
   @DisplayName("저장한 코스 목록을 조회한다")
   @Test
   void getBookmarkedCourses_returnsOk() throws Exception {
