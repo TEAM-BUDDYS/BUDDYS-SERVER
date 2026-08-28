@@ -50,7 +50,7 @@ public class UniversityVerificationController {
   @InvalidRequestResponse
   @UniversityNotFoundResponse
   @CommonErrorResponses
-  @PostMapping("/send")
+  @PostMapping
   public BaseResponse<Void> sendVerification(
       @Parameter(hidden = true)
       @LoginUser Long userId,
