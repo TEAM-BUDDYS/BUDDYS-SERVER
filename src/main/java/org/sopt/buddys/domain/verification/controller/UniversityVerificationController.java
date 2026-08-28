@@ -3,18 +3,20 @@ package org.sopt.buddys.domain.verification.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sopt.buddys.domain.location.controller.swagger.UniversityNotFoundResponse;
 import org.sopt.buddys.domain.verification.dto.request.UniversityVerificationRequest;
 import org.sopt.buddys.domain.verification.service.UniversityVerificationService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
+import org.sopt.buddys.global.swagger.CommonErrorResponses;
+import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -36,11 +38,18 @@ public class UniversityVerificationController {
 
   private final UniversityVerificationService universityVerificationService;
 
-  @Operation(summary = "학교 이메일 인증 요청", description = "학교 이메일 도메인으로 대학교를 찾아 인증 링크를 발송합니다.")
-  @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "인증 메일 발송 성공"),
-      @ApiResponse(responseCode = "400", description = "이메일 도메인과 일치하는 대학교를 찾을 수 없음"),
-  })
+  @Operation(
+      summary = "학교 이메일 인증 요청",
+      description = """
+          학교 이메일 도메인으로 대학교를 찾아 인증 링크를 발송합니다.
+
+          - 이메일 도메인과 일치하는 대학교가 없으면 404(LOC-E003)가 반환됩니다.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "인증 메일 발송 성공")
+  @InvalidRequestResponse
+  @UniversityNotFoundResponse
+  @CommonErrorResponses
   @PostMapping("/send")
   public BaseResponse<Void> sendVerification(
       @Parameter(hidden = true)
