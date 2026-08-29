@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
@@ -20,11 +21,13 @@ import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
+import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
@@ -194,6 +197,71 @@ class UserServiceTest {
 
     // then
     assertThat(result).isTrue();
+  }
+
+  @DisplayName("알림 설정 조회는 로그인한 사용자의 알림 설정 여부를 반환한다")
+  @Test
+  void getNotificationSetting_returnsUserWithNotificationEnabled() {
+    // given
+    Long userId = 1L;
+    User user = baseUserBuilder(userId)
+        .notificationEnabled(false)
+        .build();
+
+    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+
+    // when
+    User result = userService.getNotificationSetting(userId);
+
+    // then
+    assertThat(result.isNotificationEnabled()).isFalse();
+  }
+
+  @DisplayName("알림 설정 조회 시 사용자가 없으면 USER_NOT_FOUND 예외가 발생한다")
+  @Test
+  void getNotificationSetting_userNotFound_throwsException() {
+    // given
+    Long userId = 1L;
+    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> userService.getNotificationSetting(userId))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+  }
+
+  @DisplayName("알림 설정 변경은 값을 갱신하고 갱신된 사용자를 반환한다")
+  @Test
+  void updateNotificationSetting_updatesValue() {
+    // given
+    Long userId = 1L;
+    User user = baseUserBuilder(userId)
+        .notificationEnabled(true)
+        .build();
+
+    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+
+    // when
+    User result = userService.updateNotificationSetting(userId, false);
+
+    // then
+    assertThat(result.isNotificationEnabled()).isFalse();
+    assertThat(user.isNotificationEnabled()).isFalse();
+  }
+
+  @DisplayName("알림 설정 변경 시 사용자가 없으면 USER_NOT_FOUND 예외가 발생한다")
+  @Test
+  void updateNotificationSetting_userNotFound_throwsException() {
+    // given
+    Long userId = 1L;
+    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> userService.updateNotificationSetting(userId, false))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(UserErrorCode.USER_NOT_FOUND);
   }
 
   private User createOnboardedProfileUser(Long userId) {
