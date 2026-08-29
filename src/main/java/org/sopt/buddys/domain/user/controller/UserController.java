@@ -70,6 +70,19 @@ public class UserController {
     return BaseResponse.success(GlobalSuccessCode.OK, userProfileEditService.getProfile(userId));
   }
 
+  @Operation(summary = "프로필 수정", description = "닉네임, 성별, 생년월일, 자기소개와 카테고리별 태그를 수정합니다.")
+  @PatchMapping("/me")
+  public BaseResponse<ProfileEditResponse> updateMyProfile(
+          @Parameter(hidden = true)
+          @LoginUser Long userId,
+          @RequestBody @Valid UpdateProfileRequest request
+  ) {
+    return BaseResponse.success(
+            GlobalSuccessCode.OK,
+            userProfileEditService.updateProfile(userId, request.toCommand())
+    );
+  }
+
   @Operation(summary = "닉네임 중복 확인", description = "현재 사용자를 제외하고 닉네임 사용 가능 여부를 확인합니다.")
   @GetMapping("/me/nickname-availability")
   public BaseResponse<NicknameAvailabilityResponse> checkNicknameAvailability(

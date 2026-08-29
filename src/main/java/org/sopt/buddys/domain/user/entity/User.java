@@ -182,4 +182,16 @@ public class User extends BaseEntity {
     this.interestCountry = interestCountry;
     this.interestCity = interestCity;
   }
+
+  public void updateProfile(
+      String nickname,
+      Gender gender,
+      LocalDate birthDate,
+      String introduction
+  ) {
+    this.nickname = nickname;
+    this.gender = gender;
+    this.birthDate = birthDate;
+    this.introduction = introduction;
+  }
 }
