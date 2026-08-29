@@ -53,7 +53,7 @@ public class UserProfileEditService {
 
   @Transactional
   public ProfileEditResponse updateProfile(Long userId, UpdateProfileCommand command) {
-    User user = getActiveUser(userId);
+    User user = getActiveUserForUpdate(userId);
     List<Long> orderedTagIds = command.orderedTagIds();
     Map<Long, Tag> tagsById = getAndValidateTags(orderedTagIds);
 
@@ -79,6 +79,11 @@ public class UserProfileEditService {
 
   private User getActiveUser(Long userId) {
     return userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+  }
+
+  private User getActiveUserForUpdate(Long userId) {
+    return userRepository.findByIdForProfileUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
   }
 

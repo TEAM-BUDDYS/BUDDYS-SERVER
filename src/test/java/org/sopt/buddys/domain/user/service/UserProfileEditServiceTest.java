@@ -65,7 +65,7 @@ class UserProfileEditServiceTest {
         List.of(27L, 1L, 13L, 28L, 14L)
     );
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+    given(userRepository.findByIdForProfileUpdate(userId)).willReturn(Optional.of(user));
     given(tagRepository.findAllById(List.of(27L, 1L, 13L, 28L, 14L)))
         .willReturn(List.of(activity, interest, secondInterest, travelStyle, secondTravelStyle));
 
@@ -102,7 +102,7 @@ class UserProfileEditServiceTest {
         List.of(13L, 14L, 27L)
     );
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+    given(userRepository.findByIdForProfileUpdate(userId)).willReturn(Optional.of(user));
     given(tagRepository.findAllById(List.of(13L, 14L, 27L)))
         .willReturn(List.of(interest, secondInterest, travelStyle));
 
@@ -130,7 +130,7 @@ class UserProfileEditServiceTest {
         List.of(1L, 13L, 27L, 27L)
     );
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+    given(userRepository.findByIdForProfileUpdate(userId)).willReturn(Optional.of(user));
 
     // when & then
     assertThatThrownBy(() -> userProfileEditService.updateProfile(userId, command))
