@@ -24,6 +24,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Transactional(readOnly = true)
 public class UniversityVerificationService {
 
+  private static final int MAX_VERIFICATION_ATTEMPTS = 5;
+
   private final UniversityVerificationRepository universityVerificationRepository;
   private final UniversityRepository universityRepository;
   private final UserRepository userRepository;
@@ -40,11 +42,11 @@ public class UniversityVerificationService {
     UniversityVerification verification = UniversityVerification.issue(userId, university.getId(), email);
     universityVerificationRepository.save(
         verification,
-        universityVerificationProperties.tokenExpiration()
+        universityVerificationProperties.codeExpiration()
     );
 
     try {
-      mailSender.send(email, university.getName(), verification.token());
+      mailSender.send(email, university.getName(), verification.code());
     } catch (RuntimeException e) {
       deleteAfterMailFailure(verification, e);
       throw e;
@@ -52,11 +54,19 @@ public class UniversityVerificationService {
   }
 
   @Transactional
-  public void confirmVerification(String token) {
-    UniversityVerification verification = universityVerificationRepository.findByToken(token)
-        .orElseThrow(() -> new BaseException(UniversityVerificationErrorCode.VERIFICATION_TOKEN_NOT_FOUND));
+  public void confirmVerification(Long userId, String code) {
+    long attempts = universityVerificationRepository.incrementAttemptCount(
+        userId, universityVerificationProperties.codeExpiration()
+    );
+    if (attempts > MAX_VERIFICATION_ATTEMPTS) {
+      universityVerificationRepository.deleteByUserId(userId);
+      throw new BaseException(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID);
+    }
 
-    User user = userRepository.findByIdAndDeletedAtIsNull(verification.userId())
+    UniversityVerification verification = universityVerificationRepository.findByUserIdAndCode(userId, code)
+        .orElseThrow(() -> new BaseException(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
+
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
     University university = universityRepository.findById(verification.universityId())
         .orElseThrow(() -> new BaseException(LocationErrorCode.UNIVERSITY_NOT_FOUND));
@@ -73,16 +83,16 @@ public class UniversityVerificationService {
 
   private void deleteAfterMailFailure(UniversityVerification verification, RuntimeException cause) {
     try {
-      universityVerificationRepository.deleteIfTokenMatches(verification);
+      universityVerificationRepository.deleteIfMatches(verification);
     } catch (RuntimeException cleanupException) {
       cause.addSuppressed(cleanupException);
-      log.error("Failed to clean up university verification token after mail failure", cleanupException);
+      log.error("Failed to clean up university verification code after mail failure", cleanupException);
     }
   }
 
   private void deleteAfterCommit(UniversityVerification verification) {
     if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-      universityVerificationRepository.deleteIfTokenMatches(verification);
+      universityVerificationRepository.deleteIfMatches(verification);
       return;
     }
 
@@ -90,9 +100,9 @@ public class UniversityVerificationService {
       @Override
       public void afterCommit() {
         try {
-          universityVerificationRepository.deleteIfTokenMatches(verification);
+          universityVerificationRepository.deleteIfMatches(verification);
         } catch (RuntimeException e) {
-          log.error("Failed to delete consumed university verification token", e);
+          log.error("Failed to delete consumed university verification code", e);
         }
       }
     });

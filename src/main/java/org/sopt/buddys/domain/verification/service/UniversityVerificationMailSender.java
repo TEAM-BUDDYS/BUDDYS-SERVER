@@ -25,9 +25,7 @@ public class UniversityVerificationMailSender {
   private final MailProperties mailProperties;
   private final UniversityVerificationProperties universityVerificationProperties;
 
-  public void send(String toEmail, String universityName, String token) {
-    String confirmLink = universityVerificationProperties.confirmUrl() + "?token=" + token;
-
+  public void send(String toEmail, String universityName, String code) {
     SendEmailRequest request = SendEmailRequest.builder()
         .fromEmailAddress(mailProperties.sender())
         .destination(Destination.builder().toAddresses(toEmail).build())
@@ -35,12 +33,12 @@ public class UniversityVerificationMailSender {
             .simple(Message.builder()
                 .subject(Content.builder()
                     .charset(CHARSET)
-                    .data("[Buddys] " + universityName + " 학교 이메일 인증")
+                    .data("[Buddys] " + universityName + " 학교 이메일 인증 코드")
                     .build())
                 .body(Body.builder()
                     .html(Content.builder()
                         .charset(CHARSET)
-                        .data(buildHtmlBody(universityName, confirmLink))
+                        .data(buildHtmlBody(universityName, code))
                         .build())
                     .build())
                 .build())
@@ -54,13 +52,15 @@ public class UniversityVerificationMailSender {
     }
   }
 
-  private String buildHtmlBody(String universityName, String confirmLink) {
+  private String buildHtmlBody(String universityName, String code) {
+    long expirationMinutes = universityVerificationProperties.codeExpiration().toMinutes();
     return """
         <div>
-          <p>%s 학교 이메일 인증을 완료하려면 아래 버튼을 눌러주세요.</p>
-          <p><a href="%s">학교 이메일 인증하기</a></p>
+          <p>%s 학교 이메일 인증 코드입니다.</p>
+          <p style="font-size:28px;font-weight:bold;letter-spacing:6px;">%s</p>
+          <p>앱 화면에 이 코드를 입력하면 인증이 완료됩니다. 코드는 %d분간 유효합니다.</p>
           <p>본인이 요청하지 않았다면 이 메일을 무시하셔도 됩니다.</p>
         </div>
-        """.formatted(universityName, confirmLink);
+        """.formatted(universityName, code, expirationMinutes);
   }
 }
