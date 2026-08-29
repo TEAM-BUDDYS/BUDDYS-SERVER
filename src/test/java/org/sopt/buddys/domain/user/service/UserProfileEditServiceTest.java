@@ -136,7 +136,7 @@ class UserProfileEditServiceTest {
     assertThatThrownBy(() -> userProfileEditService.updateProfile(userId, command))
         .isInstanceOf(BaseException.class)
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
-            .isEqualTo(UserErrorCode.INVALID_TAG));
+            .isEqualTo(UserErrorCode.DUPLICATE_TAG));
     assertThat(user.getNickname()).isEqualTo("기존닉네임");
     verify(userRepository, never()).flush();
     verify(userTagRepository, never()).deleteAllByUserId(userId);

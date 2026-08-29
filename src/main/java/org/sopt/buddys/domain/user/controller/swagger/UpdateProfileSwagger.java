@@ -77,6 +77,17 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                           "data": null
                         }
                         """
+                ),
+                @ExampleObject(
+                    name = "중복 태그 포함",
+                    value = """
+                        {
+                          "success": false,
+                          "code": "USER-E009",
+                          "message": "중복된 태그가 포함되어 있습니다.",
+                          "data": null
+                        }
+                        """
                 )
             }
         )

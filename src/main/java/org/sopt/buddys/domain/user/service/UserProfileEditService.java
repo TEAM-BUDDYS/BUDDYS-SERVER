@@ -84,7 +84,7 @@ public class UserProfileEditService {
 
   private Map<Long, Tag> getAndValidateTags(List<Long> orderedTagIds) {
     if (new HashSet<>(orderedTagIds).size() != orderedTagIds.size()) {
-      throw new BaseException(UserErrorCode.INVALID_TAG);
+      throw new BaseException(UserErrorCode.DUPLICATE_TAG);
     }
 
     Map<Long, Tag> tagsById = tagRepository.findAllById(orderedTagIds).stream()
