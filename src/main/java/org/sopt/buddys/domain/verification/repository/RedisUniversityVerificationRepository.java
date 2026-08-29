@@ -18,6 +18,7 @@ import org.springframework.stereotype.Repository;
 public class RedisUniversityVerificationRepository implements UniversityVerificationRepository {
 
   private static final String KEY_PREFIX = "verification:university:user:";
+  private static final String ATTEMPT_KEY_SUFFIX = ":attempts";
   private static final String VALUE_SEPARATOR = ":";
   private static final int VALUE_PARTS = 3;
   private static final Base64.Encoder VALUE_ENCODER = Base64.getUrlEncoder().withoutPadding();
@@ -32,26 +33,39 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
 
   @Override
   public void save(UniversityVerification verification, Duration ttl) {
-    redisTemplate.opsForValue().set(key(verification.userId()), encode(verification), ttl);
+    Long userId = verification.userId();
+    redisTemplate.opsForValue().set(key(userId), encode(verification), ttl);
+    redisTemplate.delete(attemptKey(userId));
   }
 
   @Override
-  public Optional<UniversityVerification> findByToken(String token) {
-    Optional<Long> userId = extractUserId(token);
-    if (userId.isEmpty()) {
+  public Optional<UniversityVerification> findByUserIdAndCode(Long userId, String code) {
+    if (userId == null || code == null) {
       return Optional.empty();
     }
 
-    String storedValue = redisTemplate.opsForValue().get(key(userId.get()));
+    String storedValue = redisTemplate.opsForValue().get(key(userId));
     if (storedValue == null) {
       return Optional.empty();
     }
 
-    return decode(userId.get(), token, storedValue);
+    return decode(userId, code, storedValue);
   }
 
   @Override
-  public void deleteIfTokenMatches(UniversityVerification verification) {
+  public long incrementAttemptCount(Long userId, Duration ttl) {
+    Long count = redisTemplate.opsForValue().increment(attemptKey(userId));
+    if (count == null) {
+      return Long.MAX_VALUE;
+    }
+    if (count == 1L) {
+      redisTemplate.expire(attemptKey(userId), ttl);
+    }
+    return count;
+  }
+
+  @Override
+  public void deleteIfMatches(UniversityVerification verification) {
     redisTemplate.execute(
         DELETE_IF_VALUE_MATCHES,
         List.of(key(verification.userId())),
@@ -59,34 +73,22 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
     );
   }
 
-  private Optional<UniversityVerification> decode(Long userId, String token, String storedValue) {
+  @Override
+  public void deleteByUserId(Long userId) {
+    redisTemplate.delete(List.of(key(userId), attemptKey(userId)));
+  }
+
+  private Optional<UniversityVerification> decode(Long userId, String code, String storedValue) {
     String[] parts = storedValue.split(VALUE_SEPARATOR, VALUE_PARTS);
-    if (parts.length != VALUE_PARTS || !tokenMatches(parts[1], token)) {
+    if (parts.length != VALUE_PARTS || !codeMatches(parts[1], code)) {
       return Optional.empty();
     }
 
     try {
       Long universityId = Long.valueOf(parts[0]);
       String email = new String(VALUE_DECODER.decode(parts[2]), StandardCharsets.UTF_8);
-      return Optional.of(new UniversityVerification(userId, universityId, email, token));
+      return Optional.of(new UniversityVerification(userId, universityId, email, code));
     } catch (IllegalArgumentException e) {
-      return Optional.empty();
-    }
-  }
-
-  private Optional<Long> extractUserId(String token) {
-    if (token == null) {
-      return Optional.empty();
-    }
-
-    int separatorIndex = token.indexOf('.');
-    if (separatorIndex <= 0 || separatorIndex == token.length() - 1) {
-      return Optional.empty();
-    }
-
-    try {
-      return Optional.of(Long.valueOf(token.substring(0, separatorIndex)));
-    } catch (NumberFormatException e) {
       return Optional.empty();
     }
   }
@@ -96,20 +98,20 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
         verification.email().getBytes(StandardCharsets.UTF_8)
     );
     return verification.universityId()
-        + VALUE_SEPARATOR + tokenDigest(verification.token())
+        + VALUE_SEPARATOR + codeDigest(verification.code())
         + VALUE_SEPARATOR + encodedEmail;
   }
 
-  private boolean tokenMatches(String storedDigest, String token) {
+  private boolean codeMatches(String storedDigest, String code) {
     byte[] stored = storedDigest.getBytes(StandardCharsets.US_ASCII);
-    byte[] actual = tokenDigest(token).getBytes(StandardCharsets.US_ASCII);
+    byte[] actual = codeDigest(code).getBytes(StandardCharsets.US_ASCII);
     return MessageDigest.isEqual(stored, actual);
   }
 
-  private String tokenDigest(String token) {
+  private String codeDigest(String code) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      return VALUE_ENCODER.encodeToString(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+      return VALUE_ENCODER.encodeToString(digest.digest(code.getBytes(StandardCharsets.UTF_8)));
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 is not available", e);
     }
@@ -117,5 +119,9 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
 
   private String key(Long userId) {
     return KEY_PREFIX + userId;
+  }
+
+  private String attemptKey(Long userId) {
+    return KEY_PREFIX + userId + ATTEMPT_KEY_SUFFIX;
   }
 }
