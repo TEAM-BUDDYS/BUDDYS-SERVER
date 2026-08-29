@@ -14,7 +14,7 @@ import org.sopt.buddys.global.response.BaseResponse;
 @Retention(RetentionPolicy.RUNTIME)
 @ApiResponse(
     responseCode = "400",
-    description = "인증 코드가 올바르지 않거나 만료됨(시도 횟수 초과 포함)",
+    description = "인증 코드가 올바르지 않거나 만료됨",
     content = @Content(
         mediaType = "application/json",
         schema = @Schema(implementation = BaseResponse.class),

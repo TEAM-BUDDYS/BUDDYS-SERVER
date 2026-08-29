@@ -39,7 +39,7 @@ public class UniversityVerificationController {
           학교 이메일 도메인으로 대학교를 찾아 6자리 인증 코드(영어 대문자 + 숫자)를 해당 이메일로 발송합니다.
 
           - 이메일 도메인과 일치하는 대학교가 없으면 404(LOC-E003)가 반환됩니다.
-          - 같은 사용자가 다시 요청하면 이전 코드와 시도 횟수는 폐기되고 새 코드가 발급됩니다.
+          - 같은 사용자가 다시 요청하면 이전 코드는 폐기되고 새 코드가 발급됩니다.
           """
   )
   @ApiResponse(responseCode = "200", description = "인증 코드 발송 성공")
@@ -61,7 +61,7 @@ public class UniversityVerificationController {
       description = """
           앱 화면에서 입력한 인증 코드를 검증합니다. 일치하면 로그인 사용자의 학교 인증을 완료하고 코드를 폐기합니다.
 
-          - 코드가 없거나 틀리거나 만료됐거나 시도 횟수(5회)를 초과하면 400(UNIV-E001)이 반환됩니다.
+          - 코드가 없거나 틀리거나 만료됐으면 400(UNIV-E001)이 반환됩니다.
           """
   )
   @ApiResponse(responseCode = "200", description = "학교 인증 완료")

@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum UniversityVerificationErrorCode implements ErrorCode {
 
   VERIFICATION_CODE_INVALID("UNIV-E001", HttpStatus.BAD_REQUEST, "인증 코드가 올바르지 않거나 만료되었습니다."),
-  MAIL_SEND_FAILED("UNIV-E003", HttpStatus.INTERNAL_SERVER_ERROR, "인증 메일 발송에 실패했습니다.");
+  MAIL_SEND_FAILED("UNIV-E002", HttpStatus.INTERNAL_SERVER_ERROR, "인증 메일 발송에 실패했습니다.");
 
   private final String code;
   private final HttpStatus httpStatus;

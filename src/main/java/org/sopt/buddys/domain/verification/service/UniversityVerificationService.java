@@ -24,8 +24,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Transactional(readOnly = true)
 public class UniversityVerificationService {
 
-  private static final int MAX_VERIFICATION_ATTEMPTS = 5;
-
   private final UniversityVerificationRepository universityVerificationRepository;
   private final UniversityRepository universityRepository;
   private final UserRepository userRepository;
@@ -55,14 +53,6 @@ public class UniversityVerificationService {
 
   @Transactional
   public void confirmVerification(Long userId, String code) {
-    long attempts = universityVerificationRepository.incrementAttemptCount(
-        userId, universityVerificationProperties.codeExpiration()
-    );
-    if (attempts > MAX_VERIFICATION_ATTEMPTS) {
-      universityVerificationRepository.deleteByUserId(userId);
-      throw new BaseException(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID);
-    }
-
     UniversityVerification verification = universityVerificationRepository.findByUserIdAndCode(userId, code)
         .orElseThrow(() -> new BaseException(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
 

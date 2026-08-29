@@ -125,8 +125,6 @@ class UniversityVerificationServiceTest {
   void confirmVerification_validCode_verifiesUniversityAndDeletesCode() {
     // given
     UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
-    given(universityVerificationRepository.incrementAttemptCount(eq(USER_ID), eq(CODE_EXPIRATION)))
-        .willReturn(1L);
     given(universityVerificationRepository.findByUserIdAndCode(USER_ID, verification.code()))
         .willReturn(Optional.of(verification));
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
@@ -144,8 +142,6 @@ class UniversityVerificationServiceTest {
   @Test
   void confirmVerification_missingCode_throwsInvalid() {
     // given
-    given(universityVerificationRepository.incrementAttemptCount(eq(USER_ID), eq(CODE_EXPIRATION)))
-        .willReturn(1L);
     given(universityVerificationRepository.findByUserIdAndCode(eq(USER_ID), any()))
         .willReturn(Optional.empty());
 
@@ -154,23 +150,6 @@ class UniversityVerificationServiceTest {
         .isInstanceOf(BaseException.class)
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
-    then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
-  }
-
-  @DisplayName("시도 횟수를 초과하면 인증 정보를 폐기하고 코드 검증 없이 오류를 던진다")
-  @Test
-  void confirmVerification_tooManyAttempts_clearsAndThrows() {
-    // given
-    given(universityVerificationRepository.incrementAttemptCount(eq(USER_ID), eq(CODE_EXPIRATION)))
-        .willReturn(6L);
-
-    // when & then
-    assertThatThrownBy(() -> universityVerificationService.confirmVerification(USER_ID, "ABC123"))
-        .isInstanceOf(BaseException.class)
-        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
-            .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
-    then(universityVerificationRepository).should().deleteByUserId(USER_ID);
-    then(universityVerificationRepository).should(never()).findByUserIdAndCode(any(), any());
     then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
   }
 }

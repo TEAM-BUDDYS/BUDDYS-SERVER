@@ -18,7 +18,6 @@ import org.springframework.stereotype.Repository;
 public class RedisUniversityVerificationRepository implements UniversityVerificationRepository {
 
   private static final String KEY_PREFIX = "verification:university:user:";
-  private static final String ATTEMPT_KEY_SUFFIX = ":attempts";
   private static final String VALUE_SEPARATOR = ":";
   private static final int VALUE_PARTS = 3;
   private static final Base64.Encoder VALUE_ENCODER = Base64.getUrlEncoder().withoutPadding();
@@ -33,9 +32,7 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
 
   @Override
   public void save(UniversityVerification verification, Duration ttl) {
-    Long userId = verification.userId();
-    redisTemplate.opsForValue().set(key(userId), encode(verification), ttl);
-    redisTemplate.delete(attemptKey(userId));
+    redisTemplate.opsForValue().set(key(verification.userId()), encode(verification), ttl);
   }
 
   @Override
@@ -53,29 +50,12 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
   }
 
   @Override
-  public long incrementAttemptCount(Long userId, Duration ttl) {
-    Long count = redisTemplate.opsForValue().increment(attemptKey(userId));
-    if (count == null) {
-      return Long.MAX_VALUE;
-    }
-    if (count == 1L) {
-      redisTemplate.expire(attemptKey(userId), ttl);
-    }
-    return count;
-  }
-
-  @Override
   public void deleteIfMatches(UniversityVerification verification) {
     redisTemplate.execute(
         DELETE_IF_VALUE_MATCHES,
         List.of(key(verification.userId())),
         encode(verification)
     );
-  }
-
-  @Override
-  public void deleteByUserId(Long userId) {
-    redisTemplate.delete(List.of(key(userId), attemptKey(userId)));
   }
 
   private Optional<UniversityVerification> decode(Long userId, String code, String storedValue) {
@@ -119,9 +99,5 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
 
   private String key(Long userId) {
     return KEY_PREFIX + userId;
-  }
-
-  private String attemptKey(Long userId) {
-    return KEY_PREFIX + userId + ATTEMPT_KEY_SUFFIX;
   }
 }

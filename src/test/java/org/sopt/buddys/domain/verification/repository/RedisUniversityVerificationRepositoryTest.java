@@ -45,10 +45,7 @@ class RedisUniversityVerificationRepositoryTest {
 
     redisTemplate = new StringRedisTemplate(connectionFactory);
     redisTemplate.afterPropertiesSet();
-    redisTemplate.delete(java.util.List.of(
-        KEY_PREFIX + USER_ID,
-        KEY_PREFIX + USER_ID + ":attempts"
-    ));
+    redisTemplate.delete(KEY_PREFIX + USER_ID);
     repository = new RedisUniversityVerificationRepository(redisTemplate);
   }
 
@@ -74,15 +71,13 @@ class RedisUniversityVerificationRepositoryTest {
         .isLessThanOrEqualTo(TTL.toSeconds());
   }
 
-  @DisplayName("같은 사용자가 재발송하면 이전 코드와 시도 횟수가 초기화된다")
+  @DisplayName("같은 사용자가 재발송하면 이전 코드는 무효화된다")
   @Test
-  void saveAgain_invalidatesPreviousCodeAndAttempts() {
+  void saveAgain_invalidatesPreviousCode() {
     // given
     UniversityVerification previous = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
     UniversityVerification current = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
     repository.save(previous, TTL);
-    repository.incrementAttemptCount(USER_ID, TTL);
-    repository.incrementAttemptCount(USER_ID, TTL);
 
     // when
     repository.save(current, TTL);
@@ -90,17 +85,6 @@ class RedisUniversityVerificationRepositoryTest {
     // then
     assertThat(repository.findByUserIdAndCode(USER_ID, previous.code())).isEmpty();
     assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).contains(current);
-    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(1L);
-  }
-
-  @DisplayName("시도 횟수는 증가하며 최초 증가 시 TTL이 설정된다")
-  @Test
-  void incrementAttemptCount() {
-    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(1L);
-    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(2L);
-    assertThat(redisTemplate.getExpire(KEY_PREFIX + USER_ID + ":attempts"))
-        .isPositive()
-        .isLessThanOrEqualTo(TTL.toSeconds());
   }
 
   @DisplayName("조건부 삭제는 재발송으로 갱신된 코드를 삭제하지 않는다")
@@ -122,21 +106,5 @@ class RedisUniversityVerificationRepositoryTest {
 
     // then
     assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).isEmpty();
-  }
-
-  @DisplayName("deleteByUserId는 인증 정보와 시도 횟수를 모두 제거한다")
-  @Test
-  void deleteByUserId_removesCodeAndAttempts() {
-    // given
-    UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
-    repository.save(verification, TTL);
-    repository.incrementAttemptCount(USER_ID, TTL);
-
-    // when
-    repository.deleteByUserId(USER_ID);
-
-    // then
-    assertThat(repository.findByUserIdAndCode(USER_ID, verification.code())).isEmpty();
-    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(1L);
   }
 }
