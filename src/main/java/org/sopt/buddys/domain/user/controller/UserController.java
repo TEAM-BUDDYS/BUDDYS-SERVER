@@ -13,8 +13,8 @@ import org.sopt.buddys.domain.user.controller.swagger.GetNotificationSettingSwag
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.UpdateNotificationSettingSwagger;
-import org.sopt.buddys.domain.user.dto.request.NotificationSettingUpdateRequest;
 import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
+import org.sopt.buddys.domain.user.dto.request.UpdateNotificationSettingRequest;
 import org.sopt.buddys.domain.user.dto.response.NotificationSettingResponse;
 import org.sopt.buddys.domain.user.dto.response.OnboardingResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
@@ -74,7 +74,7 @@ public class UserController {
   public BaseResponse<NotificationSettingResponse> updateNotificationSetting(
       @Parameter(hidden = true)
       @LoginUser Long userId,
-      @RequestBody @Valid NotificationSettingUpdateRequest request
+      @RequestBody @Valid UpdateNotificationSettingRequest request
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
