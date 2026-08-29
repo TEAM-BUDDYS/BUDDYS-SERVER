@@ -61,6 +61,15 @@ public class UserController {
     );
   }
 
+  @Operation(summary = "프로필 편집 정보 조회", description = "편집 가능한 프로필 값과 현재 선택된 태그 ID를 반환합니다.")
+  @GetMapping("/me/edit")
+  public BaseResponse<ProfileEditResponse> getMyProfileForEdit(
+          @Parameter(hidden = true)
+          @LoginUser Long userId
+  ) {
+    return BaseResponse.success(GlobalSuccessCode.OK, userProfileEditService.getProfile(userId));
+  }
+
   @Operation(summary = "닉네임 중복 확인", description = "현재 사용자를 제외하고 닉네임 사용 가능 여부를 확인합니다.")
   @GetMapping("/me/nickname-availability")
   public BaseResponse<NicknameAvailabilityResponse> checkNicknameAvailability(
