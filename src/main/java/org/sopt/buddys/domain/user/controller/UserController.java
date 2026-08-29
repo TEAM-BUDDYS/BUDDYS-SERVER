@@ -88,7 +88,7 @@ public class UserController {
   public BaseResponse<NicknameAvailabilityResponse> checkNicknameAvailability(
       @Parameter(hidden = true)
       @LoginUser Long userId,
-      @RequestParam @NotBlank @Size(max = 50) String nickname
+      @RequestParam @NotBlank @Size(max = 14) String nickname
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
