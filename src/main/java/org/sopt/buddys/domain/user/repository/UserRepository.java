@@ -24,6 +24,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
   boolean existsByIdAndDeletedAtIsNull(Long id);
 
+  boolean existsByNicknameAndIdNot(String nickname, Long id);
+
   @Query("""
       select u
       from User u
