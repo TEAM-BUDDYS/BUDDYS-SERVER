@@ -13,15 +13,12 @@ public record OrderedTagResponse(
     String name,
 
     @Schema(description = "태그 카테고리", example = "TRAVEL_STYLE")
-    TagType tagType,
-
-    @Schema(description = "전체 선택 태그 내 노출 순서. 0부터 시작", example = "0")
-    int displayOrder
+    TagType tagType
 ) {
 
   public static OrderedTagResponse from(UserProfileResult.OrderedTagResult result) {
     return new OrderedTagResponse(
-        result.id(), result.name(), result.tagType(), result.displayOrder()
+        result.id(), result.name(), result.tagType()
     );
   }
 
@@ -29,8 +26,7 @@ public record OrderedTagResponse(
     return new OrderedTagResponse(
         userTag.getTag().getId(),
         userTag.getTag().getName(),
-        userTag.getTag().getTagType(),
-        userTag.getDisplayOrder()
+        userTag.getTag().getTagType()
     );
   }
 }

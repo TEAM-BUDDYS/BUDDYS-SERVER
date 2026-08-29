@@ -21,6 +21,7 @@ import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.dto.response.OrderedTagResponse;
 import org.sopt.buddys.domain.user.dto.response.ProfileEditResponse;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.Gender;
@@ -77,14 +78,8 @@ class UserProfileEditServiceTest {
     assertThat(user.getBirthDate()).isEqualTo(LocalDate.of(2001, 2, 3));
     assertThat(user.getIntroduction()).isEqualTo("새로운 자기소개");
     assertThat(response.orderedTags())
-        .extracting("id", "displayOrder")
-        .containsExactly(
-            org.assertj.core.groups.Tuple.tuple(27L, 0),
-            org.assertj.core.groups.Tuple.tuple(1L, 1),
-            org.assertj.core.groups.Tuple.tuple(13L, 2),
-            org.assertj.core.groups.Tuple.tuple(28L, 3),
-            org.assertj.core.groups.Tuple.tuple(14L, 4)
-        );
+        .extracting(OrderedTagResponse::id)
+        .containsExactly(27L, 1L, 13L, 28L, 14L);
     verify(userTagRepository).deleteAllByUserId(userId);
     verify(userTagRepository).flush();
     verify(userTagRepository).saveAllAndFlush(org.mockito.ArgumentMatchers.anyList());
