@@ -23,7 +23,7 @@ public class TagService {
   }
 
   public List<TagGroupListResponse> getAllTagGroups() {
-    Map<TagType, List<Tag>> tagsByType = tagRepository.findAllByOrderByTagTypeAscIdAsc().stream()
+    Map<TagType, List<Tag>> tagsByType = tagRepository.findAllByOrderByIdAsc().stream()
         .collect(Collectors.groupingBy(Tag::getTagType));
     return Stream.of(TagType.ACTIVITY, TagType.INTEREST, TagType.TRAVEL_STYLE)
         .map(type -> TagGroupListResponse.of(type, tagsByType.getOrDefault(type, List.of())))
