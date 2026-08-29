@@ -65,7 +65,7 @@ public class UserController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        NotificationSettingResponse.from(userService.getNotificationSetting(userId))
+        NotificationSettingResponse.of(userService.getNotificationSetting(userId))
     );
   }
 
@@ -78,7 +78,7 @@ public class UserController {
   ) {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
-        NotificationSettingResponse.from(
+        NotificationSettingResponse.of(
             userService.updateNotificationSetting(userId, request.notificationEnabled())
         )
     );

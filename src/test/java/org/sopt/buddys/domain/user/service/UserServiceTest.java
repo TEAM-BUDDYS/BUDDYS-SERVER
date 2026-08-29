@@ -201,20 +201,16 @@ class UserServiceTest {
 
   @DisplayName("알림 설정 조회는 로그인한 사용자의 알림 설정 여부를 반환한다")
   @Test
-  void getNotificationSetting_returnsUserWithNotificationEnabled() {
+  void getNotificationSetting_returnsNotificationEnabled() {
     // given
     Long userId = 1L;
-    User user = baseUserBuilder(userId)
-        .notificationEnabled(false)
-        .build();
-
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+    given(userRepository.findNotificationEnabledById(userId)).willReturn(Optional.of(false));
 
     // when
-    User result = userService.getNotificationSetting(userId);
+    boolean result = userService.getNotificationSetting(userId);
 
     // then
-    assertThat(result.isNotificationEnabled()).isFalse();
+    assertThat(result).isFalse();
   }
 
   @DisplayName("알림 설정 조회 시 사용자가 없으면 USER_NOT_FOUND 예외가 발생한다")
@@ -222,7 +218,7 @@ class UserServiceTest {
   void getNotificationSetting_userNotFound_throwsException() {
     // given
     Long userId = 1L;
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
+    given(userRepository.findNotificationEnabledById(userId)).willReturn(Optional.empty());
 
     // when & then
     assertThatThrownBy(() -> userService.getNotificationSetting(userId))
@@ -231,7 +227,7 @@ class UserServiceTest {
         .isEqualTo(UserErrorCode.USER_NOT_FOUND);
   }
 
-  @DisplayName("알림 설정 변경은 값을 갱신하고 갱신된 사용자를 반환한다")
+  @DisplayName("알림 설정 변경은 값을 갱신하고 갱신된 값을 반환한다")
   @Test
   void updateNotificationSetting_updatesValue() {
     // given
@@ -243,10 +239,10 @@ class UserServiceTest {
     given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
 
     // when
-    User result = userService.updateNotificationSetting(userId, false);
+    boolean result = userService.updateNotificationSetting(userId, false);
 
     // then
-    assertThat(result.isNotificationEnabled()).isFalse();
+    assertThat(result).isFalse();
     assertThat(user.isNotificationEnabled()).isFalse();
   }
 

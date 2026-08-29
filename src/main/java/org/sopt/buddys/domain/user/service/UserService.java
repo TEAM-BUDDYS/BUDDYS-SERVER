@@ -64,18 +64,18 @@ public class UserService {
     return getProfileResult(user);
   }
 
-  public User getNotificationSetting(Long userId) {
-    return userRepository.findByIdAndDeletedAtIsNull(userId)
+  public boolean getNotificationSetting(Long userId) {
+    return userRepository.findNotificationEnabledById(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
   }
 
   @Transactional
-  public User updateNotificationSetting(Long userId, boolean notificationEnabled) {
+  public boolean updateNotificationSetting(Long userId, boolean notificationEnabled) {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     user.updateNotificationEnabled(notificationEnabled);
-    return user;
+    return user.isNotificationEnabled();
   }
 
   private UserProfileResult getProfileResult(User user) {
