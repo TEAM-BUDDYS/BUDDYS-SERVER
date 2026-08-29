@@ -23,8 +23,8 @@ public record UserPublicProfileResponse(
     @Schema(description = "프로필에 표시할 인증 뱃지", example = "SOCIAL_LOGIN")
     VerificationBadge verificationBadge,
 
-    @Schema(description = "대표 취향 태그", example = "[\"문화생활\", \"액티비티\", \"활발한\"]")
-    List<String> representativeTags,
+    @Schema(description = "사용자가 지정한 순서의 상위 3개 대표 취향 태그")
+    List<OrderedTagResponse> representativeTags,
 
     @JsonProperty("isDeleted")
     @Schema(description = "삭제된 사용자 여부", example = "false")
@@ -45,7 +45,7 @@ public record UserPublicProfileResponse(
         VerificationBadge.from(user),
         result.orderedTags().stream()
             .limit(3)
-            .map(UserProfileResult.OrderedTagResult::name)
+            .map(OrderedTagResponse::from)
             .toList(),
         user.getDeletedAt() != null
     );

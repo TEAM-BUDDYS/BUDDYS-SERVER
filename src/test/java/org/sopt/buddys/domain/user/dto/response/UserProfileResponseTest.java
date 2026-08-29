@@ -93,7 +93,9 @@ class UserProfileResponseTest {
     UserPublicProfileResponse response = UserPublicProfileResponse.from(result);
 
     // then
-    assertThat(response.representativeTags()).containsExactly("계획형", "여행", "자연");
+    assertThat(response.representativeTags())
+        .extracting(OrderedTagResponse::id)
+        .containsExactly(27L, 1L, 13L);
   }
 
   private User createUser(boolean universityVerified, boolean exchangeVerified) {
