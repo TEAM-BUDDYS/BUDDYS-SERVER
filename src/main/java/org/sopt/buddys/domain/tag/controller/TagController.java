@@ -30,7 +30,12 @@ public class TagController {
   @ApiResponse(responseCode = "200", description = "조회 성공")
   @GetMapping
   public BaseResponse<List<TagGroupListResponse>> getAllTags() {
-    return BaseResponse.success(GlobalSuccessCode.OK, tagService.getAllTagGroups());
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        tagService.getAllTagGroups().stream()
+            .map(TagGroupListResponse::from)
+            .toList()
+    );
   }
 
   @Operation(summary = "태그 목록 조회", description = "type(ACTIVITY, INTEREST, TRAVEL_STYLE)에 해당하는 태그 목록을 반환합니다.")
