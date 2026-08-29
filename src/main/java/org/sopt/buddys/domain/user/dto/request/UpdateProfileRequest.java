@@ -24,20 +24,17 @@ public record UpdateProfileRequest(
     @Schema(description = "자기소개. 최대 69자", example = "안녕하세요 김버디입니다~~", nullable = true)
     @Size(max = 69) String bio,
 
-    @Schema(description = "활동 태그 ID 목록. 1~3개", example = "[1, 3]")
-    @NotEmpty @Size(min = 1, max = 3) List<Long> activityTagIds,
-
-    @Schema(description = "관심사 태그 ID 목록. 1~3개", example = "[15, 18]")
-    @NotEmpty @Size(min = 1, max = 3) List<Long> interestTagIds,
-
-    @Schema(description = "여행 스타일 태그 ID 목록. 1~5개", example = "[27, 30, 34]")
-    @NotEmpty @Size(min = 1, max = 5) List<Long> travelStyleTagIds
+    @Schema(
+        description = "드래그앤드롭으로 정렬한 전체 선택 태그 ID 목록. 카테고리와 무관하게 상위 3개가 대표 태그로 노출됩니다. "
+            + "서버에서 활동 1~3개, 관심사 1~3개, 여행 스타일 1~5개인지 검증합니다.",
+        example = "[27, 1, 15, 3, 18, 30, 34]"
+    )
+    @NotEmpty @Size(min = 3, max = 11) List<@NotNull Long> orderedTagIds
 ) {
 
   public UpdateProfileCommand toCommand() {
     return new UpdateProfileCommand(
-        nickname, gender, birthDate, bio,
-        activityTagIds, interestTagIds, travelStyleTagIds
+        nickname, gender, birthDate, bio, orderedTagIds
     );
   }
 }

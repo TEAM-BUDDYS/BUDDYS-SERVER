@@ -9,7 +9,5 @@ public record UpdateProfileCommand(
     Gender gender,
     LocalDate birthDate,
     String bio,
-    List<Long> activityTagIds,
-    List<Long> interestTagIds,
-    List<Long> travelStyleTagIds
+    List<Long> orderedTagIds
 ) {}

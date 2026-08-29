@@ -22,11 +22,8 @@ public record UserProfileResponse(
     @Schema(description = "프로필에 표시할 인증 뱃지", example = "SOCIAL_LOGIN")
     VerificationBadge verificationBadge,
 
-    @Schema(description = "대표 취향 태그", example = "[\"문화생활\", \"액티비티\", \"활발한\"]")
-    List<String> representativeTags,
-
-    @Schema(description = "전체 취향 태그")
-    List<TagGroupResponse> allTags
+    @Schema(description = "사용자가 지정한 순서대로 정렬된 전체 취향 태그")
+    List<OrderedTagResponse> orderedTags
 ) {
 
   public static UserProfileResponse from(UserProfileResult result) {
@@ -37,11 +34,7 @@ public record UserProfileResponse(
         user.getProfileImageUrl(),
         user.getIntroduction(),
         VerificationBadge.from(user),
-        result.representativeTags(),
-        result.allTags()
-            .stream()
-            .map(TagGroupResponse::from)
-            .toList()
+        result.orderedTags().stream().map(OrderedTagResponse::from).toList()
     );
   }
 }

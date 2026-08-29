@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
@@ -30,6 +30,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserProfileEditService {
 
   private static final String NICKNAME_UNIQUE_CONSTRAINT = "uk_user_nickname";
+  private static final int MIN_ACTIVITY_TAG_COUNT = 1;
+  private static final int MAX_ACTIVITY_TAG_COUNT = 3;
+  private static final int MIN_INTEREST_TAG_COUNT = 1;
+  private static final int MAX_INTEREST_TAG_COUNT = 3;
+  private static final int MIN_TRAVEL_STYLE_TAG_COUNT = 1;
+  private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 5;
 
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
@@ -48,14 +54,8 @@ public class UserProfileEditService {
   @Transactional
   public ProfileEditResponse updateProfile(Long userId, UpdateProfileCommand command) {
     User user = getActiveUser(userId);
-    List<Long> allTagIds = Stream.of(
-                    command.activityTagIds(),
-                    command.interestTagIds(),
-                    command.travelStyleTagIds()
-            )
-            .flatMap(List::stream)
-            .toList();
-    Map<Long, Tag> tagsById = getAndValidateTags(command, allTagIds);
+    List<Long> orderedTagIds = command.orderedTagIds();
+    Map<Long, Tag> tagsById = getAndValidateTags(orderedTagIds);
 
     try {
       user.updateProfile(command.nickname(), command.gender(), command.birthDate(), command.bio());
@@ -69,9 +69,9 @@ public class UserProfileEditService {
 
     userTagRepository.deleteAllByUserId(userId);
     userTagRepository.flush();
-    List<UserTag> updatedUserTags = allTagIds.stream()
-            .map(tagId -> new UserTag(user, tagsById.get(tagId)))
-            .toList();
+    List<UserTag> updatedUserTags = IntStream.range(0, orderedTagIds.size())
+        .mapToObj(order -> new UserTag(user, tagsById.get(orderedTagIds.get(order)), order))
+        .toList();
     userTagRepository.saveAllAndFlush(updatedUserTags);
 
     return ProfileEditResponse.of(user, updatedUserTags);
@@ -79,33 +79,39 @@ public class UserProfileEditService {
 
   private User getActiveUser(Long userId) {
     return userRepository.findByIdAndDeletedAtIsNull(userId)
-            .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
   }
 
-  private Map<Long, Tag> getAndValidateTags(UpdateProfileCommand command, List<Long> allTagIds) {
-    if (new HashSet<>(allTagIds).size() != allTagIds.size()) {
+  private Map<Long, Tag> getAndValidateTags(List<Long> orderedTagIds) {
+    if (new HashSet<>(orderedTagIds).size() != orderedTagIds.size()) {
       throw new BaseException(UserErrorCode.INVALID_TAG);
     }
 
-    Map<Long, Tag> tagsById = tagRepository.findAllById(allTagIds).stream()
-            .collect(Collectors.toMap(Tag::getId, Function.identity()));
-    if (tagsById.size() != allTagIds.size()) {
+    Map<Long, Tag> tagsById = tagRepository.findAllById(orderedTagIds).stream()
+        .collect(Collectors.toMap(Tag::getId, Function.identity()));
+    if (tagsById.size() != orderedTagIds.size()) {
       throw new BaseException(UserErrorCode.TAG_NOT_FOUND);
     }
 
-    validateTagType(tagsById, command.activityTagIds(), TagType.ACTIVITY);
-    validateTagType(tagsById, command.interestTagIds(), TagType.INTEREST);
-    validateTagType(tagsById, command.travelStyleTagIds(), TagType.TRAVEL_STYLE);
+    validateTagCounts(tagsById);
     return tagsById;
   }
 
-  private void validateTagType(Map<Long, Tag> tagsById, List<Long> tagIds, TagType expectedType) {
-    boolean allMatch = tagIds.stream()
-            .map(tagsById::get)
-            .allMatch(tag -> tag.getTagType() == expectedType);
-    if (!allMatch) {
-      throw new BaseException(UserErrorCode.INVALID_TAG);
+  private void validateTagCounts(Map<Long, Tag> tagsById) {
+    Map<TagType, Long> tagCounts = tagsById.values().stream()
+        .collect(Collectors.groupingBy(Tag::getTagType, Collectors.counting()));
+    if (!isBetween(tagCounts.getOrDefault(TagType.ACTIVITY, 0L),
+        MIN_ACTIVITY_TAG_COUNT, MAX_ACTIVITY_TAG_COUNT)
+        || !isBetween(tagCounts.getOrDefault(TagType.INTEREST, 0L),
+        MIN_INTEREST_TAG_COUNT, MAX_INTEREST_TAG_COUNT)
+        || !isBetween(tagCounts.getOrDefault(TagType.TRAVEL_STYLE, 0L),
+        MIN_TRAVEL_STYLE_TAG_COUNT, MAX_TRAVEL_STYLE_TAG_COUNT)) {
+      throw new BaseException(UserErrorCode.INVALID_TAG_SELECTION_COUNT);
     }
+  }
+
+  private boolean isBetween(long value, int minimum, int maximum) {
+    return value >= minimum && value <= maximum;
   }
 
   private boolean isNicknameConflict(DataIntegrityViolationException exception) {
@@ -114,7 +120,7 @@ public class UserProfileEditService {
       if (cause instanceof ConstraintViolationException constraintViolationException) {
         String constraintName = constraintViolationException.getConstraintName();
         return constraintName != null
-                && (constraintName.equals(NICKNAME_UNIQUE_CONSTRAINT)
+            && (constraintName.equals(NICKNAME_UNIQUE_CONSTRAINT)
                 || constraintName.endsWith("." + NICKNAME_UNIQUE_CONSTRAINT));
       }
       cause = cause.getCause();

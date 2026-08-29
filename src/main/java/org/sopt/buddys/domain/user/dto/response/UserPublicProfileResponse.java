@@ -26,9 +26,6 @@ public record UserPublicProfileResponse(
     @Schema(description = "대표 취향 태그", example = "[\"문화생활\", \"액티비티\", \"활발한\"]")
     List<String> representativeTags,
 
-    @Schema(description = "전체 취향 태그")
-    List<TagGroupResponse> allTags,
-
     @JsonProperty("isDeleted")
     @Schema(description = "삭제된 사용자 여부", example = "false")
     boolean deleted
@@ -36,7 +33,6 @@ public record UserPublicProfileResponse(
 
   public UserPublicProfileResponse {
     representativeTags = List.copyOf(representativeTags);
-    allTags = List.copyOf(allTags);
   }
 
   public static UserPublicProfileResponse from(UserProfileResult result) {
@@ -47,10 +43,9 @@ public record UserPublicProfileResponse(
         user.getProfileImageUrl(),
         user.getIntroduction(),
         VerificationBadge.from(user),
-        result.representativeTags(),
-        result.allTags()
-            .stream()
-            .map(TagGroupResponse::from)
+        result.orderedTags().stream()
+            .limit(3)
+            .map(UserProfileResult.OrderedTagResult::name)
             .toList(),
         user.getDeletedAt() != null
     );

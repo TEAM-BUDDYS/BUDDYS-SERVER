@@ -2,9 +2,8 @@ package org.sopt.buddys.domain.user.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
-import org.sopt.buddys.domain.tag.dto.response.TagResponse;
-import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.entity.UserTag;
@@ -22,42 +21,24 @@ public record ProfileEditResponse(
     @Schema(description = "자기소개", example = "안녕하세요 김버디입니다~~")
     String bio,
 
-    @Schema(description = "현재 선택된 카테고리별 태그")
-    List<SelectedTagGroupResponse> selectedTags
+    @Schema(description = "드래그앤드롭으로 지정한 순서대로 정렬된 전체 선택 태그. 앞 3개가 대표 태그")
+    List<OrderedTagResponse> orderedTags
 ) {
 
   public ProfileEditResponse {
-    selectedTags = List.copyOf(selectedTags);
+    orderedTags = List.copyOf(orderedTags);
   }
 
   public static ProfileEditResponse of(User user, List<UserTag> userTags) {
-    List<SelectedTagGroupResponse> groups = List.of(
-        toGroup(TagType.ACTIVITY, userTags),
-        toGroup(TagType.INTEREST, userTags),
-        toGroup(TagType.TRAVEL_STYLE, userTags)
-    );
-    return new ProfileEditResponse(
-        user.getNickname(), user.getGender(), user.getBirthDate(), user.getIntroduction(), groups
-    );
-  }
-
-  private static SelectedTagGroupResponse toGroup(TagType type, List<UserTag> userTags) {
-    List<TagResponse> tags = userTags.stream()
-        .map(UserTag::getTag)
-        .filter(tag -> tag.getTagType() == type)
-        .map(TagResponse::from)
+    List<UserTag> ordered = userTags.stream()
+        .sorted(Comparator.comparingInt(UserTag::getDisplayOrder))
         .toList();
-    return new SelectedTagGroupResponse(type, tags);
-  }
-
-  public record SelectedTagGroupResponse(
-      @Schema(description = "태그 카테고리", example = "ACTIVITY")
-      TagType tagType,
-      @Schema(description = "현재 선택된 태그")
-      List<TagResponse> tags
-  ) {
-    public SelectedTagGroupResponse {
-      tags = List.copyOf(tags);
-    }
+    List<OrderedTagResponse> orderedTags = ordered.stream()
+        .map(OrderedTagResponse::from)
+        .toList();
+    return new ProfileEditResponse(
+        user.getNickname(), user.getGender(), user.getBirthDate(), user.getIntroduction(),
+        orderedTags
+    );
   }
 }
