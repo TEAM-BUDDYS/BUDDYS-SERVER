@@ -1,6 +1,5 @@
 package org.sopt.buddys.domain.user.service;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -61,10 +60,7 @@ public class UserService {
 
   private UserProfileResult getProfileResult(User user) {
     Long userId = user.getId();
-    List<UserTagRepository.UserTagProjection> userTags = userTagRepository.findTagsByUserId(userId)
-        .stream()
-        .sorted(Comparator.comparingInt(UserTagRepository.UserTagProjection::getDisplayOrder))
-        .toList();
+    List<UserTagRepository.UserTagProjection> userTags = userTagRepository.findTagsByUserId(userId);
     List<OrderedTagResult> orderedTags = userTags.stream()
         .map(userTag -> new OrderedTagResult(
             userTag.getTagId(),

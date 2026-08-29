@@ -2,7 +2,6 @@ package org.sopt.buddys.domain.user.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
@@ -30,10 +29,7 @@ public record ProfileEditResponse(
   }
 
   public static ProfileEditResponse of(User user, List<UserTag> userTags) {
-    List<UserTag> ordered = userTags.stream()
-        .sorted(Comparator.comparingInt(UserTag::getDisplayOrder))
-        .toList();
-    List<OrderedTagResponse> orderedTags = ordered.stream()
+    List<OrderedTagResponse> orderedTags = userTags.stream()
         .map(OrderedTagResponse::from)
         .toList();
     return new ProfileEditResponse(
