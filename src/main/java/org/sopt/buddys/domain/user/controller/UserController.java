@@ -1,6 +1,5 @@
 package org.sopt.buddys.domain.user.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -9,11 +8,14 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.user.controller.swagger.CheckNicknameAvailabilitySwagger;
 import org.sopt.buddys.domain.user.controller.swagger.CompleteOnboardingSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.GetProfileEditSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.UpdateProfileSwagger;
 import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
 import org.sopt.buddys.domain.user.dto.request.UpdateProfileRequest;
 import org.sopt.buddys.domain.user.dto.response.NicknameAvailabilityResponse;
@@ -61,7 +63,7 @@ public class UserController {
     );
   }
 
-  @Operation(summary = "프로필 편집 정보 조회", description = "편집 가능한 프로필 값과 현재 선택된 태그 ID를 반환합니다.")
+  @GetProfileEditSwagger
   @GetMapping("/me/edit")
   public BaseResponse<ProfileEditResponse> getMyProfileForEdit(
           @Parameter(hidden = true)
@@ -70,7 +72,7 @@ public class UserController {
     return BaseResponse.success(GlobalSuccessCode.OK, userProfileEditService.getProfile(userId));
   }
 
-  @Operation(summary = "프로필 수정", description = "닉네임, 성별, 생년월일, 자기소개와 카테고리별 태그를 수정합니다.")
+  @UpdateProfileSwagger
   @PatchMapping("/me")
   public BaseResponse<ProfileEditResponse> updateMyProfile(
           @Parameter(hidden = true)
@@ -83,7 +85,7 @@ public class UserController {
     );
   }
 
-  @Operation(summary = "닉네임 중복 확인", description = "현재 사용자를 제외하고 닉네임 사용 가능 여부를 확인합니다.")
+  @CheckNicknameAvailabilitySwagger
   @GetMapping("/me/nickname-availability")
   public BaseResponse<NicknameAvailabilityResponse> checkNicknameAvailability(
       @Parameter(hidden = true)
