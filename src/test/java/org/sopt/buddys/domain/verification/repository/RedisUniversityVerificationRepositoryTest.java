@@ -20,6 +20,10 @@ import org.testcontainers.utility.DockerImageName;
 class RedisUniversityVerificationRepositoryTest {
 
   private static final String KEY_PREFIX = "verification:university:user:";
+  private static final long USER_ID = 1L;
+  private static final long UNIVERSITY_ID = 10L;
+  private static final String EMAIL = "student@university.ac.kr";
+  private static final Duration TTL = Duration.ofMinutes(15);
 
   @Container
   static GenericContainer<?> valkey = new GenericContainer<>(
@@ -41,6 +45,10 @@ class RedisUniversityVerificationRepositoryTest {
 
     redisTemplate = new StringRedisTemplate(connectionFactory);
     redisTemplate.afterPropertiesSet();
+    redisTemplate.delete(java.util.List.of(
+        KEY_PREFIX + USER_ID,
+        KEY_PREFIX + USER_ID + ":attempts"
+    ));
     repository = new RedisUniversityVerificationRepository(redisTemplate);
   }
 
@@ -49,76 +57,86 @@ class RedisUniversityVerificationRepositoryTest {
     connectionFactory.destroy();
   }
 
-  @DisplayName("인증 정보를 TTL로 저장하고 올바른 토큰으로 조회한다")
+  @DisplayName("인증 정보를 TTL로 저장하고 올바른 코드로만 조회된다")
   @Test
-  void saveAndFindByToken() {
+  void saveAndFindByUserIdAndCode() {
     // given
-    UniversityVerification verification = UniversityVerification.issue(
-        1L,
-        10L,
-        "student@university.ac.kr"
-    );
+    UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
 
     // when
-    repository.save(verification, Duration.ofMinutes(15));
+    repository.save(verification, TTL);
 
     // then
-    assertThat(repository.findByToken(verification.token())).contains(verification);
-    assertThat(redisTemplate.getExpire(KEY_PREFIX + verification.userId()))
+    assertThat(repository.findByUserIdAndCode(USER_ID, verification.code())).contains(verification);
+    assertThat(repository.findByUserIdAndCode(USER_ID, "ZZZZZZ")).isEmpty();
+    assertThat(redisTemplate.getExpire(KEY_PREFIX + USER_ID))
         .isPositive()
-        .isLessThanOrEqualTo(Duration.ofMinutes(15).toSeconds());
+        .isLessThanOrEqualTo(TTL.toSeconds());
   }
 
-  @DisplayName("같은 사용자가 재발송하면 이전 토큰은 즉시 무효화된다")
+  @DisplayName("같은 사용자가 재발송하면 이전 코드와 시도 횟수가 초기화된다")
   @Test
-  void saveAgain_invalidatesPreviousToken() {
+  void saveAgain_invalidatesPreviousCodeAndAttempts() {
     // given
-    UniversityVerification previous = UniversityVerification.issue(
-        1L,
-        10L,
-        "student@university.ac.kr"
-    );
-    UniversityVerification current = UniversityVerification.issue(
-        1L,
-        10L,
-        "student@university.ac.kr"
-    );
-    repository.save(previous, Duration.ofMinutes(15));
+    UniversityVerification previous = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    UniversityVerification current = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    repository.save(previous, TTL);
+    repository.incrementAttemptCount(USER_ID, TTL);
+    repository.incrementAttemptCount(USER_ID, TTL);
 
     // when
-    repository.save(current, Duration.ofMinutes(15));
+    repository.save(current, TTL);
 
     // then
-    assertThat(repository.findByToken(previous.token())).isEmpty();
-    assertThat(repository.findByToken(current.token())).contains(current);
+    assertThat(repository.findByUserIdAndCode(USER_ID, previous.code())).isEmpty();
+    assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).contains(current);
+    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(1L);
   }
 
-  @DisplayName("이전 요청의 조건부 삭제가 새로 발급한 토큰을 삭제하지 않는다")
+  @DisplayName("시도 횟수는 증가하며 최초 증가 시 TTL이 설정된다")
   @Test
-  void deleteIfTokenMatches_doesNotDeleteNewToken() {
+  void incrementAttemptCount() {
+    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(1L);
+    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(2L);
+    assertThat(redisTemplate.getExpire(KEY_PREFIX + USER_ID + ":attempts"))
+        .isPositive()
+        .isLessThanOrEqualTo(TTL.toSeconds());
+  }
+
+  @DisplayName("조건부 삭제는 재발송으로 갱신된 코드를 삭제하지 않는다")
+  @Test
+  void deleteIfMatches_doesNotDeleteRefreshedCode() {
     // given
-    UniversityVerification previous = UniversityVerification.issue(
-        1L,
-        10L,
-        "student@university.ac.kr"
-    );
-    UniversityVerification current = UniversityVerification.issue(
-        1L,
-        10L,
-        "student@university.ac.kr"
-    );
-    repository.save(current, Duration.ofMinutes(15));
+    UniversityVerification previous = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    UniversityVerification current = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    repository.save(current, TTL);
 
     // when
-    repository.deleteIfTokenMatches(previous);
+    repository.deleteIfMatches(previous);
 
     // then
-    assertThat(repository.findByToken(current.token())).contains(current);
+    assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).contains(current);
 
     // when
-    repository.deleteIfTokenMatches(current);
+    repository.deleteIfMatches(current);
 
     // then
-    assertThat(repository.findByToken(current.token())).isEmpty();
+    assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).isEmpty();
+  }
+
+  @DisplayName("deleteByUserId는 인증 정보와 시도 횟수를 모두 제거한다")
+  @Test
+  void deleteByUserId_removesCodeAndAttempts() {
+    // given
+    UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    repository.save(verification, TTL);
+    repository.incrementAttemptCount(USER_ID, TTL);
+
+    // when
+    repository.deleteByUserId(USER_ID);
+
+    // then
+    assertThat(repository.findByUserIdAndCode(USER_ID, verification.code())).isEmpty();
+    assertThat(repository.incrementAttemptCount(USER_ID, TTL)).isEqualTo(1L);
   }
 }

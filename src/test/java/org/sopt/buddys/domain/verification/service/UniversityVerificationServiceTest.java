@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.verification.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -33,7 +34,7 @@ class UniversityVerificationServiceTest {
   private static final long UNIVERSITY_ID = 10L;
   private static final String EMAIL = "student@university.ac.kr";
   private static final String UNIVERSITY_NAME = "Buddys University";
-  private static final Duration TOKEN_EXPIRATION = Duration.ofMinutes(15);
+  private static final Duration CODE_EXPIRATION = Duration.ofMinutes(15);
 
   @Mock
   private UniversityVerificationRepository universityVerificationRepository;
@@ -57,10 +58,7 @@ class UniversityVerificationServiceTest {
 
   @BeforeEach
   void setUp() {
-    UniversityVerificationProperties properties = new UniversityVerificationProperties(
-        TOKEN_EXPIRATION,
-        "http://localhost:8080/api/v1/verifications/university/email/confirm"
-    );
+    UniversityVerificationProperties properties = new UniversityVerificationProperties(CODE_EXPIRATION);
     universityVerificationService = new UniversityVerificationService(
         universityVerificationRepository,
         universityRepository,
@@ -70,9 +68,9 @@ class UniversityVerificationServiceTest {
     );
   }
 
-  @DisplayName("학교 인증 요청은 사용자별 토큰을 15분 TTL로 저장한 뒤 메일을 발송한다")
+  @DisplayName("인증 요청은 6자리 코드를 15분 TTL로 저장한 뒤 코드가 담긴 메일을 발송한다")
   @Test
-  void sendVerification_savesTokenWithTtlAndSendsMail() {
+  void sendVerification_savesCodeWithTtlAndSendsMail() {
     // given
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
     given(universityRepository.findFirstByDomainIgnoreCase("university.ac.kr"))
@@ -88,20 +86,20 @@ class UniversityVerificationServiceTest {
         ArgumentCaptor.forClass(UniversityVerification.class);
     then(universityVerificationRepository).should().save(
         verificationCaptor.capture(),
-        org.mockito.ArgumentMatchers.eq(Duration.ofMinutes(15))
+        eq(CODE_EXPIRATION)
     );
 
     UniversityVerification saved = verificationCaptor.getValue();
     assertThat(saved.userId()).isEqualTo(USER_ID);
     assertThat(saved.universityId()).isEqualTo(UNIVERSITY_ID);
     assertThat(saved.email()).isEqualTo(EMAIL);
-    assertThat(saved.token()).startsWith(USER_ID + ".");
-    then(mailSender).should().send(EMAIL, UNIVERSITY_NAME, saved.token());
+    assertThat(saved.code()).matches("^[A-Z0-9]{6}$");
+    then(mailSender).should().send(EMAIL, UNIVERSITY_NAME, saved.code());
   }
 
-  @DisplayName("메일 발송에 실패하면 이번 요청으로 저장한 인증 토큰을 제거한다")
+  @DisplayName("메일 발송에 실패하면 이번 요청으로 저장한 인증 코드를 제거한다")
   @Test
-  void sendVerification_mailFailure_deletesSavedToken() {
+  void sendVerification_mailFailure_deletesSavedCode() {
     // given
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
     given(universityRepository.findFirstByDomainIgnoreCase("university.ac.kr"))
@@ -118,40 +116,61 @@ class UniversityVerificationServiceTest {
 
     ArgumentCaptor<UniversityVerification> verificationCaptor =
         ArgumentCaptor.forClass(UniversityVerification.class);
-    then(universityVerificationRepository).should().deleteIfTokenMatches(verificationCaptor.capture());
+    then(universityVerificationRepository).should().deleteIfMatches(verificationCaptor.capture());
     assertThat(verificationCaptor.getValue().userId()).isEqualTo(USER_ID);
   }
 
-  @DisplayName("유효한 인증 토큰이면 사용자의 학교를 인증하고 토큰을 한 번만 삭제한다")
+  @DisplayName("코드가 일치하면 사용자의 학교를 인증하고 코드를 한 번만 삭제한다")
   @Test
-  void confirmVerification_validToken_verifiesUniversityAndDeletesToken() {
+  void confirmVerification_validCode_verifiesUniversityAndDeletesCode() {
     // given
     UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
-    given(universityVerificationRepository.findByToken(verification.token()))
+    given(universityVerificationRepository.incrementAttemptCount(eq(USER_ID), eq(CODE_EXPIRATION)))
+        .willReturn(1L);
+    given(universityVerificationRepository.findByUserIdAndCode(USER_ID, verification.code()))
         .willReturn(Optional.of(verification));
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
     given(universityRepository.findById(UNIVERSITY_ID)).willReturn(Optional.of(university));
 
     // when
-    universityVerificationService.confirmVerification(verification.token());
+    universityVerificationService.confirmVerification(USER_ID, verification.code());
 
     // then
     then(user).should().verifyUniversity(university);
-    then(universityVerificationRepository).should().deleteIfTokenMatches(verification);
+    then(universityVerificationRepository).should().deleteIfMatches(verification);
   }
 
-  @DisplayName("Redis에 토큰이 없으면 유효하지 않은 인증 링크 오류가 발생한다")
+  @DisplayName("코드가 없거나 틀리면 인증 코드 오류가 발생한다")
   @Test
-  void confirmVerification_missingToken_throwsNotFound() {
+  void confirmVerification_missingCode_throwsInvalid() {
     // given
-    String token = "1.invalid-token";
-    given(universityVerificationRepository.findByToken(token)).willReturn(Optional.empty());
+    given(universityVerificationRepository.incrementAttemptCount(eq(USER_ID), eq(CODE_EXPIRATION)))
+        .willReturn(1L);
+    given(universityVerificationRepository.findByUserIdAndCode(eq(USER_ID), any()))
+        .willReturn(Optional.empty());
 
     // when & then
-    assertThatThrownBy(() -> universityVerificationService.confirmVerification(token))
+    assertThatThrownBy(() -> universityVerificationService.confirmVerification(USER_ID, "ABC123"))
         .isInstanceOf(BaseException.class)
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
-            .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_TOKEN_NOT_FOUND));
+            .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
+    then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
+  }
+
+  @DisplayName("시도 횟수를 초과하면 인증 정보를 폐기하고 코드 검증 없이 오류를 던진다")
+  @Test
+  void confirmVerification_tooManyAttempts_clearsAndThrows() {
+    // given
+    given(universityVerificationRepository.incrementAttemptCount(eq(USER_ID), eq(CODE_EXPIRATION)))
+        .willReturn(6L);
+
+    // when & then
+    assertThatThrownBy(() -> universityVerificationService.confirmVerification(USER_ID, "ABC123"))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
+    then(universityVerificationRepository).should().deleteByUserId(USER_ID);
+    then(universityVerificationRepository).should(never()).findByUserIdAndCode(any(), any());
     then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
   }
 }
