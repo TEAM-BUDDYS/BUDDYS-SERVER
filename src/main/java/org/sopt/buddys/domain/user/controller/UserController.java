@@ -1,10 +1,13 @@
 package org.sopt.buddys.domain.user.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.user.controller.swagger.CompleteOnboardingSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
@@ -12,12 +15,16 @@ import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
 import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
+import org.sopt.buddys.domain.user.dto.request.UpdateProfileRequest;
+import org.sopt.buddys.domain.user.dto.response.NicknameAvailabilityResponse;
 import org.sopt.buddys.domain.user.dto.response.OnboardingResponse;
+import org.sopt.buddys.domain.user.dto.response.ProfileEditResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPublicProfileResponse;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.service.UserOnboardingService;
+import org.sopt.buddys.domain.user.service.UserProfileEditService;
 import org.sopt.buddys.domain.user.service.UserService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -40,6 +47,7 @@ public class UserController {
 
   private final UserService userService;
   private final UserOnboardingService userOnboardingService;
+  private final UserProfileEditService userProfileEditService;
 
   @GetMyProfileSwagger
   @GetMapping("/me")
@@ -50,6 +58,21 @@ public class UserController {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
         UserProfileResponse.from(userService.getProfile(userId))
+    );
+  }
+
+  @Operation(summary = "닉네임 중복 확인", description = "현재 사용자를 제외하고 닉네임 사용 가능 여부를 확인합니다.")
+  @GetMapping("/me/nickname-availability")
+  public BaseResponse<NicknameAvailabilityResponse> checkNicknameAvailability(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @RequestParam @NotBlank @Size(max = 50) String nickname
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        new NicknameAvailabilityResponse(
+            userProfileEditService.isNicknameAvailable(userId, nickname)
+        )
     );
   }
 
