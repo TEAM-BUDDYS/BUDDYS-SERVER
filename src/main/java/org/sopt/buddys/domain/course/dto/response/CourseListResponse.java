@@ -5,16 +5,18 @@ import java.util.List;
 import org.sopt.buddys.domain.course.service.result.CourseListResult;
 
 public record CourseListResponse(
-    @Schema(description = "코스 목록")
+    @Schema(description = "코스 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<CourseSummaryResponse> content,
 
-    @Schema(description = "현재 페이지 번호. 0부터 시작합니다.", example = "0")
+    @Schema(description = "현재 페이지 번호. 0부터 시작합니다.", example = "0",
+        requiredMode = Schema.RequiredMode.REQUIRED)
     int page,
 
-    @Schema(description = "페이지 크기", example = "20")
+    @Schema(description = "페이지 크기", example = "20", requiredMode = Schema.RequiredMode.REQUIRED)
     int size,
 
-    @Schema(description = "다음 페이지 존재 여부", example = "true")
+    @Schema(description = "다음 페이지 존재 여부", example = "true",
+        requiredMode = Schema.RequiredMode.REQUIRED)
     boolean hasNext
 ) {
 
@@ -34,25 +36,32 @@ public record CourseListResponse(
   }
 
   public record CourseSummaryResponse(
-      @Schema(description = "코스 ID", example = "1")
+      @Schema(description = "코스 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
       Long courseId,
 
-      @Schema(description = "코스 제목", example = "여유로운 파리 미술관 코스")
+      @Schema(description = "코스 제목", example = "여유로운 파리 미술관 코스",
+          requiredMode = Schema.RequiredMode.REQUIRED)
       String title,
 
-      @Schema(description = "코스 소개", example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.", nullable = true)
+      @Schema(description = "코스 소개", example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.",
+          requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
       String content,
 
-      @Schema(description = "로그인 사용자의 코스 저장 여부", example = "false")
+      @Schema(description = "로그인 사용자의 코스 저장 여부", example = "false",
+          requiredMode = Schema.RequiredMode.REQUIRED)
       boolean isBookmarked,
 
-      @Schema(description = "대표 사진과 일자별 사진을 합친 이미지 목록", example = "[\"https://example.com/thumbnail.jpg\"]")
+      @Schema(description = "대표 사진과 일자별 사진을 합친 이미지 목록",
+          example = "[\"https://example.com/thumbnail.jpg\"]",
+          requiredMode = Schema.RequiredMode.REQUIRED)
       List<String> images,
 
-      @Schema(description = "여행 국가 목록 (쉼표로 구분)", example = "체코, 독일")
+      @Schema(description = "여행 국가 목록 (쉼표로 구분)", example = "체코, 독일",
+          requiredMode = Schema.RequiredMode.REQUIRED)
       String countries,
 
-      @Schema(description = "여행 도시 목록 (쉼표로 구분)", example = "프라하, 뮌헨, 베를린")
+      @Schema(description = "여행 도시 목록 (쉼표로 구분)", example = "프라하, 뮌헨, 베를린",
+          requiredMode = Schema.RequiredMode.REQUIRED)
       String cities
   ) {
 
