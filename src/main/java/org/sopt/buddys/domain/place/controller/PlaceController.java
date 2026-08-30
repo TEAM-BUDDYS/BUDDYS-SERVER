@@ -17,7 +17,9 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.place.code.PlaceSuccessCode;
 import org.sopt.buddys.domain.place.controller.swagger.BookmarkPlaceSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.CancelPlaceBookmarkSwagger;
+import org.sopt.buddys.domain.place.controller.swagger.GetBookmarkedPlacesSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.GooglePlacesUnavailableResponse;
+import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceListResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceBookmarkResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceSearchResponse;
 import org.sopt.buddys.domain.place.service.PlaceBookmarkService;
@@ -37,6 +39,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @RestController
 @Validated
@@ -244,6 +248,21 @@ public class PlaceController {
   ) {
     placeBookmarkService.cancelBookmark(userId, placeId);
     return BaseResponse.success(PlaceSuccessCode.PLACE_BOOKMARK_CANCELED, PlaceBookmarkResponse.of(false));
+  }
+
+  @GetBookmarkedPlacesSwagger
+  @GetMapping("/bookmarks")
+  public BaseResponse<BookmarkedPlaceListResponse> getBookmarkedPlaces(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+  ) {
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        BookmarkedPlaceListResponse.from(placeBookmarkService.getBookmarkedPlaces(userId, page, size))
+    );
   }
 
   @Operation(summary = "장소 사진 프록시", description = "장소의 대표 사진 URL로 302 리다이렉트합니다. 구글 API 키를 클라이언트에 노출하지 않기 위한 프록시입니다.")

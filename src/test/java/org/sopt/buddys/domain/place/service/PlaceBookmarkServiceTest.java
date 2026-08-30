@@ -6,9 +6,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -22,12 +24,21 @@ import org.sopt.buddys.domain.place.client.GooglePlacesClient;
 import org.sopt.buddys.domain.place.client.dto.GoogleDisplayName;
 import org.sopt.buddys.domain.place.client.dto.GoogleLatLng;
 import org.sopt.buddys.domain.place.client.dto.GooglePlace;
-import org.sopt.buddys.domain.place.entity.Place;
-import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.code.PlaceErrorCode;
+import org.sopt.buddys.domain.place.entity.Place;
+import org.sopt.buddys.domain.place.entity.PlaceBookmark;
+import org.sopt.buddys.domain.place.entity.PlaceCategory;
+import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
+import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceListResult;
+import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class PlaceBookmarkServiceTest {
@@ -42,6 +53,9 @@ class PlaceBookmarkServiceTest {
 
   @Mock
   private PlaceRepository placeRepository;
+
+  @Mock
+  private PlaceBookmarkRepository placeBookmarkRepository;
 
   @Mock
   private PlaceBookmarkTransactionService placeBookmarkTransactionService;
@@ -171,6 +185,60 @@ class PlaceBookmarkServiceTest {
 
     // then
     then(placeBookmarkTransactionService).should(never()).deleteBookmark(anyLong(), anyLong());
+  }
+
+  @DisplayName("저장한 장소를 최근 저장순 스냅샷으로 매핑해 반환한다")
+  @Test
+  void getBookmarkedPlaces_mapsSnapshotAndPaging() {
+    // given
+    Place louvre = Place.builder()
+        .id(1L)
+        .googlePlaceId("place-louvre")
+        .name("루브르 박물관")
+        .category(PlaceCategory.TOURISM)
+        .address("Rue de Rivoli, 75001 Paris")
+        .latitude(new BigDecimal("48.8606000"))
+        .longitude(new BigDecimal("2.3376000"))
+        .build();
+    PlaceBookmark bookmark = bookmark(louvre, LocalDateTime.of(2026, 8, 30, 21, 0));
+    given(placeBookmarkRepository.findAllByUserIdWithPlaceOrderByCreatedAtDesc(1L, PageRequest.of(0, 20)))
+        .willReturn(new SliceImpl<>(List.of(bookmark), PageRequest.of(0, 20), true));
+
+    // when
+    BookmarkedPlaceListResult result = placeBookmarkService.getBookmarkedPlaces(1L, 0, 20);
+
+    // then
+    assertThat(result.page()).isZero();
+    assertThat(result.size()).isEqualTo(20);
+    assertThat(result.hasNext()).isTrue();
+    assertThat(result.places()).singleElement().satisfies(place -> {
+      assertThat(place.placeId()).isEqualTo("place-louvre");
+      assertThat(place.name()).isEqualTo("루브르 박물관");
+      assertThat(place.category()).isEqualTo(PlaceCategory.TOURISM);
+      assertThat(place.latitude()).isEqualTo(48.8606);
+      assertThat(place.longitude()).isEqualTo(2.3376);
+      assertThat(place.photoUrl()).isEqualTo("/api/v1/places/place-louvre/photo?maxWidth=400");
+      assertThat(place.bookmarkedAt()).isEqualTo(LocalDateTime.of(2026, 8, 30, 21, 0));
+    });
+  }
+
+  @DisplayName("size가 허용 범위를 벗어나면 조회하지 않고 예외가 발생한다")
+  @Test
+  void getBookmarkedPlaces_invalidSize_throws() {
+    // when & then
+    assertThatThrownBy(() -> placeBookmarkService.getBookmarkedPlaces(1L, 0, 101))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+    then(placeBookmarkRepository).shouldHaveNoInteractions();
+  }
+
+  private static PlaceBookmark bookmark(Place place, LocalDateTime bookmarkedAt) {
+    User user = mock(User.class);
+    given(user.getId()).willReturn(1L);
+    PlaceBookmark bookmark = new PlaceBookmark(user, place);
+    ReflectionTestUtils.setField(bookmark, "createdAt", bookmarkedAt);
+    return bookmark;
   }
 
   private static GooglePlace googlePlace() {
