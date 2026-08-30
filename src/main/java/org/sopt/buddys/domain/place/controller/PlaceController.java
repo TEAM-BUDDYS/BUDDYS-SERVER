@@ -14,8 +14,13 @@ import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.place.code.PlaceSuccessCode;
+import org.sopt.buddys.domain.place.controller.swagger.BookmarkPlaceSwagger;
+import org.sopt.buddys.domain.place.controller.swagger.CancelPlaceBookmarkSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.GooglePlacesUnavailableResponse;
+import org.sopt.buddys.domain.place.dto.response.PlaceBookmarkResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceSearchResponse;
+import org.sopt.buddys.domain.place.service.PlaceBookmarkService;
 import org.sopt.buddys.domain.place.service.PlaceService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -25,8 +30,10 @@ import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlaceController {
 
   private final PlaceService placeService;
+  private final PlaceBookmarkService placeBookmarkService;
 
   @Operation(summary = "장소 검색", description = "구글 Places API를 통해 장소를 검색합니다. lat/lng를 함께 주면 해당 좌표 주변 결과를 우선합니다.")
   @ApiResponses({
@@ -206,6 +214,36 @@ public class PlaceController {
     return BaseResponse.success(GlobalSuccessCode.OK,
         PlaceSearchResponse.from(placeService.nearby(userId, lat, lng, radius, category))
     );
+  }
+
+  @BookmarkPlaceSwagger
+  @PostMapping("/{placeId}/bookmark")
+  public ResponseEntity<BaseResponse<PlaceBookmarkResponse>> bookmarkPlace(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "구글 place_id", example = "ChIJN1t_tDeuEmsRUsoyG83frY4")
+      @PathVariable
+      @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "placeId 형식이 올바르지 않습니다.")
+      String placeId
+  ) {
+    placeBookmarkService.bookmark(userId, placeId);
+    return ResponseEntity
+        .status(PlaceSuccessCode.PLACE_BOOKMARKED.getHttpStatus())
+        .body(BaseResponse.success(PlaceSuccessCode.PLACE_BOOKMARKED, PlaceBookmarkResponse.of(true)));
+  }
+
+  @CancelPlaceBookmarkSwagger
+  @DeleteMapping("/{placeId}/bookmark")
+  public BaseResponse<PlaceBookmarkResponse> cancelPlaceBookmark(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "구글 place_id", example = "ChIJN1t_tDeuEmsRUsoyG83frY4")
+      @PathVariable
+      @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "placeId 형식이 올바르지 않습니다.")
+      String placeId
+  ) {
+    placeBookmarkService.cancelBookmark(userId, placeId);
+    return BaseResponse.success(PlaceSuccessCode.PLACE_BOOKMARK_CANCELED, PlaceBookmarkResponse.of(false));
   }
 
   @Operation(summary = "장소 사진 프록시", description = "장소의 대표 사진 URL로 302 리다이렉트합니다. 구글 API 키를 클라이언트에 노출하지 않기 위한 프록시입니다.")

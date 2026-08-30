@@ -11,6 +11,7 @@ import org.sopt.buddys.domain.place.client.dto.GoogleLatLng;
 import org.sopt.buddys.domain.place.client.dto.GoogleLocationBias;
 import org.sopt.buddys.domain.place.client.dto.GoogleLocationRestriction;
 import org.sopt.buddys.domain.place.client.dto.GooglePhotoMediaResponse;
+import org.sopt.buddys.domain.place.client.dto.GooglePlace;
 import org.sopt.buddys.domain.place.client.dto.GooglePlaceDetailsResponse;
 import org.sopt.buddys.domain.place.client.dto.GooglePlacesNearbyRequest;
 import org.sopt.buddys.domain.place.client.dto.GooglePlacesSearchRequest;
@@ -38,6 +39,8 @@ public class GooglePlacesClient {
   private static final String PLACE_FIELDS =
       "places.id,places.displayName,places.primaryType,places.types,places.formattedAddress,places.location,places.photos";
   private static final String SEARCH_TEXT_FIELD_MASK = PLACE_FIELDS + ",nextPageToken";
+  private static final String PLACE_DETAILS_FIELD_MASK =
+      "id,displayName,primaryType,types,formattedAddress,location";
   private static final double DEFAULT_BIAS_RADIUS_METERS = 20_000.0;
   private static final int NEARBY_MAX_RESULT_COUNT = 20;
   private static final String LANGUAGE_CODE_KOREAN = "ko";
@@ -115,6 +118,22 @@ public class GooglePlacesClient {
         ).getBody(),
         "searchNearby category=" + category + " radius=" + radiusMeters
     );
+  }
+
+  public GooglePlace getPlace(String placeId) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.set("X-Goog-Api-Key", apiKey);
+    headers.set("X-Goog-FieldMask", PLACE_DETAILS_FIELD_MASK);
+
+    return execute(() -> {
+      URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/places/" + placeId).build().toUri();
+      return restTemplate.exchange(
+          uri,
+          HttpMethod.GET,
+          new HttpEntity<>(headers),
+          GooglePlace.class
+      ).getBody();
+    }, "getPlace placeId=" + placeId);
   }
 
   public GooglePlaceDetailsResponse getPlaceDetails(String placeId) {
