@@ -13,7 +13,10 @@ public record PlaceResponse(
     @Schema(description = "위도. 구글이 좌표를 안 줄 경우 null일 수 있음", example = "48.8606", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true) Double latitude,
     @Schema(description = "경도. 구글이 좌표를 안 줄 경우 null일 수 있음", example = "2.3376", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true) Double longitude,
     @Schema(description = "로그인 유저의 저장 여부", example = "false", requiredMode = Schema.RequiredMode.REQUIRED) boolean bookmarked,
-    @Schema(description = "대표 사진 URL", nullable = true) String photoUrl
+    @Schema(description = "대표 사진 URL", nullable = true) String photoUrl,
+    @Schema(description = "구글맵에서 이 장소를 여는 딥링크",
+        example = "https://www.google.com/maps/search/?api=1&query=%EB%A3%A8%EB%B8%8C%EB%A5%B4+%EB%B0%95%EB%AC%BC%EA%B4%80&query_place_id=ChIJN1t_tDeuEmsRUsoyG83frY4",
+        requiredMode = Schema.RequiredMode.REQUIRED) String googleMapsUrl
 ) {
   public static PlaceResponse from(PlaceSearchItemResult result) {
     return new PlaceResponse(
@@ -24,7 +27,8 @@ public record PlaceResponse(
         result.latitude(),
         result.longitude(),
         result.bookmarked(),
-        result.photoUrl()
+        result.photoUrl(),
+        result.googleMapsUrl()
     );
   }
 }

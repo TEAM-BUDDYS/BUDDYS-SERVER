@@ -218,6 +218,10 @@ class PlaceBookmarkServiceTest {
       assertThat(place.latitude()).isEqualTo(48.8606);
       assertThat(place.longitude()).isEqualTo(2.3376);
       assertThat(place.photoUrl()).isEqualTo("/api/v1/places/place-louvre/photo?maxWidth=400");
+      assertThat(place.googleMapsUrl()).isEqualTo(
+          "https://www.google.com/maps/search/?api=1"
+              + "&query=%EB%A3%A8%EB%B8%8C%EB%A5%B4+%EB%B0%95%EB%AC%BC%EA%B4%80"
+              + "&query_place_id=place-louvre");
       assertThat(place.bookmarkedAt()).isEqualTo(LocalDateTime.of(2026, 8, 30, 21, 0));
     });
   }

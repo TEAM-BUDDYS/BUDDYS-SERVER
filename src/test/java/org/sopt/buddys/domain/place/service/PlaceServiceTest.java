@@ -199,6 +199,35 @@ class PlaceServiceTest {
         .containsExactly((String) null);
   }
 
+  @DisplayName("검색 결과에 place_id와 장소명이 담긴 구글맵 딥링크를 함께 내려준다")
+  @Test
+  void search_includesGoogleMapsUrl() {
+    // given
+    GooglePlace place = new GooglePlace(
+        "ChIJN1t_tDeuEmsRUsoyG83frY4",
+        new GoogleDisplayName("루브르 박물관", "ko"),
+        "art_gallery",
+        List.of("art_gallery"),
+        "Rue de Rivoli, 75001 Paris",
+        new GoogleLatLng(48.8606, 2.3376),
+        List.of()
+    );
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(place), null));
+    given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
+
+    // when
+    PlaceSearchResult result = placeService.search(1L, "루브르", null, null, null, null);
+
+    // then
+    assertThat(result.places())
+        .extracting(PlaceSearchResult.PlaceSearchItemResult::googleMapsUrl)
+        .containsExactly(
+            "https://www.google.com/maps/search/?api=1"
+                + "&query=%EB%A3%A8%EB%B8%8C%EB%A5%B4+%EB%B0%95%EB%AC%BC%EA%B4%80"
+                + "&query_place_id=ChIJN1t_tDeuEmsRUsoyG83frY4");
+  }
+
   @DisplayName("구글의 nextPageToken을 그대로 전달한다")
   @Test
   void search_propagatesNextPageToken() {

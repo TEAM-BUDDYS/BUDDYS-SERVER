@@ -68,6 +68,11 @@ public record BookmarkedPlaceListResponse(
           requiredMode = Schema.RequiredMode.REQUIRED)
       String photoUrl,
 
+      @Schema(description = "구글맵에서 이 장소를 여는 딥링크",
+          example = "https://www.google.com/maps/search/?api=1&query=%EB%A3%A8%EB%B8%8C%EB%A5%B4+%EB%B0%95%EB%AC%BC%EA%B4%80&query_place_id=ChIJN1t_tDeuEmsRUsoyG83frY4",
+          requiredMode = Schema.RequiredMode.REQUIRED)
+      String googleMapsUrl,
+
       @Schema(description = "저장한 시각", example = "2026-08-30T21:00:00",
           requiredMode = Schema.RequiredMode.REQUIRED)
       LocalDateTime bookmarkedAt
@@ -82,6 +87,7 @@ public record BookmarkedPlaceListResponse(
           result.latitude(),
           result.longitude(),
           result.photoUrl(),
+          result.googleMapsUrl(),
           result.bookmarkedAt()
       );
     }

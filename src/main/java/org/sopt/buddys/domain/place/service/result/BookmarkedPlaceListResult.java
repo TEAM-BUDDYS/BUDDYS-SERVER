@@ -23,6 +23,7 @@ public record BookmarkedPlaceListResult(
       Double latitude,
       Double longitude,
       String photoUrl,
+      String googleMapsUrl,
       LocalDateTime bookmarkedAt
   ) {
   }

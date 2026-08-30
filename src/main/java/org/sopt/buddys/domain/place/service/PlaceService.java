@@ -13,6 +13,7 @@ import org.sopt.buddys.domain.place.entity.PlaceCategoryMapper;
 import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult.PlaceSearchItemResult;
+import org.sopt.buddys.domain.place.util.GoogleMapsUrlBuilder;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -121,16 +122,18 @@ public class PlaceService {
     Double latitude = place.location() != null ? place.location().latitude() : null;
     Double longitude = place.location() != null ? place.location().longitude() : null;
     boolean hasPhoto = place.photos() != null && !place.photos().isEmpty();
+    String name = place.displayName() != null ? place.displayName().text() : null;
 
     return new PlaceSearchItemResult(
         place.id(),
-        place.displayName() != null ? place.displayName().text() : null,
+        name,
         category,
         place.formattedAddress(),
         latitude,
         longitude,
         bookmarked,
-        hasPhoto ? PHOTO_URL_TEMPLATE.formatted(place.id()) : null
+        hasPhoto ? PHOTO_URL_TEMPLATE.formatted(place.id()) : null,
+        GoogleMapsUrlBuilder.toPlaceUrl(place.id(), name != null ? name : place.formattedAddress())
     );
   }
 

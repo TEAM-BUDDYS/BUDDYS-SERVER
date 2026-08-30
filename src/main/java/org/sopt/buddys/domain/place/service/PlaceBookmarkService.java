@@ -15,6 +15,7 @@ import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceListResult;
 import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceListResult.BookmarkedPlaceResult;
+import org.sopt.buddys.domain.place.util.GoogleMapsUrlBuilder;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -72,6 +73,10 @@ public class PlaceBookmarkService {
         toDouble(place.getLatitude()),
         toDouble(place.getLongitude()),
         PHOTO_URL_TEMPLATE.formatted(place.getGooglePlaceId()),
+        GoogleMapsUrlBuilder.toPlaceUrl(
+            place.getGooglePlaceId(),
+            place.getName() != null ? place.getName() : place.getAddress()
+        ),
         bookmark.getCreatedAt()
     );
   }
