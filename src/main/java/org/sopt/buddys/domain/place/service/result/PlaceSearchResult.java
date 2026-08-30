@@ -21,7 +21,9 @@ public record PlaceSearchResult(
       Double longitude,
       boolean bookmarked,
       String photoUrl,
-      String googleMapsUrl
+      String googleMapsUrl,
+      String country,
+      String city
   ) {
   }
 }

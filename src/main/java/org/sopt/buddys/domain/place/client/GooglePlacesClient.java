@@ -37,7 +37,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class GooglePlacesClient {
 
   private static final String PLACE_FIELDS =
-      "places.id,places.displayName,places.primaryType,places.types,places.formattedAddress,places.location,places.photos";
+      "places.id,places.displayName,places.primaryType,places.types,places.formattedAddress,"
+          + "places.addressComponents,places.location,places.photos";
   private static final String SEARCH_TEXT_FIELD_MASK = PLACE_FIELDS + ",nextPageToken";
   private static final String PLACE_DETAILS_FIELD_MASK =
       "id,displayName,primaryType,types,formattedAddress,location";

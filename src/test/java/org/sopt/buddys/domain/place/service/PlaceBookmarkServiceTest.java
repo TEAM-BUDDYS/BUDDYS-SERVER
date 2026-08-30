@@ -86,6 +86,7 @@ class PlaceBookmarkServiceTest {
         "art_gallery",
         List.of("art_gallery", "tourist_attraction"),
         "Rue de Rivoli, 75001 Paris",
+        null,
         new GoogleLatLng(48.8606, 2.3376),
         null
     ));
@@ -132,7 +133,7 @@ class PlaceBookmarkServiceTest {
     // given
     given(placeRepository.findByGooglePlaceId(GOOGLE_PLACE_ID)).willReturn(Optional.empty());
     given(googlePlacesClient.getPlace(GOOGLE_PLACE_ID)).willReturn(new GooglePlace(
-        GOOGLE_PLACE_ID, null, "restaurant", List.of("restaurant"), null, null, null));
+        GOOGLE_PLACE_ID, null, "restaurant", List.of("restaurant"), null, null, null, null));
 
     // when & then
     assertThatThrownBy(() -> placeBookmarkService.bookmark(1L, GOOGLE_PLACE_ID))
@@ -149,7 +150,7 @@ class PlaceBookmarkServiceTest {
     // given
     given(placeRepository.findByGooglePlaceId(GOOGLE_PLACE_ID)).willReturn(Optional.empty());
     given(googlePlacesClient.getPlace(GOOGLE_PLACE_ID)).willReturn(new GooglePlace(
-        GOOGLE_PLACE_ID, null, "cafe", List.of("cafe"), "서울特別市 중구 세종대로 110", null, null));
+        GOOGLE_PLACE_ID, null, "cafe", List.of("cafe"), "서울特別市 중구 세종대로 110", null, null, null));
     given(placeBookmarkTransactionService.savePlace(any(Place.class))).willReturn(place(40L));
 
     // when
@@ -252,6 +253,7 @@ class PlaceBookmarkServiceTest {
         "restaurant",
         List.of("restaurant"),
         "어딘가",
+        null,
         new GoogleLatLng(37.5, 127.0),
         null
     );

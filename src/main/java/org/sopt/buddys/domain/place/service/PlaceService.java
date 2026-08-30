@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
+import org.sopt.buddys.domain.place.client.dto.GoogleAddressComponent;
 import org.sopt.buddys.domain.place.client.dto.GooglePhoto;
 import org.sopt.buddys.domain.place.client.dto.GooglePlace;
 import org.sopt.buddys.domain.place.code.PlaceErrorCode;
@@ -13,6 +14,7 @@ import org.sopt.buddys.domain.place.entity.PlaceCategoryMapper;
 import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult.PlaceSearchItemResult;
+import org.sopt.buddys.domain.place.util.AddressComponentParser;
 import org.sopt.buddys.domain.place.util.GoogleMapsUrlBuilder;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
@@ -123,6 +125,7 @@ public class PlaceService {
     Double longitude = place.location() != null ? place.location().longitude() : null;
     boolean hasPhoto = place.photos() != null && !place.photos().isEmpty();
     String name = place.displayName() != null ? place.displayName().text() : null;
+    List<GoogleAddressComponent> addressComponents = place.addressComponents();
 
     return new PlaceSearchItemResult(
         place.id(),
@@ -133,7 +136,9 @@ public class PlaceService {
         longitude,
         bookmarked,
         hasPhoto ? PHOTO_URL_TEMPLATE.formatted(place.id()) : null,
-        GoogleMapsUrlBuilder.toPlaceUrl(place.id(), name != null ? name : place.formattedAddress())
+        GoogleMapsUrlBuilder.toPlaceUrl(place.id(), name != null ? name : place.formattedAddress()),
+        AddressComponentParser.extractCountry(addressComponents),
+        AddressComponentParser.extractCity(addressComponents)
     );
   }
 
