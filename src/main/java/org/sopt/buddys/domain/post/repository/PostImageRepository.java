@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 
+  void deleteAllByPostId(Long postId);
+
   @Query("""
       select pi.post.id as postId,
              pi.imageUrl as thumbnailImageUrl

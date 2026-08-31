@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -72,6 +73,9 @@ public class Post extends BaseEntity {
   @Column(name = "comment_count", nullable = false)
   private Long commentCount = 0L;
 
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
+
   public Post(
       User author,
       Country country,
@@ -99,5 +103,28 @@ public class Post extends BaseEntity {
 
   public void updateStatus(PostStatus status) {
     this.status = status;
+  }
+
+  public void update(
+      Country country, City city, LocalDate startDate, LocalDate endDate,
+      String title, String content, CompanionType companionType,
+      RecruitmentCountType recruitmentCountType
+  ) {
+    this.country = country;
+    this.city = city;
+    this.startDate = startDate;
+    this.endDate = endDate;
+    this.title = title;
+    this.content = content;
+    this.companionType = companionType;
+    this.recruitmentCountType = recruitmentCountType;
+  }
+
+  public boolean isDeleted() {
+    return deletedAt != null;
+  }
+
+  public void softDelete(LocalDateTime deletedAt) {
+    this.deletedAt = deletedAt;
   }
 }

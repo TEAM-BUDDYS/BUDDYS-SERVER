@@ -54,6 +54,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
   private BooleanBuilder toPredicate(PostSearchCondition condition) {
     BooleanBuilder builder = new BooleanBuilder()
         .and(post.status.eq(PostStatus.RECRUITING))
+        .and(post.deletedAt.isNull())
         .and(keywordContains(condition.keyword()))
         .and(countryEquals(condition.countryId()))
         .and(startDateGoe(condition))
