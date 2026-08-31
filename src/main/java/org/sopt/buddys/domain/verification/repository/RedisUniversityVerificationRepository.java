@@ -103,6 +103,11 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
     );
   }
 
+  @Override
+  public void deleteByUserId(Long userId) {
+    redisTemplate.delete(List.of(key(userId), attemptsKey(userId)));
+  }
+
   private Optional<UniversityVerification> decode(Long userId, String code, String storedValue) {
     String[] parts = storedValue.split(VALUE_SEPARATOR, VALUE_PARTS);
     if (parts.length != VALUE_PARTS || !codeMatches(parts[1], code)) {
