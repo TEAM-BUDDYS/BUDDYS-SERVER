@@ -57,12 +57,6 @@ public class UpdatePostRequest {
   public void setTagIds(List<Long> value) { tagIds = mark(Field.TAG_IDS, value); }
   public void setImageUrls(List<String> value) { imageUrls = mark(Field.IMAGE_URLS, value); }
 
-  @JsonIgnore
-  public boolean isProvided(Field field) { return providedFields.contains(field); }
-
-  @JsonIgnore
-  public boolean isEmpty() { return providedFields.isEmpty(); }
-
   public UpdatePostCommand toCommand() {
     return new UpdatePostCommand(
         countryId, cityId, startDate, endDate, title, content, ageConditions,

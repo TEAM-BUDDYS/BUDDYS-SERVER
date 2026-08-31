@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
+import org.sopt.buddys.domain.post.dto.request.UpdatePostRequest.Field;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
@@ -33,7 +34,6 @@ import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
 import org.sopt.buddys.domain.post.service.command.UpdatePostCommand;
-import org.sopt.buddys.domain.post.dto.request.UpdatePostRequest.Field;
 import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult.PostSummaryResult;
@@ -143,14 +143,12 @@ public class PostService {
         ? countryRepository.findById(command.countryId())
             .orElseThrow(() -> new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND))
         : post.getCountry();
-    City city = command.isProvided(Field.CITY_ID)
-        ? cityRepository.findById(command.cityId())
-            .orElseThrow(() -> new BaseException(LocationErrorCode.CITY_NOT_FOUND))
+    City city = command.isProvided(Field.COUNTRY_ID) || command.isProvided(Field.CITY_ID)
+        ? getCity(
+            country.getId(),
+            command.isProvided(Field.CITY_ID) ? command.cityId() : post.getCity().getId()
+        )
         : post.getCity();
-    if ((command.isProvided(Field.COUNTRY_ID) || command.isProvided(Field.CITY_ID))
-        && !city.getCountry().getId().equals(country.getId())) {
-      throw new BaseException(PostErrorCode.CITY_NOT_IN_COUNTRY);
-    }
 
     LocalDate startDate = command.isProvided(Field.START_DATE) ? command.startDate() : post.getStartDate();
     LocalDate endDate = command.isProvided(Field.END_DATE) ? command.endDate() : post.getEndDate();
