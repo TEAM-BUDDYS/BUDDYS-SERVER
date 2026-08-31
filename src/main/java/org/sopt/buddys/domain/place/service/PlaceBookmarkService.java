@@ -14,7 +14,8 @@ import org.sopt.buddys.domain.place.entity.PlaceCategoryMapper;
 import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceListResult;
-import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceListResult.BookmarkedPlaceResult;
+import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceMarkersResult;
+import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceResult;
 import org.sopt.buddys.domain.place.util.GoogleMapsUrlBuilder;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
@@ -37,6 +38,11 @@ import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 public class PlaceBookmarkService {
 
   private static final int MAX_NAME_LENGTH = 255;
+  private static final int MAX_MARKERS = 300;
+  private static final BigDecimal MIN_LATITUDE = BigDecimal.valueOf(-90);
+  private static final BigDecimal MAX_LATITUDE = BigDecimal.valueOf(90);
+  private static final BigDecimal MIN_LONGITUDE = BigDecimal.valueOf(-180);
+  private static final BigDecimal MAX_LONGITUDE = BigDecimal.valueOf(180);
   private static final String PHOTO_URL_TEMPLATE = "/api/v1/places/%s/photo?maxWidth=400";
 
   private final GooglePlacesClient googlePlacesClient;
@@ -61,6 +67,37 @@ public class PlaceBookmarkService {
         .toList();
 
     return new BookmarkedPlaceListResult(places, slice.getNumber(), slice.getSize(), slice.hasNext());
+  }
+
+  @Transactional(readOnly = true)
+  public BookmarkedPlaceMarkersResult getBookmarkedPlaceMarkers(
+      Long userId,
+      BigDecimal swLat,
+      BigDecimal swLng,
+      BigDecimal neLat,
+      BigDecimal neLng
+  ) {
+    validateBounds(swLat, swLng, neLat, neLng);
+
+    List<PlaceBookmark> bookmarks = placeBookmarkRepository.findMarkersByUserIdWithinBounds(
+        userId, swLat, neLat, swLng, neLng, PageRequest.of(0, MAX_MARKERS + 1));
+
+    boolean truncated = bookmarks.size() > MAX_MARKERS;
+    List<BookmarkedPlaceResult> places = bookmarks.stream()
+        .limit(MAX_MARKERS)
+        .map(this::toBookmarkedPlaceResult)
+        .toList();
+
+    return new BookmarkedPlaceMarkersResult(places, truncated);
+  }
+
+  private void validateBounds(BigDecimal swLat, BigDecimal swLng, BigDecimal neLat, BigDecimal neLng) {
+    boolean outOfRange = swLat.compareTo(MIN_LATITUDE) < 0 || neLat.compareTo(MAX_LATITUDE) > 0
+        || swLng.compareTo(MIN_LONGITUDE) < 0 || neLng.compareTo(MAX_LONGITUDE) > 0;
+    boolean misordered = swLat.compareTo(neLat) > 0 || swLng.compareTo(neLng) > 0;
+    if (outOfRange || misordered) {
+      throw new BaseException(PlaceErrorCode.INVALID_MAP_BOUNDS);
+    }
   }
 
   private BookmarkedPlaceResult toBookmarkedPlaceResult(PlaceBookmark bookmark) {

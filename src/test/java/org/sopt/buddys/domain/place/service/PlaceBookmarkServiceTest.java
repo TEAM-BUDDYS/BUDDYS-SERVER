@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
@@ -31,6 +32,7 @@ import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceListResult;
+import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceMarkersResult;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
@@ -235,6 +237,74 @@ class PlaceBookmarkServiceTest {
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+    then(placeBookmarkRepository).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("지도 영역 안의 저장 장소를 마커용으로 반환한다")
+  @Test
+  void getBookmarkedPlaceMarkers_withinBounds_returnsMarkers() {
+    // given
+    PlaceBookmark b1 = bookmark(place(1L), LocalDateTime.of(2026, 8, 30, 21, 0));
+    PlaceBookmark b2 = bookmark(place(2L), LocalDateTime.of(2026, 8, 29, 10, 0));
+    given(placeBookmarkRepository.findMarkersByUserIdWithinBounds(
+        eq(1L), any(BigDecimal.class), any(BigDecimal.class), any(BigDecimal.class),
+        any(BigDecimal.class), any(PageRequest.class)))
+        .willReturn(List.of(b1, b2));
+
+    // when
+    BookmarkedPlaceMarkersResult result = placeBookmarkService.getBookmarkedPlaceMarkers(
+        1L, new BigDecimal("48.84"), new BigDecimal("2.32"),
+        new BigDecimal("48.88"), new BigDecimal("2.36"));
+
+    // then
+    assertThat(result.truncated()).isFalse();
+    assertThat(result.places()).hasSize(2)
+        .allSatisfy(place -> assertThat(place.googleMapsUrl()).startsWith(
+            "https://www.google.com/maps/search/?api=1"));
+  }
+
+  @DisplayName("영역 안 저장 장소가 상한을 넘으면 잘라내고 truncated=true로 반환한다")
+  @Test
+  void getBookmarkedPlaceMarkers_overLimit_truncates() {
+    // given
+    PlaceBookmark bookmark = bookmark(place(1L), LocalDateTime.of(2026, 8, 30, 21, 0));
+    given(placeBookmarkRepository.findMarkersByUserIdWithinBounds(
+        any(), any(), any(), any(), any(), any()))
+        .willReturn(java.util.Collections.nCopies(301, bookmark));
+
+    // when
+    BookmarkedPlaceMarkersResult result = placeBookmarkService.getBookmarkedPlaceMarkers(
+        1L, new BigDecimal("-10"), new BigDecimal("-10"),
+        new BigDecimal("10"), new BigDecimal("10"));
+
+    // then
+    assertThat(result.truncated()).isTrue();
+    assertThat(result.places()).hasSize(300);
+  }
+
+  @DisplayName("남서 좌표가 북동 좌표보다 크면 조회하지 않고 예외가 발생한다")
+  @Test
+  void getBookmarkedPlaceMarkers_misorderedBounds_throws() {
+    // when & then
+    assertThatThrownBy(() -> placeBookmarkService.getBookmarkedPlaceMarkers(
+        1L, new BigDecimal("48.90"), new BigDecimal("2.32"),
+        new BigDecimal("48.80"), new BigDecimal("2.36")))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_MAP_BOUNDS);
+    then(placeBookmarkRepository).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("좌표가 유효 범위를 벗어나면 조회하지 않고 예외가 발생한다")
+  @Test
+  void getBookmarkedPlaceMarkers_outOfRange_throws() {
+    // when & then
+    assertThatThrownBy(() -> placeBookmarkService.getBookmarkedPlaceMarkers(
+        1L, new BigDecimal("-91"), new BigDecimal("2.32"),
+        new BigDecimal("48.80"), new BigDecimal("2.36")))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(PlaceErrorCode.INVALID_MAP_BOUNDS);
     then(placeBookmarkRepository).shouldHaveNoInteractions();
   }
 

@@ -17,9 +17,11 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.place.code.PlaceSuccessCode;
 import org.sopt.buddys.domain.place.controller.swagger.BookmarkPlaceSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.CancelPlaceBookmarkSwagger;
+import org.sopt.buddys.domain.place.controller.swagger.GetBookmarkedPlaceMarkersSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.GetBookmarkedPlacesSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.GooglePlacesUnavailableResponse;
 import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceListResponse;
+import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceMarkersResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceBookmarkResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceSearchResponse;
 import org.sopt.buddys.domain.place.service.PlaceBookmarkService;
@@ -262,6 +264,26 @@ public class PlaceController {
   ) {
     return BaseResponse.success(GlobalSuccessCode.OK,
         BookmarkedPlaceListResponse.from(placeBookmarkService.getBookmarkedPlaces(userId, page, size))
+    );
+  }
+
+  @GetBookmarkedPlaceMarkersSwagger
+  @GetMapping("/bookmarks/markers")
+  public BaseResponse<BookmarkedPlaceMarkersResponse> getBookmarkedPlaceMarkers(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "지도 영역 남서(south-west) 모서리 위도", example = "48.84")
+      @RequestParam BigDecimal swLat,
+      @Parameter(description = "지도 영역 남서(south-west) 모서리 경도", example = "2.32")
+      @RequestParam BigDecimal swLng,
+      @Parameter(description = "지도 영역 북동(north-east) 모서리 위도", example = "48.88")
+      @RequestParam BigDecimal neLat,
+      @Parameter(description = "지도 영역 북동(north-east) 모서리 경도", example = "2.36")
+      @RequestParam BigDecimal neLng
+  ) {
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        BookmarkedPlaceMarkersResponse.from(
+            placeBookmarkService.getBookmarkedPlaceMarkers(userId, swLat, swLng, neLat, neLng))
     );
   }
 
