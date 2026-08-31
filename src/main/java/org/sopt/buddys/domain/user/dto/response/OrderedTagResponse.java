@@ -6,13 +6,25 @@ import org.sopt.buddys.domain.user.entity.UserTag;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 
 public record OrderedTagResponse(
-    @Schema(description = "태그 ID", example = "27")
+    @Schema(
+        description = "태그 ID",
+        example = "27",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     Long id,
 
-    @Schema(description = "태그 이름", example = "계획형")
+    @Schema(
+        description = "태그 이름",
+        example = "계획형",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     String name,
 
-    @Schema(description = "태그 카테고리", example = "TRAVEL_STYLE")
+    @Schema(
+        description = "태그 카테고리",
+        example = "TRAVEL_STYLE",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     TagType tagType
 ) {
 
