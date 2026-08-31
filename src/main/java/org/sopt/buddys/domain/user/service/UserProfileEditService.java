@@ -83,7 +83,7 @@ public class UserProfileEditService {
   }
 
   private User getActiveUserForUpdate(Long userId) {
-    return userRepository.findByIdForProfileUpdate(userId)
+    return userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
   }
 

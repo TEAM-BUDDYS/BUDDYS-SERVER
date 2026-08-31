@@ -22,7 +22,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
       where u.id = :userId
         and u.deletedAt is null
       """)
-  Optional<User> findByIdForProfileUpdate(@Param("userId") Long userId);
+  Optional<User> findActiveByIdForUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u.notificationEnabled

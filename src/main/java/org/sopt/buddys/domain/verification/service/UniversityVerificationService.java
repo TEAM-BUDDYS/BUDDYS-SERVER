@@ -65,7 +65,7 @@ public class UniversityVerificationService {
     }
     UniversityVerification verification = result.verification();
 
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+    User user = userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
     University university = universityRepository.findById(verification.universityId())
         .orElseThrow(() -> new BaseException(LocationErrorCode.UNIVERSITY_NOT_FOUND));

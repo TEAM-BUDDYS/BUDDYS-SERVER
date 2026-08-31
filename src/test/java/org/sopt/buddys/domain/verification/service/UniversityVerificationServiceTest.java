@@ -132,7 +132,7 @@ class UniversityVerificationServiceTest {
     UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
     given(universityVerificationRepository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS))
         .willReturn(VerificationResult.matched(verification));
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
     given(universityRepository.findById(UNIVERSITY_ID)).willReturn(Optional.of(university));
 
     // when
@@ -141,6 +141,24 @@ class UniversityVerificationServiceTest {
     // then
     then(user).should().verifyUniversity(university);
     then(universityVerificationRepository).should().deleteIfMatches(verification);
+  }
+
+  @DisplayName("탈퇴한 사용자는 학교 인증을 완료할 수 없다")
+  @Test
+  void confirmVerification_withdrawnUser_throwsUserNotFound() {
+    // given
+    UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    given(universityVerificationRepository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS))
+        .willReturn(VerificationResult.matched(verification));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> universityVerificationService.confirmVerification(USER_ID, verification.code()))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND));
+    then(user).shouldHaveNoInteractions();
+    then(universityVerificationRepository).should(never()).deleteIfMatches(any());
   }
 
   @DisplayName("코드가 없거나 틀리면 인증 코드 오류가 발생한다")
@@ -155,7 +173,7 @@ class UniversityVerificationServiceTest {
         .isInstanceOf(BaseException.class)
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
-    then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
+    then(userRepository).should(never()).findActiveByIdForUpdate(any());
   }
 
   @DisplayName("인증 코드 입력 횟수를 초과하면 별도의 제한 초과 오류가 발생한다")
@@ -170,6 +188,6 @@ class UniversityVerificationServiceTest {
         .isInstanceOf(BaseException.class)
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_ATTEMPT_LIMIT_EXCEEDED));
-    then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
+    then(userRepository).should(never()).findActiveByIdForUpdate(any());
   }
 }

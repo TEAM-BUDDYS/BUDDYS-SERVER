@@ -45,7 +45,7 @@ public class UserOnboardingService {
 
   @Transactional
   public User completeOnboarding(Long userId, OnboardingCommand request) {
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+    User user = userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     validateNotAlreadyOnboarded(userId);
