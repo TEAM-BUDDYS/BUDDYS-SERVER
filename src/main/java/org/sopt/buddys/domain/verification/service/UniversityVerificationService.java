@@ -12,6 +12,7 @@ import org.sopt.buddys.domain.verification.code.UniversityVerificationErrorCode;
 import org.sopt.buddys.domain.verification.config.UniversityVerificationProperties;
 import org.sopt.buddys.domain.verification.entity.UniversityVerification;
 import org.sopt.buddys.domain.verification.repository.UniversityVerificationRepository;
+import org.sopt.buddys.domain.verification.repository.UniversityVerificationRepository.VerificationResult;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,8 +52,18 @@ public class UniversityVerificationService {
 
   @Transactional
   public void confirmVerification(Long userId, String code) {
-    UniversityVerification verification = universityVerificationRepository.findByUserIdAndCode(userId, code)
-        .orElseThrow(() -> new BaseException(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
+    VerificationResult result = universityVerificationRepository.verifyCode(
+        userId,
+        code,
+        universityVerificationProperties.maxAttempts()
+    );
+    if (result.status() == UniversityVerificationRepository.Status.ATTEMPT_LIMIT_EXCEEDED) {
+      throw new BaseException(UniversityVerificationErrorCode.VERIFICATION_ATTEMPT_LIMIT_EXCEEDED);
+    }
+    if (result.status() == UniversityVerificationRepository.Status.INVALID) {
+      throw new BaseException(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID);
+    }
+    UniversityVerification verification = result.verification();
 
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));

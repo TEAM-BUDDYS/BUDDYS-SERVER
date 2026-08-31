@@ -25,6 +25,7 @@ import org.sopt.buddys.domain.verification.code.UniversityVerificationErrorCode;
 import org.sopt.buddys.domain.verification.config.UniversityVerificationProperties;
 import org.sopt.buddys.domain.verification.entity.UniversityVerification;
 import org.sopt.buddys.domain.verification.repository.UniversityVerificationRepository;
+import org.sopt.buddys.domain.verification.repository.UniversityVerificationRepository.VerificationResult;
 import org.sopt.buddys.global.exception.BaseException;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +36,7 @@ class UniversityVerificationServiceTest {
   private static final String EMAIL = "student@university.ac.kr";
   private static final String UNIVERSITY_NAME = "Buddys University";
   private static final Duration CODE_EXPIRATION = Duration.ofMinutes(15);
+  private static final int MAX_ATTEMPTS = 5;
 
   @Mock
   private UniversityVerificationRepository universityVerificationRepository;
@@ -58,7 +60,10 @@ class UniversityVerificationServiceTest {
 
   @BeforeEach
   void setUp() {
-    UniversityVerificationProperties properties = new UniversityVerificationProperties(CODE_EXPIRATION);
+    UniversityVerificationProperties properties = new UniversityVerificationProperties(
+        CODE_EXPIRATION,
+        MAX_ATTEMPTS
+    );
     universityVerificationService = new UniversityVerificationService(
         universityVerificationRepository,
         universityRepository,
@@ -125,8 +130,8 @@ class UniversityVerificationServiceTest {
   void confirmVerification_validCode_verifiesUniversityAndDeletesCode() {
     // given
     UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
-    given(universityVerificationRepository.findByUserIdAndCode(USER_ID, verification.code()))
-        .willReturn(Optional.of(verification));
+    given(universityVerificationRepository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS))
+        .willReturn(VerificationResult.matched(verification));
     given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
     given(universityRepository.findById(UNIVERSITY_ID)).willReturn(Optional.of(university));
 
@@ -142,14 +147,29 @@ class UniversityVerificationServiceTest {
   @Test
   void confirmVerification_missingCode_throwsInvalid() {
     // given
-    given(universityVerificationRepository.findByUserIdAndCode(eq(USER_ID), any()))
-        .willReturn(Optional.empty());
+    given(universityVerificationRepository.verifyCode(eq(USER_ID), any(), eq(MAX_ATTEMPTS)))
+        .willReturn(VerificationResult.invalid());
 
     // when & then
     assertThatThrownBy(() -> universityVerificationService.confirmVerification(USER_ID, "ABC123"))
         .isInstanceOf(BaseException.class)
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_CODE_INVALID));
+    then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
+  }
+
+  @DisplayName("인증 코드 입력 횟수를 초과하면 별도의 제한 초과 오류가 발생한다")
+  @Test
+  void confirmVerification_attemptLimitExceeded_throwsLimitExceeded() {
+    // given
+    given(universityVerificationRepository.verifyCode(eq(USER_ID), any(), eq(MAX_ATTEMPTS)))
+        .willReturn(VerificationResult.limitExceeded());
+
+    // when & then
+    assertThatThrownBy(() -> universityVerificationService.confirmVerification(USER_ID, "ABC123"))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(UniversityVerificationErrorCode.VERIFICATION_ATTEMPT_LIMIT_EXCEEDED));
     then(userRepository).should(never()).findByIdAndDeletedAtIsNull(any());
   }
 }

@@ -66,6 +66,7 @@ mail:
 verification:
   university-email:
     code-expiration: 15m
+    max-attempts: ${UNIVERSITY_VERIFICATION_MAX_ATTEMPTS:5}
 
 buddys:
   redis:

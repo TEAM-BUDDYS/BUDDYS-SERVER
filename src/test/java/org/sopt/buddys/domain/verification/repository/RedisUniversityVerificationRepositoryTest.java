@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.verification.entity.UniversityVerification;
+import org.sopt.buddys.domain.verification.repository.UniversityVerificationRepository.Status;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -24,6 +25,7 @@ class RedisUniversityVerificationRepositoryTest {
   private static final long UNIVERSITY_ID = 10L;
   private static final String EMAIL = "student@university.ac.kr";
   private static final Duration TTL = Duration.ofMinutes(15);
+  private static final int MAX_ATTEMPTS = 5;
 
   @Container
   static GenericContainer<?> valkey = new GenericContainer<>(
@@ -64,8 +66,10 @@ class RedisUniversityVerificationRepositoryTest {
     repository.save(verification, TTL);
 
     // then
-    assertThat(repository.findByUserIdAndCode(USER_ID, verification.code())).contains(verification);
-    assertThat(repository.findByUserIdAndCode(USER_ID, "ZZZZZZ")).isEmpty();
+    assertThat(repository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS).verification())
+        .isEqualTo(verification);
+    assertThat(repository.verifyCode(USER_ID, "ZZZZZZ", MAX_ATTEMPTS).status())
+        .isEqualTo(Status.INVALID);
     assertThat(redisTemplate.getExpire(KEY_PREFIX + USER_ID))
         .isPositive()
         .isLessThanOrEqualTo(TTL.toSeconds());
@@ -83,8 +87,10 @@ class RedisUniversityVerificationRepositoryTest {
     repository.save(current, TTL);
 
     // then
-    assertThat(repository.findByUserIdAndCode(USER_ID, previous.code())).isEmpty();
-    assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).contains(current);
+    assertThat(repository.verifyCode(USER_ID, previous.code(), MAX_ATTEMPTS).status())
+        .isEqualTo(Status.INVALID);
+    assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).verification())
+        .isEqualTo(current);
   }
 
   @DisplayName("조건부 삭제는 재발송으로 갱신된 코드를 삭제하지 않는다")
@@ -99,12 +105,59 @@ class RedisUniversityVerificationRepositoryTest {
     repository.deleteIfMatches(previous);
 
     // then
-    assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).contains(current);
+    assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).verification())
+        .isEqualTo(current);
 
     // when
     repository.deleteIfMatches(current);
 
     // then
-    assertThat(repository.findByUserIdAndCode(USER_ID, current.code())).isEmpty();
+    assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).status())
+        .isEqualTo(Status.INVALID);
+  }
+
+  @DisplayName("인증 코드가 제한 횟수만큼 틀리면 올바른 코드도 더 이상 사용할 수 없다")
+  @Test
+  void verifyCode_exceedingMaxAttempts_invalidatesCode() {
+    // given
+    UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    repository.save(verification, TTL);
+
+    // when
+    for (int attempt = 0; attempt < MAX_ATTEMPTS - 1; attempt++) {
+      assertThat(repository.verifyCode(USER_ID, "WRONG" + attempt, MAX_ATTEMPTS).status())
+          .isEqualTo(Status.INVALID);
+    }
+    assertThat(repository.verifyCode(USER_ID, "WRONG4", MAX_ATTEMPTS).status())
+        .isEqualTo(Status.ATTEMPT_LIMIT_EXCEEDED);
+
+    // then
+    assertThat(repository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS).status())
+        .isEqualTo(Status.ATTEMPT_LIMIT_EXCEEDED);
+    assertThat(redisTemplate.hasKey(KEY_PREFIX + USER_ID)).isFalse();
+  }
+
+  @DisplayName("새 인증 코드를 발급하면 이전 코드의 실패 횟수도 초기화된다")
+  @Test
+  void saveAgain_resetsFailedAttempts() {
+    // given
+    UniversityVerification previous = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    repository.save(previous, TTL);
+    for (int attempt = 0; attempt < MAX_ATTEMPTS - 1; attempt++) {
+      repository.verifyCode(USER_ID, "WRONG" + attempt, MAX_ATTEMPTS);
+    }
+
+    UniversityVerification current = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+
+    // when
+    repository.save(current, TTL);
+
+    // then
+    for (int attempt = 0; attempt < MAX_ATTEMPTS - 1; attempt++) {
+      assertThat(repository.verifyCode(USER_ID, "RETRY" + attempt, MAX_ATTEMPTS).status())
+          .isEqualTo(Status.INVALID);
+    }
+    assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).verification())
+        .isEqualTo(current);
   }
 }

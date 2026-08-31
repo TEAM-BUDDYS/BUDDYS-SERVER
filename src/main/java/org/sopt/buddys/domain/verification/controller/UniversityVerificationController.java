@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sopt.buddys.domain.location.controller.swagger.UniversityNotFoundResponse;
+import org.sopt.buddys.domain.verification.controller.swagger.VerificationAttemptLimitExceededResponse;
 import org.sopt.buddys.domain.verification.controller.swagger.VerificationCodeInvalidResponse;
 import org.sopt.buddys.domain.verification.dto.request.UniversityVerificationConfirmRequest;
 import org.sopt.buddys.domain.verification.dto.request.UniversityVerificationRequest;
@@ -62,11 +63,13 @@ public class UniversityVerificationController {
           앱 화면에서 입력한 인증 코드를 검증합니다. 일치하면 로그인 사용자의 학교 인증을 완료하고 코드를 폐기합니다.
 
           - 코드가 없거나 틀리거나 만료됐으면 400(UNIV-E001)이 반환됩니다.
+          - 인증번호 입력 가능 횟수를 초과하면 429(UNIV-E003)가 반환됩니다.
           """
   )
   @ApiResponse(responseCode = "200", description = "학교 인증 완료")
   @InvalidRequestResponse
   @VerificationCodeInvalidResponse
+  @VerificationAttemptLimitExceededResponse
   @UniversityNotFoundResponse
   @CommonErrorResponses
   @PostMapping("/confirm")
