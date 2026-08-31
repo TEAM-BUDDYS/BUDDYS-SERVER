@@ -172,8 +172,7 @@ public class PostService {
       savePostGenderConditions(post, command.genderConditions());
     }
     if (command.isProvided(Field.TAG_IDS)) {
-      postTagRepository.deleteAllByPostId(postId);
-      savePostTags(post, command.tagIds());
+      updatePostTags(post, command.tagIds());
     }
     if (command.isProvided(Field.IMAGE_URLS)) {
       postImageRepository.deleteAllByPostId(postId);
@@ -351,6 +350,33 @@ public class PostService {
   }
 
   private void savePostTags(Post post, List<Long> tagIds) {
+    List<Tag> tags = getValidatedTags(tagIds);
+
+    postTagRepository.saveAll(tags.stream()
+        .map(tag -> new PostTag(post, tag))
+        .toList());
+  }
+
+  private void updatePostTags(Post post, List<Long> tagIds) {
+    List<Tag> requestedTags = getValidatedTags(tagIds);
+    Set<Long> requestedTagIds = requestedTags.stream()
+        .map(Tag::getId)
+        .collect(Collectors.toSet());
+    List<PostTag> existingPostTags = postTagRepository.findAllByPostIdWithTag(post.getId());
+    Set<Long> existingTagIds = existingPostTags.stream()
+        .map(postTag -> postTag.getTag().getId())
+        .collect(Collectors.toSet());
+
+    postTagRepository.deleteAll(existingPostTags.stream()
+        .filter(postTag -> !requestedTagIds.contains(postTag.getTag().getId()))
+        .toList());
+    postTagRepository.saveAll(requestedTags.stream()
+        .filter(tag -> !existingTagIds.contains(tag.getId()))
+        .map(tag -> new PostTag(post, tag))
+        .toList());
+  }
+
+  private List<Tag> getValidatedTags(List<Long> tagIds) {
     if (tagIds == null || tagIds.isEmpty()) {
       throw new BaseException(PostErrorCode.ACTIVITY_TAG_REQUIRED);
     }
@@ -361,10 +387,7 @@ public class PostService {
       throw new BaseException(PostErrorCode.TAG_NOT_FOUND);
     }
     validateTagTypeCounts(tags);
-
-    postTagRepository.saveAll(tags.stream()
-        .map(tag -> new PostTag(post, tag))
-        .toList());
+    return tags;
   }
 
   private void validateTagTypeCounts(List<Tag> tags) {
