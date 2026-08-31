@@ -17,7 +17,13 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
 @Retention(RetentionPolicy.RUNTIME)
 @Operation(
     summary = "프로필 수정",
-    description = "닉네임, 성별, 생년월일, 자기소개와 사용자가 정렬한 전체 태그를 수정합니다. 태그 배열의 앞 3개가 대표 태그입니다."
+    description = """
+            프로필 정보를 전체 수정합니다.
+            모든 필드를 요청에 포함해야 합니다.
+            태그는 전달된 orderedTagIds로 전체 교체되며,
+            bio를 null로 전달하면 기존 자기소개가 삭제됩니다.
+            태그 배열의 앞 3개가 대표 태그입니다.
+            """
 )
 @ApiResponses({
     @ApiResponse(

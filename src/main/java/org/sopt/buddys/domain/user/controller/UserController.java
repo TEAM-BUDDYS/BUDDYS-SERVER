@@ -32,13 +32,7 @@ import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @Validated
@@ -73,7 +67,7 @@ public class UserController {
   }
 
   @UpdateProfileSwagger
-  @PatchMapping("/me")
+  @PutMapping("/me")
   public BaseResponse<ProfileEditResponse> updateMyProfile(
           @Parameter(hidden = true)
           @LoginUser Long userId,
