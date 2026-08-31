@@ -1,4 +1,9 @@
 spring:
+  data:
+    redis:
+      repositories:
+        enabled: false
+
   security:
     jwt:
       secret: test-secret-key-for-testing-purposes-minimum-32-chars
@@ -31,3 +36,22 @@ cloud:
     s3:
       bucket: buddys-test-bucket
       region: ap-northeast-2
+    ses:
+      region: ap-northeast-2
+
+mail:
+  sender: no-reply@buddys.co.kr
+
+verification:
+  university-email:
+    code-expiration: 15m
+    max-attempts: 5
+
+buddys:
+  redis:
+    mode: standalone
+    host: localhost
+    port: 6379
+    ssl-enabled: false
+    connect-timeout: 3s
+    command-timeout: 3s
