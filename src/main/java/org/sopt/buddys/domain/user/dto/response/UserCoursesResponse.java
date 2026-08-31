@@ -21,7 +21,7 @@ public record UserCoursesResponse(
 
     @Schema(
         description = "페이지 크기",
-        example = "12",
+        example = "18",
         requiredMode = Schema.RequiredMode.REQUIRED
     )
     int size,
