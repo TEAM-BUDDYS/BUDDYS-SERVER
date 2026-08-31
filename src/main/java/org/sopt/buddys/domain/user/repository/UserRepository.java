@@ -14,6 +14,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
 
   @Query("""
+      select u.notificationEnabled
+      from User u
+      where u.id = :userId
+        and u.deletedAt is null
+      """)
+  Optional<Boolean> findNotificationEnabledById(@Param("userId") Long userId);
+
+  @Query("""
       select u
       from User u
       left join fetch u.exchangeCountry

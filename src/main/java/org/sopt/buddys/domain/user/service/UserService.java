@@ -64,6 +64,20 @@ public class UserService {
     return getProfileResult(user);
   }
 
+  public boolean getNotificationSetting(Long userId) {
+    return userRepository.findNotificationEnabledById(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+  }
+
+  @Transactional
+  public boolean updateNotificationSetting(Long userId, boolean notificationEnabled) {
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    user.updateNotificationEnabled(notificationEnabled);
+    return user.isNotificationEnabled();
+  }
+
   private UserProfileResult getProfileResult(User user) {
     Long userId = user.getId();
     List<UserTagRepository.UserTagProjection> userTags = userTagRepository.findTagsByUserId(userId);
