@@ -6,10 +6,17 @@ import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.service.result.TagGroupResult;
 
 public record TagGroupListResponse(
-    @Schema(description = "태그 카테고리", example = "ACTIVITY")
+    @Schema(
+            description = "태그 카테고리",
+            example = "ACTIVITY",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     TagType tagType,
 
-    @Schema(description = "카테고리에 속한 전체 태그")
+    @Schema(
+            description = "카테고리에 속한 전체 태그",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     List<TagResponse> tags
 ) {
 
