@@ -541,10 +541,13 @@ class CourseServiceTest {
         .extracting(ct -> ct.getTag().getId()).containsExactly(newActivityTagId);
     assertThat(courseFlightRepository.findAllByCourseIdOrderByOrderNoAsc(course.getId()))
         .extracting("airline").containsExactly("아시아나항공");
-    assertThat(courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(course.getId())).hasSize(1);
+    List<Long> updatedCourseDayIds =
+        courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(course.getId())
+            .stream().map(CourseDay::getId).toList();
+    assertThat(updatedCourseDayIds).hasSize(1);
     assertThat(courseImageRepository.findAll())
         .extracting("imageUrl").containsExactly("https://example.com/new-day.jpg");
-    assertThat(coursePlaceRepository.findAll())
+    assertThat(coursePlaceRepository.findAllByCourseDayIdInWithPlace(updatedCourseDayIds))
         .extracting(cp -> cp.getPlace().getName()).containsExactly("콜로세움");
     assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
         .extracting(cc -> cc.getUser().getId()).containsExactly(companion.getId());

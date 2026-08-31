@@ -15,7 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
 import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
+import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
+import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -34,6 +36,9 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
 
   @Autowired
   private UserRepository userRepository;
+
+  @Autowired
+  private PlaceRepository placeRepository;
 
   @DisplayName("동시에 같은 코스를 저장해도 북마크는 1개만 생성되고 두 요청 모두 예외 없이 끝난다")
   @Test
@@ -84,6 +89,68 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
     assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();
     courseService.bookmarkCourse(userId, courseId);
     return null;
+  }
+
+  @DisplayName("동시에 같은 신규 장소를 담은 코스를 생성해도 place 캐시는 1행만 생기고 두 요청 모두 성공한다")
+  @Test
+  void createCourse_concurrentSameNewPlace_savesOnePlaceRow() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    String sharedGooglePlaceId = "ChIJ-concurrent-place";
+
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    CountDownLatch readyLatch = new CountDownLatch(2);
+    CountDownLatch startLatch = new CountDownLatch(1);
+
+    try {
+      Future<Course> first = executorService.submit(() -> createCourseWithPlaceAtSameTime(
+          author.getId(), countryId, cityId, tagId, sharedGooglePlaceId, readyLatch, startLatch));
+      Future<Course> second = executorService.submit(() -> createCourseWithPlaceAtSameTime(
+          author.getId(), countryId, cityId, tagId, sharedGooglePlaceId, readyLatch, startLatch));
+
+      assertThat(readyLatch.await(3, TimeUnit.SECONDS)).isTrue();
+
+      // when
+      startLatch.countDown();
+      Course firstCourse = first.get(5, TimeUnit.SECONDS);
+      Course secondCourse = second.get(5, TimeUnit.SECONDS);
+
+      // then
+      assertThat(firstCourse.getId()).isNotNull();
+      assertThat(secondCourse.getId()).isNotNull();
+      assertThat(firstCourse.getId()).isNotEqualTo(secondCourse.getId());
+      assertThat(placeRepository.findAll())
+          .filteredOn(place -> place.getGooglePlaceId().equals(sharedGooglePlaceId))
+          .hasSize(1);
+    } finally {
+      executorService.shutdownNow();
+    }
+  }
+
+  private Course createCourseWithPlaceAtSameTime(
+      Long authorId,
+      Long countryId,
+      Long cityId,
+      Long tagId,
+      String googlePlaceId,
+      CountDownLatch readyLatch,
+      CountDownLatch startLatch
+  ) throws InterruptedException {
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"),
+            List.of(new CoursePlaceCommand(
+                googlePlaceId, "콜로세움", "TOURISM", null, null, (short) 0, null, null)))),
+        null
+    );
+    readyLatch.countDown();
+    assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();
+    return courseService.createCourse(authorId, command);
   }
 
   private CreateCourseCommand createDefaultCommand(

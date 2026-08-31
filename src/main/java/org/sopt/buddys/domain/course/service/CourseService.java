@@ -87,6 +87,7 @@ public class CourseService {
   private final CourseFlightRepository courseFlightRepository;
   private final CourseBookmarkRepository courseBookmarkRepository;
   private final CourseBookmarkTransactionService courseBookmarkTransactionService;
+  private final CoursePlaceTransactionService coursePlaceTransactionService;
   private final UserRepository userRepository;
   private final CountryRepository countryRepository;
   private final CityRepository cityRepository;
@@ -433,7 +434,7 @@ public class CourseService {
 
   private Place createPlace(CoursePlaceCommand placeCommand, PlaceCategory category) {
     try {
-      return placeRepository.save(Place.builder()
+      return coursePlaceTransactionService.save(Place.builder()
           .googlePlaceId(placeCommand.googlePlaceId())
           .name(placeCommand.name())
           .category(category)
@@ -441,7 +442,8 @@ public class CourseService {
           .longitude(placeCommand.longitude())
           .build());
     } catch (DataIntegrityViolationException e) {
-      return placeRepository.findByGooglePlaceId(placeCommand.googlePlaceId())
+      // 동시 요청이 같은 google_place_id를 먼저 저장한 경우 → 새 트랜잭션으로 승자 행을 재조회해 이어간다.
+      return coursePlaceTransactionService.findByGooglePlaceId(placeCommand.googlePlaceId())
           .orElseThrow(() -> e);
     }
   }
