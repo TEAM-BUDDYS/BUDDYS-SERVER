@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.persistence.EntityManager;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
@@ -77,6 +78,9 @@ class PostControllerTest {
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
+
+  @Autowired
+  private EntityManager entityManager;
 
   @BeforeEach
   void setUp() {
@@ -376,6 +380,8 @@ class PostControllerTest {
     assertThat(updated.getTitle()).isEqualTo("변경된 제목");
     assertThat(updated.getContent()).isEqualTo("함께 여행하실 분을 구합니다.");
     assertThat(updated.getStartDate()).isEqualTo(post.getStartDate());
+    assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
+    assertThat(updated.getCity().getId()).isEqualTo(post.getCity().getId());
   }
 
   @DisplayName("모집 완료 게시글의 본문도 수정할 수 있다")
@@ -414,9 +420,9 @@ class PostControllerTest {
     assertThat(updated.getCity().getId()).isEqualTo(parisId);
   }
 
-  @DisplayName("국가만 수정해 기존 도시와 불일치하면 실패한다")
+  @DisplayName("국가만 전달하면 잘못된 요청으로 거부한다")
   @Test
-  void updatePost_countryOnlyWithMismatchedCity_returnsBadRequest() throws Exception {
+  void updatePost_countryOnly_returnsInvalidRequest() throws Exception {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Post post = createPost(author);
     Long franceId = insertCountry("프랑스", "FR");
@@ -426,7 +432,41 @@ class PostControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"countryId\":%d}".formatted(franceId)))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("POST-E002"));
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("도시만 전달하면 기존 국가에 속한 도시로 수정한다")
+  @Test
+  void updatePost_cityOnly_updatesCityWithinExistingCountry() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long busanId = insertCity(post.getCountry().getId(), "Busan", "부산광역시", 3_000_000L);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"cityId\":%d}".formatted(busanId)))
+        .andExpect(status().isOk());
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
+    assertThat(updated.getCity().getId()).isEqualTo(busanId);
+  }
+
+  @DisplayName("국가와 도시의 소속 관계가 맞지 않으면 기존 오류로 거부한다")
+  @Test
+  void updatePost_countryAndCityMismatch_returnsCityNotInCountry() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long franceId = insertCountry("프랑스", "FR");
+
+    assertUpdateError(
+        author,
+        post,
+        "{\"countryId\":%d,\"cityId\":%d}".formatted(franceId, post.getCity().getId()),
+        "POST-E002",
+        400
+    );
   }
 
   @DisplayName("시작일 하나만 수정해 최종 날짜 조합을 검증한다")
@@ -450,7 +490,9 @@ class PostControllerTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Post post = createPost(author);
 
-    for (String content : List.of("{}", "{\"title\":null}", "{\"imageUrls\":null}")) {
+    for (String content : List.of(
+        "{}", "{\"title\":null}", "{\"imageUrls\":null}",
+        "{\"countryId\":null}", "{\"cityId\":null}")) {
       mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
               .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
               .contentType(MediaType.APPLICATION_JSON)
@@ -505,6 +547,31 @@ class PostControllerTest {
     assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM post_image WHERE post_id = ?", Integer.class, post.getId())).isZero();
   }
 
+  @DisplayName("기존 태그를 유지하며 태그를 교체하고 동일 요청을 반복해도 DB 관계가 정확하다")
+  @Test
+  void updatePost_tags_replaceByDifferenceAndRemainIdempotent() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long tag1 = insertTag("산책", TagType.ACTIVITY);
+    Long tag2 = insertTag("맛집", TagType.ACTIVITY);
+    Long tag3 = insertTag("전시", TagType.ACTIVITY);
+    jdbcTemplate.update("INSERT INTO post_tag (post_id, tag_id) VALUES (?, ?), (?, ?)",
+        post.getId(), tag1, post.getId(), tag2);
+
+    String replaceRequest = "{\"tagIds\":[%d,%d]}".formatted(tag2, tag3);
+    updatePostTags(author, post, replaceRequest);
+    entityManager.clear();
+    assertThat(findPostTagIds(post.getId())).containsExactly(tag2, tag3);
+
+    updatePostTags(author, post, replaceRequest);
+    entityManager.clear();
+    assertThat(findPostTagIds(post.getId())).containsExactly(tag2, tag3);
+
+    updatePostTags(author, post, replaceRequest);
+    entityManager.clear();
+    assertThat(findPostTagIds(post.getId())).containsExactly(tag2, tag3);
+  }
+
   @DisplayName("나이와 성별 조건을 전체 교체하고 미전달 이미지는 유지한다")
   @Test
   void updatePost_conditions_replaceAllAndKeepOmittedImages() throws Exception {
@@ -536,7 +603,13 @@ class PostControllerTest {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Post post = createPost(author);
 
-    assertUpdateError(author, post, "{\"countryId\":99999}", "LOC-E001", 404);
+    assertUpdateError(
+        author,
+        post,
+        "{\"countryId\":99999,\"cityId\":%d}".formatted(post.getCity().getId()),
+        "LOC-E001",
+        404
+    );
     assertUpdateError(author, post, "{\"cityId\":99999}", "LOC-E002", 404);
     assertUpdateError(author, post, "{\"tagIds\":[99999]}", "POST-E003", 404);
   }
@@ -584,6 +657,10 @@ class PostControllerTest {
         .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].patch.parameters[0].required").value(true))
         .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].patch.requestBody.required").value(true))
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.required").doesNotExist())
+        .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.countryId.description")
+            .value(org.hamcrest.Matchers.containsString("cityId도 함께 전달")))
+        .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.cityId.description")
+            .value(org.hamcrest.Matchers.containsString("기존 국가")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostSuccessResponse.required").isArray())
         .andExpect(jsonPath("$.components.schemas.UpdatePostSuccessResponse.required").value(org.hamcrest.Matchers.containsInAnyOrder("success", "code", "message", "data")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostResponse.required").value(org.hamcrest.Matchers.hasItem("postId")));
@@ -675,6 +752,22 @@ class PostControllerTest {
             .content(body))
         .andExpect(status().is(statusCode))
         .andExpect(jsonPath("$.code").value(code));
+  }
+
+  private void updatePostTags(User author, Post post, String body) throws Exception {
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+        .andExpect(status().isOk());
+  }
+
+  private List<Long> findPostTagIds(Long postId) {
+    return jdbcTemplate.queryForList(
+        "SELECT tag_id FROM post_tag WHERE post_id = ? ORDER BY tag_id",
+        Long.class,
+        postId
+    );
   }
 
   private void cleanUp() {
