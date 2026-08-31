@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
@@ -11,6 +13,8 @@ import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
+import org.sopt.buddys.domain.user.service.result.UserCoursesResult.CourseResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult.PostResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
@@ -34,6 +38,7 @@ public class UserService {
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
   private final PostImageRepository postImageRepository;
+  private final CourseRepository courseRepository;
 
   public boolean isOnboardingCompleted(User user) {
     return isOnboardingCompleted(user, userTagRepository.countByUserId(user.getId()));
@@ -116,6 +121,41 @@ public class UserService {
         posts.getNumber(),
         posts.getSize(),
         posts.hasNext()
+    );
+  }
+
+  public UserCoursesResult getCourses(Long userId, int page, int size) {
+    validateUserExists(userId);
+
+    return getCoursesResult(userId, page, size);
+  }
+
+  public UserCoursesResult getPublicCourses(Long userId, int page, int size) {
+    validateUserExistsIncludingDeleted(userId);
+
+    return getCoursesResult(userId, page, size);
+  }
+
+  private UserCoursesResult getCoursesResult(Long userId, int page, int size) {
+    validatePageRequest(page, size);
+
+    Pageable pageable = PageRequest.of(
+        page,
+        size,
+        Sort.by(Sort.Direction.DESC, "createdAt", "id")
+    );
+    Slice<Course> courses = courseRepository.findByAuthorIdAndDeletedAtIsNull(userId, pageable);
+
+    List<CourseResult> courseResults = courses.getContent()
+        .stream()
+        .map(CourseResult::new)
+        .toList();
+
+    return new UserCoursesResult(
+        courseResults,
+        courses.getNumber(),
+        courses.getSize(),
+        courses.hasNext()
     );
   }
 
