@@ -14,6 +14,7 @@ public interface CourseCommentRepository extends JpaRepository<CourseComment, Lo
       from CourseComment cc
       join fetch cc.author
       where cc.course.id = :courseId
+        and cc.course.deletedAt is null
       order by cc.createdAt asc, cc.id asc
       """)
   Slice<CourseComment> findAllByCourseIdWithAuthorOrderByCreatedAtAsc(

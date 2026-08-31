@@ -22,10 +22,6 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
 
   boolean existsByIdAndDeletedAtIsNull(Long id);
 
-  /**
-   * 게시글 상태 변경/수정/삭제처럼 연관 데이터를 함께 바꾸는 작업에서, 동일 게시글에 대한 동시 실행을
-   * 직렬화하기 위해 게시글 행에 쓰기 락(SELECT ... FOR UPDATE)을 건다.
-   */
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("""
       select p
