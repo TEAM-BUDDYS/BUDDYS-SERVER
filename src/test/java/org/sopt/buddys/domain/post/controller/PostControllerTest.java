@@ -1,13 +1,18 @@
 package org.sopt.buddys.domain.post.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.persistence.EntityManager;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,9 +23,13 @@ import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.Post;
+import org.sopt.buddys.domain.post.entity.PostImage;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
+import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
+import org.sopt.buddys.domain.post.service.PostService;
+import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -35,6 +44,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -58,6 +69,18 @@ class PostControllerTest {
 
   @Autowired
   private PostRepository postRepository;
+
+  @Autowired
+  private PostImageRepository postImageRepository;
+
+  @Autowired
+  private PostService postService;
+
+  @Autowired
+  private PlatformTransactionManager transactionManager;
+
+  @Autowired
+  private EntityManager entityManager;
 
   @Autowired
   private UserRepository userRepository;
@@ -350,6 +373,471 @@ class PostControllerTest {
         .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
+  @DisplayName("제목만 수정하면 다른 게시글 필드는 유지되고 게시글 ID를 반환한다")
+  @Test
+  void updatePost_titleOnly_updatesTitleAndKeepsOthers() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"title\":\"  변경된 제목  \"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("POST-S004"))
+        .andExpect(jsonPath("$.message").value("게시글 수정에 성공했습니다."))
+        .andExpect(jsonPath("$.data.postId").value(post.getId()));
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getTitle()).isEqualTo("변경된 제목");
+    assertThat(updated.getContent()).isEqualTo("함께 여행하실 분을 구합니다.");
+    assertThat(updated.getStartDate()).isEqualTo(post.getStartDate());
+    assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
+    assertThat(updated.getCity().getId()).isEqualTo(post.getCity().getId());
+  }
+
+  @DisplayName("모집 완료 게시글의 본문도 수정할 수 있다")
+  @Test
+  void updatePost_completedPost_updatesContent() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    post.updateStatus(PostStatus.COMPLETED);
+    postRepository.saveAndFlush(post);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\":\" 새 본문 \"}"))
+        .andExpect(status().isOk());
+
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getContent()).isEqualTo("새 본문");
+  }
+
+  @DisplayName("국가와 도시를 함께 수정하고 최종 조합을 저장한다")
+  @Test
+  void updatePost_countryAndCity_updatesPair() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long franceId = insertCountry("프랑스", "FR");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"countryId\":%d,\"cityId\":%d}".formatted(franceId, parisId)))
+        .andExpect(status().isOk());
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getCountry().getId()).isEqualTo(franceId);
+    assertThat(updated.getCity().getId()).isEqualTo(parisId);
+  }
+
+  @DisplayName("국가만 전달하면 잘못된 요청으로 거부한다")
+  @Test
+  void updatePost_countryOnly_returnsInvalidRequest() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long franceId = insertCountry("프랑스", "FR");
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"countryId\":%d}".formatted(franceId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("도시만 전달하면 기존 국가에 속한 도시로 수정한다")
+  @Test
+  void updatePost_cityOnly_updatesCityWithinExistingCountry() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long busanId = insertCity(post.getCountry().getId(), "Busan", "부산광역시", 3_000_000L);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"cityId\":%d}".formatted(busanId)))
+        .andExpect(status().isOk());
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
+    assertThat(updated.getCity().getId()).isEqualTo(busanId);
+  }
+
+  @DisplayName("국가와 도시의 소속 관계가 맞지 않으면 기존 오류로 거부한다")
+  @Test
+  void updatePost_countryAndCityMismatch_returnsCityNotInCountry() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long franceId = insertCountry("프랑스", "FR");
+
+    assertUpdateError(
+        author,
+        post,
+        "{\"countryId\":%d,\"cityId\":%d}".formatted(franceId, post.getCity().getId()),
+        "POST-E002",
+        400
+    );
+  }
+
+  @DisplayName("시작일 하나만 수정해 최종 날짜 조합을 검증한다")
+  @Test
+  void updatePost_startDateOnly_updatesDate() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    LocalDate newStart = LocalDate.now().plusDays(11);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"startDate\":\"%s\"}".formatted(newStart)))
+        .andExpect(status().isOk());
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getStartDate()).isEqualTo(newStart);
+  }
+
+  @DisplayName("빈 객체와 명시적인 null 요청은 실패한다")
+  @Test
+  void updatePost_emptyOrExplicitNull_returnsBadRequest() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    for (String content : List.of(
+        "{}", "{\"title\":null}", "{\"imageUrls\":null}",
+        "{\"countryId\":null}", "{\"cityId\":null}")) {
+      mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(content))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.code").value("GLB-E001"));
+    }
+  }
+
+  @DisplayName("작성자가 아니거나 게시글이 없거나 postId가 0이면 수정할 수 없다")
+  @Test
+  void updatePost_invalidTarget_returnsExpectedErrors() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른 사용자"));
+    Post post = createPost(author);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(other.getId()))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"변경\"}"))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("GLB-E003"));
+    mockMvc.perform(patch("/api/v1/posts/{postId}", 999L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"변경\"}"))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+    mockMvc.perform(patch("/api/v1/posts/{postId}", 0L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"변경\"}"))
+        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("태그와 이미지는 전체 교체하며 빈 이미지 배열은 전체 삭제한다")
+  @Test
+  void updatePost_tagsAndImages_replaceAllAndDeleteImages() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+    postImageRepository.saveAndFlush(new PostImage(post, "https://example.com/old.png", (short) 0));
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"tagIds\":[%d],\"imageUrls\":[\"https://example.com/a.png\",\"https://example.com/b.png\"]}".formatted(tagId)))
+        .andExpect(status().isOk());
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM post_tag WHERE post_id = ?", Integer.class, post.getId())).isOne();
+    assertThat(jdbcTemplate.queryForList("SELECT image_url FROM post_image WHERE post_id = ? ORDER BY order_no", String.class, post.getId()))
+        .containsExactly("https://example.com/a.png", "https://example.com/b.png");
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"imageUrls\":[]}"))
+        .andExpect(status().isOk());
+    assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM post_image WHERE post_id = ?", Integer.class, post.getId())).isZero();
+  }
+
+  @DisplayName("기존 태그를 유지하며 태그를 교체하고 동일 요청을 반복해도 DB 관계가 정확하다")
+  @Test
+  void updatePost_tags_replaceByDifferenceAndRemainIdempotent() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long tag1 = insertTag("산책", TagType.ACTIVITY);
+    Long tag2 = insertTag("맛집", TagType.ACTIVITY);
+    Long tag3 = insertTag("전시", TagType.ACTIVITY);
+    jdbcTemplate.update("INSERT INTO post_tag (post_id, tag_id) VALUES (?, ?), (?, ?)",
+        post.getId(), tag1, post.getId(), tag2);
+
+    String replaceRequest = "{\"tagIds\":[%d,%d]}".formatted(tag2, tag3);
+    updatePostTags(author, post, replaceRequest);
+    entityManager.clear();
+    assertThat(findPostTagIds(post.getId())).containsExactly(tag2, tag3);
+
+    updatePostTags(author, post, replaceRequest);
+    entityManager.clear();
+    assertThat(findPostTagIds(post.getId())).containsExactly(tag2, tag3);
+
+    updatePostTags(author, post, replaceRequest);
+    entityManager.clear();
+    assertThat(findPostTagIds(post.getId())).containsExactly(tag2, tag3);
+  }
+
+  @DisplayName("나이와 성별 조건을 전체 교체하고 미전달 이미지는 유지한다")
+  @Test
+  void updatePost_conditions_replaceAllAndKeepOmittedImages() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    jdbcTemplate.update("INSERT INTO post_age_condition (post_id, age_condition) VALUES (?, ?)", post.getId(), "EARLY_20S");
+    jdbcTemplate.update("INSERT INTO post_gender_condition (post_id, gender_condition) VALUES (?, ?)", post.getId(), "MALE");
+    postImageRepository.saveAndFlush(new PostImage(post, "https://example.com/keep.png", (short) 0));
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"ageConditions\":[\"MID_20S\",\"LATE_20S\"],\"genderConditions\":[\"FEMALE\"]}"))
+        .andExpect(status().isOk());
+
+    assertThat(jdbcTemplate.queryForList(
+        "SELECT age_condition FROM post_age_condition WHERE post_id = ? ORDER BY age_condition", String.class, post.getId()))
+        .containsExactlyInAnyOrder("MID_20S", "LATE_20S");
+    assertThat(jdbcTemplate.queryForList(
+        "SELECT gender_condition FROM post_gender_condition WHERE post_id = ?", String.class, post.getId()))
+        .containsExactly("FEMALE");
+    assertThat(postImageRepository.findImageUrlsByPostId(post.getId()))
+        .containsExactly("https://example.com/keep.png");
+  }
+
+  @DisplayName("존재하지 않는 국가, 도시, 태그는 각각 정해진 오류를 반환한다")
+  @Test
+  void updatePost_missingReferences_returnDomainErrors() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    assertUpdateError(
+        author,
+        post,
+        "{\"countryId\":99999,\"cityId\":%d}".formatted(post.getCity().getId()),
+        "LOC-E001",
+        404
+    );
+    assertUpdateError(author, post, "{\"cityId\":99999}", "LOC-E002", 404);
+    assertUpdateError(author, post, "{\"tagIds\":[99999]}", "POST-E003", 404);
+  }
+
+  @DisplayName("잘못된 날짜, 빈 조건 목록, 태그 정책 위반은 요청을 거부한다")
+  @Test
+  void updatePost_invalidDatesConditionsAndTags_returnBadRequest() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long interestTag = insertTag("자연", TagType.INTEREST);
+    List<Long> activities = List.of(
+        insertTag("활동1", TagType.ACTIVITY), insertTag("활동2", TagType.ACTIVITY),
+        insertTag("활동3", TagType.ACTIVITY), insertTag("활동4", TagType.ACTIVITY));
+
+    assertUpdateError(author, post, "{\"startDate\":\"%s\"}".formatted(LocalDate.now().minusDays(1)), "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"endDate\":\"%s\"}".formatted(LocalDate.now().plusDays(1)), "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"ageConditions\":[]}", "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"genderConditions\":[]}", "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"tagIds\":[]}", "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"tagIds\":[%d]}".formatted(interestTag), "POST-E004", 400);
+    assertUpdateError(author, post, "{\"tagIds\":%s}".formatted(activities), "POST-E005", 400);
+  }
+
+  @DisplayName("제목과 이미지 URL의 공백 및 길이와 이미지 개수 제한을 검증한다")
+  @Test
+  void updatePost_invalidTitleAndImages_returnBadRequest() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    String elevenImages = java.util.stream.IntStream.range(0, 11)
+        .mapToObj(index -> "\"https://example.com/" + index + ".png\"")
+        .collect(java.util.stream.Collectors.joining(",", "[", "]"));
+
+    assertUpdateError(author, post, "{\"title\":\"   \"}", "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"title\":\"%s\"}".formatted("가".repeat(121)), "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"imageUrls\":[\"   \"]}", "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"imageUrls\":[\"%s\"]}".formatted("a".repeat(513)), "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"imageUrls\":%s}".formatted(elevenImages), "GLB-E001", 400);
+  }
+
+  @DisplayName("수정 API OpenAPI 스키마가 부분 수정과 필수 응답 계약을 표현한다")
+  @Test
+  void updatePost_openApiSchema_matchesContract() throws Exception {
+    mockMvc.perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].patch.parameters[0].required").value(true))
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].patch.requestBody.required").value(true))
+        .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.required").doesNotExist())
+        .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.countryId.description")
+            .value(org.hamcrest.Matchers.containsString("cityId도 함께 전달")))
+        .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.cityId.description")
+            .value(org.hamcrest.Matchers.containsString("기존 국가")))
+        .andExpect(jsonPath("$.components.schemas.UpdatePostSuccessResponse.required").isArray())
+        .andExpect(jsonPath("$.components.schemas.UpdatePostSuccessResponse.required").value(org.hamcrest.Matchers.containsInAnyOrder("success", "code", "message", "data")))
+        .andExpect(jsonPath("$.components.schemas.UpdatePostResponse.required").value(org.hamcrest.Matchers.hasItem("postId")));
+  }
+
+  @DisplayName("작성자가 모집 중 게시글을 소프트 삭제하면 행과 연관 데이터가 유지된다")
+  @Test
+  void deletePost_authorSoftDeletesRecruitingPostAndKeepsRelations() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+    jdbcTemplate.update("INSERT INTO post_tag (post_id, tag_id) VALUES (?, ?)", post.getId(), tagId);
+    jdbcTemplate.update("INSERT INTO post_age_condition (post_id, age_condition) VALUES (?, ?)", post.getId(), "EARLY_20S");
+    jdbcTemplate.update("INSERT INTO post_gender_condition (post_id, gender_condition) VALUES (?, ?)", post.getId(), "MALE");
+    postImageRepository.saveAndFlush(new PostImage(post, "https://example.com/keep.png", (short) 0));
+    jdbcTemplate.update("INSERT INTO post_comment (post_id, author_id, content, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6))",
+        post.getId(), author.getId(), "유지할 댓글");
+
+    mockMvc.perform(delete("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("POST-S005"))
+        .andExpect(jsonPath("$.message").value("게시글 삭제에 성공했습니다."))
+        .andExpect(jsonPath("$.data.postId").value(post.getId()))
+        .andExpect(jsonPath("$.data.deletedAt").doesNotExist());
+
+    Post deletedPost = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(deletedPost.getDeletedAt()).isNotNull();
+    assertThat(postRepository.count()).isOne();
+    for (String table : List.of("post_comment", "post_image", "post_tag", "post_age_condition", "post_gender_condition")) {
+      assertThat(jdbcTemplate.queryForObject(
+          "SELECT COUNT(*) FROM " + table + " WHERE post_id = ?", Integer.class, post.getId())).isOne();
+    }
+  }
+
+  @DisplayName("작성자는 모집 완료 게시글도 삭제할 수 있다")
+  @Test
+  void deletePost_completedPost_succeeds() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    post.updateStatus(PostStatus.COMPLETED);
+    postRepository.saveAndFlush(post);
+
+    mockMvc.perform(delete("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk());
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getDeletedAt()).isNotNull();
+  }
+
+  @DisplayName("삭제 트랜잭션에서 예외가 발생하면 삭제 시각 기록이 롤백된다")
+  @Test
+  void deletePost_transactionFailure_rollsBackDeletedAt() {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+
+    assertThatThrownBy(() -> transactionTemplate.executeWithoutResult(status -> {
+      postService.deletePost(author.getId(), post.getId());
+      throw new IllegalStateException("rollback test");
+    })).isInstanceOf(IllegalStateException.class);
+
+    entityManager.clear();
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getDeletedAt()).isNull();
+  }
+
+  @DisplayName("게시글 삭제는 작성자 권한, 존재 여부, postId와 인증을 검증한다")
+  @Test
+  void deletePost_invalidRequests_returnExpectedErrors() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른 사용자"));
+    Post post = createPost(author);
+
+    mockMvc.perform(delete("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(other.getId())))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("GLB-E003"));
+    mockMvc.perform(delete("/api/v1/posts/{postId}", 99999L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+    mockMvc.perform(delete("/api/v1/posts/{postId}", 0L)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("GLB-E001"));
+    mockMvc.perform(delete("/api/v1/posts/{postId}", post.getId()))
+        .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("GLB-E002"));
+
+    mockMvc.perform(delete("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk());
+    mockMvc.perform(delete("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+  }
+
+  @DisplayName("삭제된 게시글은 상세, 목록, 수정, 상태 변경, 댓글과 프로필 게시글 API에서 제외된다")
+  @Test
+  void deletedPost_isExcludedFromUserFacingPostPaths() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Post post = createPost(author);
+    post.softDelete(java.time.LocalDateTime.now());
+    postRepository.saveAndFlush(post);
+    long viewCount = post.getViewCount();
+
+    mockMvc.perform(get("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+    assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(viewCount);
+
+    mockMvc.perform(get("/api/v1/posts").header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.content").isEmpty());
+    mockMvc.perform(get("/api/v1/posts").header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "동행"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.content").isEmpty());
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"변경\"}"))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+    mockMvc.perform(patch("/api/v1/posts/{postId}/status", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+    mockMvc.perform(get("/api/v1/posts/{postId}/comments", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+    mockMvc.perform(post("/api/v1/posts/{postId}/comments", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"content\":\"댓글\"}"))
+        .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("POST-E006"));
+    mockMvc.perform(get("/api/v1/users/me/posts").header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.posts").isEmpty());
+    mockMvc.perform(get("/api/v1/users/{userId}/posts", author.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.data.posts").isEmpty());
+  }
+
+  @DisplayName("삭제된 게시글은 추천 게시글에서 제외된다")
+  @Test
+  void deletedPost_isExcludedFromRecommendations() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    User viewer = userRepository.save(User.builder()
+        .email("viewer@test.com").provider(AuthProvider.KAKAO).providerId("provider-viewer")
+        .nickname("조회자").interestCountry(post.getCountry()).build());
+    post.softDelete(java.time.LocalDateTime.now());
+    postRepository.saveAndFlush(post);
+
+    mockMvc.perform(get("/api/v1/recommendations/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.posts").isEmpty());
+  }
+
+  @DisplayName("삭제 API OpenAPI 스키마는 본문 없이 필수 성공 응답을 표현한다")
+  @Test
+  void deletePost_openApiSchema_matchesContract() throws Exception {
+    mockMvc.perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].delete.parameters[0].required").value(true))
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].delete.requestBody").doesNotExist())
+        .andExpect(jsonPath("$.components.schemas.DeletePostSuccessResponse.required")
+            .value(org.hamcrest.Matchers.containsInAnyOrder("success", "code", "message", "data")))
+        .andExpect(jsonPath("$.components.schemas.DeletePostResponse.required")
+            .value(org.hamcrest.Matchers.hasItem("postId")));
+  }
+
   private Post createPost(User author) {
     Long countryId = insertCountry("대한민국", "KR");
     Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
@@ -414,6 +902,44 @@ class PostControllerTest {
         keyHolder
     );
     return keyHolder.getKey().longValue();
+  }
+
+  private Long insertTag(String name, TagType tagType) {
+    KeyHolder keyHolder = new GeneratedKeyHolder();
+    jdbcTemplate.update(connection -> {
+      var statement = connection.prepareStatement(
+          "INSERT INTO tag (name, tag_type) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS);
+      statement.setString(1, name);
+      statement.setString(2, tagType.name());
+      return statement;
+    }, keyHolder);
+    return keyHolder.getKey().longValue();
+  }
+
+  private void assertUpdateError(User author, Post post, String body, String code, int statusCode)
+      throws Exception {
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+        .andExpect(status().is(statusCode))
+        .andExpect(jsonPath("$.code").value(code));
+  }
+
+  private void updatePostTags(User author, Post post, String body) throws Exception {
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body))
+        .andExpect(status().isOk());
+  }
+
+  private List<Long> findPostTagIds(Long postId) {
+    return jdbcTemplate.queryForList(
+        "SELECT tag_id FROM post_tag WHERE post_id = ? ORDER BY tag_id",
+        Long.class,
+        postId
+    );
   }
 
   private void cleanUp() {

@@ -65,6 +65,19 @@ public class AuthServiceTest {
     then(authTransactionService).should(times(1)).processKakaoLogin("12345", kakaoUserInfo);
   }
 
+  @DisplayName("로그아웃하면 사용자의 리프레시 토큰을 삭제한다")
+  @Test
+  void logout_deletesRefreshTokenByUserId() {
+    // given
+    Long userId = 1L;
+
+    // when
+    authService.logout(userId);
+
+    // then
+    then(refreshTokenRepository).should(times(1)).deleteByUserId(userId);
+  }
+
   private KakaoUserInfo createKakaoUserInfo(String id) {
     KakaoUserInfo.KakaoProfile profile = new KakaoUserInfo.KakaoProfile("닉네임", "http://img.url");
     KakaoUserInfo.KakaoAccount account = new KakaoUserInfo.KakaoAccount("test@kakao.com", profile);

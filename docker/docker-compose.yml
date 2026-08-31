@@ -1,4 +1,17 @@
 services:
+  valkey:
+    image: valkey/valkey:9-alpine
+    profiles:
+      - local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   app:
     image: ${DOCKER_IMAGE}
     env_file:
