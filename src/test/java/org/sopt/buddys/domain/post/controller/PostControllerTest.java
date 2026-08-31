@@ -12,7 +12,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.persistence.EntityManager;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +37,7 @@ import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostBookmarkRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.service.PostService;
+import org.sopt.buddys.domain.post.service.result.PostBookmarkResult;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -848,6 +855,7 @@ class PostControllerTest {
   void bookmarkPost_repeatedRequests_areIdempotent() throws Exception {
     User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
     Post post = createPost(user);
+    LocalDateTime firstCreatedAt = null;
 
     for (int requestCount = 0; requestCount < 2; requestCount++) {
       mockMvc.perform(post("/api/v1/posts/{postId}/bookmarks", post.getId())
@@ -858,9 +866,48 @@ class PostControllerTest {
           .andExpect(jsonPath("$.message").value("게시글 저장에 성공했습니다."))
           .andExpect(jsonPath("$.data.postId").value(post.getId()))
           .andExpect(jsonPath("$.data.isBookmarked").value(true));
+
+      LocalDateTime createdAt = jdbcTemplate.queryForObject(
+          "SELECT created_at FROM post_bookmark WHERE user_id = ? AND post_id = ?",
+          LocalDateTime.class,
+          user.getId(),
+          post.getId()
+      );
+      if (firstCreatedAt == null) {
+        firstCreatedAt = createdAt;
+      } else {
+        assertThat(createdAt).isEqualTo(firstCreatedAt);
+      }
     }
 
     assertThat(postBookmarkRepository.count()).isOne();
+  }
+
+  @DisplayName("동시에 같은 게시글을 최초 저장해도 두 요청이 성공하고 북마크는 한 건만 생성된다")
+  @Test
+  void bookmarkPost_concurrentFirstRequests_areIdempotent() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    CountDownLatch readyLatch = new CountDownLatch(2);
+    CountDownLatch startLatch = new CountDownLatch(1);
+
+    try {
+      Future<PostBookmarkResult> first = executorService.submit(
+          () -> bookmarkPostAfterSignal(user.getId(), post.getId(), readyLatch, startLatch));
+      Future<PostBookmarkResult> second = executorService.submit(
+          () -> bookmarkPostAfterSignal(user.getId(), post.getId(), readyLatch, startLatch));
+
+      assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+      startLatch.countDown();
+
+      assertThat(first.get(10, TimeUnit.SECONDS).isBookmarked()).isTrue();
+      assertThat(second.get(10, TimeUnit.SECONDS).isBookmarked()).isTrue();
+      assertThat(postBookmarkRepository.count()).isOne();
+    } finally {
+      executorService.shutdownNow();
+      assertThat(executorService.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+    }
   }
 
   @DisplayName("게시글 저장을 반복 취소해도 성공하고 북마크가 남지 않는다")
@@ -1050,6 +1097,19 @@ class PostControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(body))
         .andExpect(status().isOk());
+  }
+
+  private PostBookmarkResult bookmarkPostAfterSignal(
+      Long userId,
+      Long postId,
+      CountDownLatch readyLatch,
+      CountDownLatch startLatch
+  ) throws InterruptedException {
+    readyLatch.countDown();
+    if (!startLatch.await(5, TimeUnit.SECONDS)) {
+      throw new IllegalStateException("동시 저장 시작 신호를 기다리는 중 시간 초과");
+    }
+    return postService.bookmarkPost(userId, postId);
   }
 
   private List<Long> findPostTagIds(Long postId) {

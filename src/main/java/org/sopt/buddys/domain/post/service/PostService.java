@@ -22,7 +22,6 @@ import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostAgeCondition;
-import org.sopt.buddys.domain.post.entity.PostBookmark;
 import org.sopt.buddys.domain.post.entity.PostBookmarkId;
 import org.sopt.buddys.domain.post.entity.PostGenderCondition;
 import org.sopt.buddys.domain.post.entity.PostImage;
@@ -201,15 +200,12 @@ public class PostService {
 
   @Transactional
   public PostBookmarkResult bookmarkPost(Long userId, Long postId) {
-    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+    postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+    userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    PostBookmarkId bookmarkId = new PostBookmarkId(userId, postId);
 
-    if (!postBookmarkRepository.existsById(bookmarkId)) {
-      postBookmarkRepository.save(new PostBookmark(user, post));
-    }
+    postBookmarkRepository.insertOrKeep(userId, postId);
     return new PostBookmarkResult(postId, true);
   }
 
