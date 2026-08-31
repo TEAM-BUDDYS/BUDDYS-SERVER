@@ -189,9 +189,6 @@ public class PostService {
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
-    if (post.isDeleted()) {
-      throw new BaseException(PostErrorCode.POST_NOT_FOUND);
-    }
 
     post.softDelete(LocalDateTime.now());
     return post;
