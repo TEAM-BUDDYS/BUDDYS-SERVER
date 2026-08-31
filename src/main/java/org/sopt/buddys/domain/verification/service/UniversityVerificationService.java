@@ -21,7 +21,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class UniversityVerificationService {
 
   private final UniversityVerificationRepository universityVerificationRepository;
@@ -30,7 +29,6 @@ public class UniversityVerificationService {
   private final UniversityVerificationProperties universityVerificationProperties;
   private final UniversityVerificationMailSender mailSender;
 
-  @Transactional
   public void sendVerification(Long userId, String email) {
     userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
