@@ -125,7 +125,7 @@ public class CourseService {
 
   @Transactional
   public Course updateCourse(Long userId, Long courseId, UpdateCourseCommand command) {
-    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
+    Course course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     if (!course.getAuthor().getId().equals(userId)) {
@@ -188,7 +188,7 @@ public class CourseService {
 
   @Transactional
   public void deleteCourse(Long userId, Long courseId) {
-    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
+    Course course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     if (!course.getAuthor().getId().equals(userId)) {
@@ -442,7 +442,6 @@ public class CourseService {
           .longitude(placeCommand.longitude())
           .build());
     } catch (DataIntegrityViolationException e) {
-      // 동시 요청이 같은 google_place_id를 먼저 저장한 경우 → 새 트랜잭션으로 승자 행을 재조회해 이어간다.
       return coursePlaceTransactionService.findByGooglePlaceId(placeCommand.googlePlaceId())
           .orElseThrow(() -> e);
     }

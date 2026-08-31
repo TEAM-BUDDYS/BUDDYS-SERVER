@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,9 +15,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseBookmarkRepository;
+import org.sopt.buddys.domain.course.repository.CourseCountryRepository;
 import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
 import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
 import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
+import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -39,6 +42,9 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
 
   @Autowired
   private PlaceRepository placeRepository;
+
+  @Autowired
+  private CourseCountryRepository courseCountryRepository;
 
   @DisplayName("동시에 같은 코스를 저장해도 북마크는 1개만 생성되고 두 요청 모두 예외 없이 끝난다")
   @Test
@@ -151,6 +157,71 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
     readyLatch.countDown();
     assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();
     return courseService.createCourse(authorId, command);
+  }
+
+  @DisplayName("동일 코스를 동시에 수정해도 락으로 직렬화되어 연관 데이터가 뒤섞이지 않고 한 요청 값으로 정리된다")
+  @Test
+  void updateCourse_concurrentRequest_serializedByLock() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long franceId = insertCountry("프랑스", "FR");
+    Long italyId = insertCountry("이탈리아", "IT");
+    Long spainId = insertCountry("스페인", "ES");
+    Long cityId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(franceId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+
+    Set<Long> payloadA = Set.of(franceId);
+    Set<Long> payloadB = Set.of(italyId, spainId);
+
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    CountDownLatch readyLatch = new CountDownLatch(2);
+    CountDownLatch startLatch = new CountDownLatch(1);
+
+    try {
+      Future<Void> first = executorService.submit(() -> updateCountriesAtSameTime(
+          author.getId(), course.getId(), cityId, tagId, List.copyOf(payloadA), readyLatch, startLatch));
+      Future<Void> second = executorService.submit(() -> updateCountriesAtSameTime(
+          author.getId(), course.getId(), cityId, tagId, List.copyOf(payloadB), readyLatch, startLatch));
+
+      assertThat(readyLatch.await(3, TimeUnit.SECONDS)).isTrue();
+
+      // when
+      startLatch.countDown();
+      first.get(5, TimeUnit.SECONDS);
+      second.get(5, TimeUnit.SECONDS);
+
+      // then: 두 요청 중 하나의 payload로만 정리되어야 하고, 두 payload가 합쳐진 상태(3개)는 나올 수 없다
+      Set<Long> finalCountryIds = courseCountryRepository.findAllByCourseIdWithCountry(course.getId())
+          .stream().map(cc -> cc.getCountry().getId()).collect(java.util.stream.Collectors.toSet());
+      assertThat(finalCountryIds).isIn(payloadA, payloadB);
+    } finally {
+      executorService.shutdownNow();
+    }
+  }
+
+  private Void updateCountriesAtSameTime(
+      Long authorId,
+      Long courseId,
+      Long cityId,
+      Long tagId,
+      List<Long> countryIds,
+      CountDownLatch readyLatch,
+      CountDownLatch startLatch
+  ) throws InterruptedException {
+    UpdateCourseCommand command = new UpdateCourseCommand(
+        countryIds, List.of(cityId), "수정된 코스", null, null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId),
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
+        null
+    );
+    readyLatch.countDown();
+    assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();
+    courseService.updateCourse(authorId, courseId, command);
+    return null;
   }
 
   private CreateCourseCommand createDefaultCommand(

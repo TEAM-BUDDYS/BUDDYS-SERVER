@@ -1,8 +1,10 @@
 package org.sopt.buddys.domain.course.repository;
 
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,6 +22,15 @@ public interface CourseRepository extends JpaRepository<Course, Long>, CourseRep
   Optional<Course> findDetailById(@Param("courseId") Long courseId);
 
   Optional<Course> findByIdAndDeletedAtIsNull(Long id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      select c
+      from Course c
+      where c.id = :courseId
+        and c.deletedAt is null
+      """)
+  Optional<Course> findByIdAndDeletedAtIsNullForUpdate(@Param("courseId") Long courseId);
 
   boolean existsByIdAndDeletedAtIsNull(Long id);
 
