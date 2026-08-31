@@ -125,12 +125,14 @@ public class CourseService {
 
   @Transactional
   public Course updateCourse(Long userId, Long courseId, UpdateCourseCommand command) {
-    Course course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
+    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
-
     if (!course.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
+        .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
         command.endDate(), command.tagIds(), command.days(), command.flights());
@@ -188,12 +190,14 @@ public class CourseService {
 
   @Transactional
   public void deleteCourse(Long userId, Long courseId) {
-    Course course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
+    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
-
     if (!course.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
+        .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     course.delete();
   }

@@ -116,12 +116,14 @@ public class PostService {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
 
-    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     post.updateStatus(status);
     return post;
@@ -131,11 +133,14 @@ public class PostService {
   public Post updatePost(Long userId, Long postId, UpdatePostCommand command) {
     validateUpdateRequest(command);
 
-    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     Country country = command.isProvided(Field.COUNTRY_ID)
         ? countryRepository.findById(command.countryId())
@@ -181,11 +186,14 @@ public class PostService {
 
   @Transactional
   public Post deletePost(Long userId, Long postId) {
-    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     post.softDelete(LocalDateTime.now());
     return post;
