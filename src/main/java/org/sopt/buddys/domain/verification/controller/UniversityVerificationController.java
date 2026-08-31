@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.sopt.buddys.domain.location.controller.swagger.UniversityNotFoundResponse;
 import org.sopt.buddys.domain.verification.controller.swagger.VerificationAttemptLimitExceededResponse;
 import org.sopt.buddys.domain.verification.controller.swagger.VerificationCodeInvalidResponse;
+import org.sopt.buddys.domain.verification.controller.swagger.VerificationMailSendFailedResponse;
 import org.sopt.buddys.domain.verification.dto.request.UniversityVerificationConfirmRequest;
 import org.sopt.buddys.domain.verification.dto.request.UniversityVerificationRequest;
 import org.sopt.buddys.domain.verification.service.UniversityVerificationService;
@@ -40,13 +41,14 @@ public class UniversityVerificationController {
           학교 이메일 도메인으로 대학교를 찾아 6자리 인증 코드(영어 대문자 + 숫자)를 해당 이메일로 발송합니다.
 
           - 이메일 도메인과 일치하는 대학교가 없으면 404(LOC-E003)가 반환됩니다.
+          - 인증 메일 발송에 실패하면 500(UNIV-E002)이 반환됩니다.
           - 같은 사용자가 다시 요청하면 이전 코드는 폐기되고 새 코드가 발급됩니다.
           """
   )
   @ApiResponse(responseCode = "200", description = "인증 코드 발송 성공")
   @InvalidRequestResponse
   @UniversityNotFoundResponse
-  @CommonErrorResponses
+  @VerificationMailSendFailedResponse
   @PostMapping
   public BaseResponse<Void> sendVerification(
       @Parameter(hidden = true)
