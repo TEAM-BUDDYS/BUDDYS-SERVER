@@ -13,12 +13,16 @@ import org.sopt.buddys.domain.user.controller.swagger.CompleteOnboardingSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetProfileEditSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.GetNotificationSettingSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.UpdateProfileSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.UpdateNotificationSettingSwagger;
 import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
 import org.sopt.buddys.domain.user.dto.request.UpdateProfileRequest;
 import org.sopt.buddys.domain.user.dto.response.NicknameAvailabilityResponse;
+import org.sopt.buddys.domain.user.dto.request.UpdateNotificationSettingRequest;
+import org.sopt.buddys.domain.user.dto.response.NotificationSettingResponse;
 import org.sopt.buddys.domain.user.dto.response.OnboardingResponse;
 import org.sopt.buddys.domain.user.dto.response.ProfileEditResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
@@ -90,6 +94,33 @@ public class UserController {
         GlobalSuccessCode.OK,
         new NicknameAvailabilityResponse(
             userProfileEditService.isNicknameAvailable(userId, nickname)
+        )
+    );
+  }
+
+  @GetNotificationSettingSwagger
+  @GetMapping("/me/notification-settings")
+  public BaseResponse<NotificationSettingResponse> getNotificationSetting(
+      @Parameter(hidden = true)
+      @LoginUser Long userId
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        NotificationSettingResponse.of(userService.getNotificationSetting(userId))
+    );
+  }
+
+  @UpdateNotificationSettingSwagger
+  @PatchMapping("/me/notification-settings")
+  public BaseResponse<NotificationSettingResponse> updateNotificationSetting(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @RequestBody @Valid UpdateNotificationSettingRequest request
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        NotificationSettingResponse.of(
+            userService.updateNotificationSetting(userId, request.notificationEnabled())
         )
     );
   }

@@ -157,6 +157,10 @@ public class User extends BaseEntity {
     return user;
   }
 
+  public void updateNotificationEnabled(boolean notificationEnabled) {
+    this.notificationEnabled = notificationEnabled;
+  }
+
   public void completeOnboarding(
       String nickname,
       Gender gender,
