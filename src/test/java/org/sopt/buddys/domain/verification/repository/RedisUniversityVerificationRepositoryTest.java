@@ -30,7 +30,7 @@ class RedisUniversityVerificationRepositoryTest {
 
   @Container
   static GenericContainer<?> valkey = new GenericContainer<>(
-          DockerImageName.parse("valkey/valkey:9-alpine")
+      DockerImageName.parse("valkey/valkey:9-alpine")
   ).withExposedPorts(6379);
 
   private LettuceConnectionFactory connectionFactory;
@@ -40,8 +40,8 @@ class RedisUniversityVerificationRepositoryTest {
   @BeforeEach
   void setUp() {
     RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration(
-            valkey.getHost(),
-            valkey.getMappedPort(6379)
+        valkey.getHost(),
+        valkey.getMappedPort(6379)
     );
     connectionFactory = new LettuceConnectionFactory(configuration);
     connectionFactory.afterPropertiesSet();
@@ -68,15 +68,15 @@ class RedisUniversityVerificationRepositoryTest {
 
     // then
     assertThat(repository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS).verification())
-            .isEqualTo(verification);
+        .isEqualTo(verification);
     assertThat(repository.verifyCode(USER_ID, "ZZZZZZ", MAX_ATTEMPTS).status())
-            .isEqualTo(Status.INVALID);
+        .isEqualTo(Status.INVALID);
     assertThat(redisTemplate.getExpire(key(USER_ID)))
-            .isPositive()
-            .isLessThanOrEqualTo(TTL.toSeconds());
+        .isPositive()
+        .isLessThanOrEqualTo(TTL.toSeconds());
     assertThat(redisTemplate.hasKey(attemptsKey(USER_ID))).isTrue();
     assertThat(SlotHash.getSlot(key(USER_ID)))
-            .isEqualTo(SlotHash.getSlot(attemptsKey(USER_ID)));
+        .isEqualTo(SlotHash.getSlot(attemptsKey(USER_ID)));
   }
 
   @DisplayName("같은 사용자가 재발송하면 이전 코드는 무효화된다")
@@ -92,9 +92,9 @@ class RedisUniversityVerificationRepositoryTest {
 
     // then
     assertThat(repository.verifyCode(USER_ID, previous.code(), MAX_ATTEMPTS).status())
-            .isEqualTo(Status.INVALID);
+        .isEqualTo(Status.INVALID);
     assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).verification())
-            .isEqualTo(current);
+        .isEqualTo(current);
   }
 
   @DisplayName("조건부 삭제는 재발송으로 갱신된 코드를 삭제하지 않는다")
@@ -110,14 +110,14 @@ class RedisUniversityVerificationRepositoryTest {
 
     // then
     assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).verification())
-            .isEqualTo(current);
+        .isEqualTo(current);
 
     // when
     repository.deleteIfMatches(current);
 
     // then
     assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).status())
-            .isEqualTo(Status.INVALID);
+        .isEqualTo(Status.INVALID);
   }
 
   @DisplayName("인증 코드가 제한 횟수만큼 틀리면 올바른 코드도 더 이상 사용할 수 없다")
@@ -130,14 +130,14 @@ class RedisUniversityVerificationRepositoryTest {
     // when
     for (int attempt = 0; attempt < MAX_ATTEMPTS - 1; attempt++) {
       assertThat(repository.verifyCode(USER_ID, "WRONG" + attempt, MAX_ATTEMPTS).status())
-              .isEqualTo(Status.INVALID);
+          .isEqualTo(Status.INVALID);
     }
     assertThat(repository.verifyCode(USER_ID, "WRONG4", MAX_ATTEMPTS).status())
-            .isEqualTo(Status.ATTEMPT_LIMIT_EXCEEDED);
+        .isEqualTo(Status.ATTEMPT_LIMIT_EXCEEDED);
 
     // then
     assertThat(repository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS).status())
-            .isEqualTo(Status.ATTEMPT_LIMIT_EXCEEDED);
+        .isEqualTo(Status.ATTEMPT_LIMIT_EXCEEDED);
     assertThat(redisTemplate.hasKey(key(USER_ID))).isFalse();
   }
 
@@ -159,10 +159,10 @@ class RedisUniversityVerificationRepositoryTest {
     // then
     for (int attempt = 0; attempt < MAX_ATTEMPTS - 1; attempt++) {
       assertThat(repository.verifyCode(USER_ID, "RETRY" + attempt, MAX_ATTEMPTS).status())
-              .isEqualTo(Status.INVALID);
+          .isEqualTo(Status.INVALID);
     }
     assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).verification())
-            .isEqualTo(current);
+        .isEqualTo(current);
   }
 
   private String key(long userId) {
