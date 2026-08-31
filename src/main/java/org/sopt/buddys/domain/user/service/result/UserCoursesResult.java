@@ -1,7 +1,6 @@
 package org.sopt.buddys.domain.user.service.result;
 
 import java.util.List;
-import org.sopt.buddys.domain.course.entity.Course;
 
 public record UserCoursesResult(
     List<CourseResult> courses,
@@ -15,7 +14,8 @@ public record UserCoursesResult(
   }
 
   public record CourseResult(
-      Course course
+      Long courseId,
+      String thumbnailImageUrl
   ) {
   }
 }

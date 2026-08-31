@@ -2,7 +2,6 @@ package org.sopt.buddys.domain.user.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
-import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
 
 public record UserCoursesResponse(
@@ -59,7 +58,7 @@ public record UserCoursesResponse(
       Long courseId,
 
       @Schema(
-          description = "코스 대표 이미지 URL",
+          description = "프로필에 표시할 코스 썸네일 URL (대표 사진이 없으면 가장 이른 일차의 첫 사진)",
           example = "https://example.com/course-thumbnail.png",
           requiredMode = Schema.RequiredMode.REQUIRED,
           nullable = true
@@ -68,8 +67,7 @@ public record UserCoursesResponse(
   ) {
 
     private static CourseResponse from(UserCoursesResult.CourseResult result) {
-      Course course = result.course();
-      return new CourseResponse(course.getId(), course.getThumbnailImageUrl());
+      return new CourseResponse(result.courseId(), result.thumbnailImageUrl());
     }
   }
 }

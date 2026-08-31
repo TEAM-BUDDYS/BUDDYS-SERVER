@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.repository.CourseImageRepository;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
@@ -39,6 +40,7 @@ public class UserService {
   private final PostRepository postRepository;
   private final PostImageRepository postImageRepository;
   private final CourseRepository courseRepository;
+  private final CourseImageRepository courseImageRepository;
 
   public boolean isOnboardingCompleted(User user) {
     return isOnboardingCompleted(user, userTagRepository.countByUserId(user.getId()));
@@ -145,10 +147,16 @@ public class UserService {
         Sort.by(Sort.Direction.DESC, "createdAt", "id")
     );
     Slice<Course> courses = courseRepository.findByAuthorIdAndDeletedAtIsNull(userId, pageable);
+    Map<Long, String> fallbackImageUrls = getFallbackCourseImageUrls(courses.getContent());
 
     List<CourseResult> courseResults = courses.getContent()
         .stream()
-        .map(CourseResult::new)
+        .map(course -> new CourseResult(
+            course.getId(),
+            hasText(course.getThumbnailImageUrl())
+                ? course.getThumbnailImageUrl()
+                : fallbackImageUrls.get(course.getId())
+        ))
         .toList();
 
     return new UserCoursesResult(
@@ -157,6 +165,29 @@ public class UserService {
         courses.getSize(),
         courses.hasNext()
     );
+  }
+
+  private Map<Long, String> getFallbackCourseImageUrls(List<Course> courses) {
+    List<Long> courseIdsWithoutThumbnail = courses.stream()
+        .filter(course -> !hasText(course.getThumbnailImageUrl()))
+        .map(Course::getId)
+        .toList();
+
+    if (courseIdsWithoutThumbnail.isEmpty()) {
+      return Map.of();
+    }
+
+    return courseImageRepository.findImageUrlsByCourseIdIn(courseIdsWithoutThumbnail)
+        .stream()
+        .collect(Collectors.toMap(
+            CourseImageRepository.CourseImageUrlProjection::getCourseId,
+            CourseImageRepository.CourseImageUrlProjection::getImageUrl,
+            (first, ignored) -> first
+        ));
+  }
+
+  private boolean hasText(String value) {
+    return value != null && !value.isBlank();
   }
 
   private void validatePageRequest(int page, int size) {
