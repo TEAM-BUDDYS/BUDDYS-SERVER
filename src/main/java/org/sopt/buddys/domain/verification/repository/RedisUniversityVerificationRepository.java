@@ -27,34 +27,34 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
   private static final Base64.Encoder VALUE_ENCODER = Base64.getUrlEncoder().withoutPadding();
   private static final Base64.Decoder VALUE_DECODER = Base64.getUrlDecoder();
   private static final DefaultRedisScript<Long> SAVE_WITH_TTL = new DefaultRedisScript<>(
-      "redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]); "
-          + "redis.call('DEL', KEYS[2]); return 1",
-      Long.class
+          "redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]); "
+                  + "redis.call('DEL', KEYS[2]); return 1",
+          Long.class
   );
   private static final DefaultRedisScript<String> VERIFY_CODE = new DefaultRedisScript<>(
-      "local value = redis.call('GET', KEYS[1]); "
-          + "if not value then "
-          + "local attempts = tonumber(redis.call('GET', KEYS[2]) or '0'); "
-          + "if attempts >= tonumber(ARGV[2]) then return 'ATTEMPT_LIMIT_EXCEEDED' end; "
-          + "return 'INVALID' end; "
-          + "local first = string.find(value, ':', 1, true); "
-          + "local second = first and string.find(value, ':', first + 1, true); "
-          + "if not second then redis.call('DEL', KEYS[1], KEYS[2]); return 'INVALID' end; "
-          + "local storedDigest = string.sub(value, first + 1, second - 1); "
-          + "if storedDigest == ARGV[1] then return 'MATCHED:' .. value end; "
-          + "local attempts = redis.call('INCR', KEYS[2]); "
-          + "if attempts == 1 then "
-          + "local ttl = redis.call('PTTL', KEYS[1]); "
-          + "if ttl > 0 then redis.call('PEXPIRE', KEYS[2], ttl) end end; "
-          + "if attempts >= tonumber(ARGV[2]) then "
-          + "redis.call('DEL', KEYS[1]); return 'ATTEMPT_LIMIT_EXCEEDED' end; "
-          + "return 'INVALID'",
-      String.class
+          "local value = redis.call('GET', KEYS[1]); "
+                  + "if not value then "
+                  + "local attempts = tonumber(redis.call('GET', KEYS[2]) or '0'); "
+                  + "if attempts >= tonumber(ARGV[2]) then return 'ATTEMPT_LIMIT_EXCEEDED' end; "
+                  + "return 'INVALID' end; "
+                  + "local first = string.find(value, ':', 1, true); "
+                  + "local second = first and string.find(value, ':', first + 1, true); "
+                  + "if not second then redis.call('DEL', KEYS[1], KEYS[2]); return 'INVALID' end; "
+                  + "local storedDigest = string.sub(value, first + 1, second - 1); "
+                  + "if storedDigest == ARGV[1] then return 'MATCHED:' .. value end; "
+                  + "local attempts = redis.call('INCR', KEYS[2]); "
+                  + "if attempts == 1 then "
+                  + "local ttl = redis.call('PTTL', KEYS[1]); "
+                  + "if ttl > 0 then redis.call('PEXPIRE', KEYS[2], ttl) end end; "
+                  + "if attempts >= tonumber(ARGV[2]) then "
+                  + "redis.call('DEL', KEYS[1]); return 'ATTEMPT_LIMIT_EXCEEDED' end; "
+                  + "return 'INVALID'",
+          String.class
   );
   private static final DefaultRedisScript<Long> DELETE_IF_VALUE_MATCHES = new DefaultRedisScript<>(
-      "if redis.call('GET', KEYS[1]) == ARGV[1] "
-          + "then return redis.call('DEL', KEYS[1], KEYS[2]) else return 0 end",
-      Long.class
+          "if redis.call('GET', KEYS[1]) == ARGV[1] "
+                  + "then return redis.call('DEL', KEYS[1], KEYS[2]) else return 0 end",
+          Long.class
   );
 
   private final StringRedisTemplate redisTemplate;
@@ -62,10 +62,10 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
   @Override
   public void save(UniversityVerification verification, Duration ttl) {
     redisTemplate.execute(
-        SAVE_WITH_TTL,
-        List.of(key(verification.userId()), attemptsKey(verification.userId())),
-        encode(verification),
-        String.valueOf(ttl.toMillis())
+            SAVE_WITH_TTL,
+            List.of(key(verification.userId()), attemptsKey(verification.userId())),
+            encode(verification),
+            String.valueOf(ttl.toMillis())
     );
   }
 
@@ -76,10 +76,10 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
     }
 
     String result = redisTemplate.execute(
-        VERIFY_CODE,
-        List.of(key(userId), attemptsKey(userId)),
-        codeDigest(code),
-        String.valueOf(maxAttempts)
+            VERIFY_CODE,
+            List.of(key(userId), attemptsKey(userId)),
+            codeDigest(code),
+            String.valueOf(maxAttempts)
     );
     if (RESULT_ATTEMPT_LIMIT_EXCEEDED.equals(result)) {
       return VerificationResult.limitExceeded();
@@ -90,16 +90,16 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
 
     String storedValue = result.substring(RESULT_MATCHED_PREFIX.length());
     return decode(userId, code, storedValue)
-        .map(VerificationResult::matched)
-        .orElseGet(VerificationResult::invalid);
+            .map(VerificationResult::matched)
+            .orElseGet(VerificationResult::invalid);
   }
 
   @Override
   public void deleteIfMatches(UniversityVerification verification) {
     redisTemplate.execute(
-        DELETE_IF_VALUE_MATCHES,
-        List.of(key(verification.userId()), attemptsKey(verification.userId())),
-        encode(verification)
+            DELETE_IF_VALUE_MATCHES,
+            List.of(key(verification.userId()), attemptsKey(verification.userId())),
+            encode(verification)
     );
   }
 
@@ -120,11 +120,11 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
 
   private String encode(UniversityVerification verification) {
     String encodedEmail = VALUE_ENCODER.encodeToString(
-        verification.email().getBytes(StandardCharsets.UTF_8)
+            verification.email().getBytes(StandardCharsets.UTF_8)
     );
     return verification.universityId()
-        + VALUE_SEPARATOR + codeDigest(verification.code())
-        + VALUE_SEPARATOR + encodedEmail;
+            + VALUE_SEPARATOR + codeDigest(verification.code())
+            + VALUE_SEPARATOR + encodedEmail;
   }
 
   private boolean codeMatches(String storedDigest, String code) {
@@ -143,7 +143,7 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
   }
 
   private String key(Long userId) {
-    return KEY_PREFIX + userId;
+    return KEY_PREFIX + "{" + userId + "}";
   }
 
   private String attemptsKey(Long userId) {
