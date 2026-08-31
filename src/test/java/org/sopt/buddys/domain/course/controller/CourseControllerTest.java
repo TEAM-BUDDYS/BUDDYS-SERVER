@@ -30,6 +30,100 @@ class CourseControllerTest extends IntegrationTestSupport {
   @Autowired
   private UserRepository userRepository;
 
+  @DisplayName("내가 작성한 코스 목록을 프로필에서 조회한다")
+  @Test
+  void getMyCourses_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    createCourseViaApi(author, countryId, cityId, tagId, "파리 코스");
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(get("/api/v1/users/me/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses.length()").value(1))
+        .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
+        .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
+            .value("https://example.com/thumbnail.jpg"))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(18))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
+  @DisplayName("타 유저가 작성한 코스 목록을 프로필에서 조회한다")
+  @Test
+  void getUserCourses_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    createCourseViaApi(author, countryId, cityId, tagId, "파리 코스");
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(get("/api/v1/users/{userId}/courses", author.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses.length()").value(1))
+        .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
+        .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
+            .value("https://example.com/thumbnail.jpg"))
+        .andExpect(jsonPath("$.data.size").value(18));
+  }
+
+  @DisplayName("코스 대표 사진이 없으면 가장 이른 일차의 첫 사진을 프로필 썸네일로 반환한다")
+  @Test
+  void getMyCourses_withoutThumbnail_returnsFirstImageOfEarliestDay() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [
+                    {
+                      "dayNumber": 2,
+                      "imageUrls": ["https://example.com/day2-first.jpg"]
+                    },
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": [
+                        "https://example.com/day1-first.jpg",
+                        "https://example.com/day1-second.jpg"
+                      ]
+                    }
+                  ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isCreated());
+
+    // when, then
+    mockMvc.perform(get("/api/v1/users/me/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
+            .value("https://example.com/day1-first.jpg"));
+  }
+
   @DisplayName("코스 목록을 국가로 필터링하여 조회한다")
   @Test
   void getCourses_filteredByCountry_returnsOk() throws Exception {

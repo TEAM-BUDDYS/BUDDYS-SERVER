@@ -87,6 +87,22 @@ class S3PresignedUrlServiceTest {
     assertThat(keyCaptor.getValue()).startsWith("profiles/");
   }
 
+  @DisplayName("코스 이미지는 courses 폴더에 업로드한다")
+  @Test
+  void createUploadUrl_courseDomain_usesCoursesFolder() {
+    // given
+    when(s3PresignedUrlManager.createUploadUrl(anyString(), anyString(), anyLong()))
+        .thenReturn(new S3PresignedUploadResult("upload-url", "image-url"));
+
+    // when
+    s3PresignedUrlService.createUploadUrl(1L, ImageDomain.COURSE, "image/jpeg", VALID_FILE_SIZE);
+
+    // then
+    ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+    verify(s3PresignedUrlManager).createUploadUrl(keyCaptor.capture(), anyString(), anyLong());
+    assertThat(keyCaptor.getValue()).startsWith("courses/");
+  }
+
   @DisplayName("대소문자가 섞인 Content-Type도 정상적으로 처리하고, 소문자로 정규화해서 S3에 전달한다")
   @Test
   void createUploadUrl_mixedCaseContentType_normalizesToLowerCase() {
