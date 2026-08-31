@@ -24,8 +24,8 @@ public record CourseDayRequest(
     @Size(max = 10)
     List<@NotBlank @Size(max = 512) String> imageUrls,
 
-    @Schema(description = "해당 일자에 방문한 장소 목록 (최대 20곳)")
-    @Size(max = 20)
+    @Schema(description = "해당 일자에 방문한 장소 목록 (최대 10곳)")
+    @Size(max = 10)
     List<@NotNull @Valid CoursePlaceRequest> places
 ) {
 }

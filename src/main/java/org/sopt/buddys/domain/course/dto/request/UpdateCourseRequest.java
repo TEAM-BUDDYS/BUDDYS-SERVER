@@ -48,8 +48,8 @@ public record UpdateCourseRequest(
     @Size(max = 30)
     List<@NotNull @Valid CourseDayRequest> days,
 
-    @Schema(description = "항공편 목록 (최대 10개). 기존 항공편 정보를 모두 대체합니다.")
-    @Size(max = 10)
+    @Schema(description = "항공편 목록 (최대 5개). 기존 항공편 정보를 모두 대체합니다.")
+    @Size(max = 5)
     List<@NotNull @Valid CourseFlightRequest> flights
 ) {
 }
