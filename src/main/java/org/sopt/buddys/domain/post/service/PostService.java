@@ -116,7 +116,7 @@ public class PostService {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
 
-    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     if (!post.getAuthor().getId().equals(userId)) {
@@ -131,7 +131,7 @@ public class PostService {
   public Post updatePost(Long userId, Long postId, UpdatePostCommand command) {
     validateUpdateRequest(command);
 
-    Post post = postRepository.findDetailById(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
@@ -181,7 +181,7 @@ public class PostService {
 
   @Transactional
   public Post deletePost(Long userId, Long postId) {
-    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
