@@ -26,8 +26,8 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
-import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
 import org.sopt.buddys.global.exception.BaseException;
+import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagResult;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
@@ -51,19 +51,19 @@ class UserServiceTest {
   @Mock
   private PostImageRepository postImageRepository;
 
-  @DisplayName("타입별 태그 리스트를 만들고 대표 태그는 각 타입 리스트의 첫 번째 요소로 반환한다")
+  @DisplayName("프로필 태그는 카테고리와 무관하게 displayOrder 순서대로 반환한다")
   @Test
-  void getProfile_representativeTags_areFirstTagsOfEachType() {
+  void getProfile_tagsAreSortedByDisplayOrder() {
     // given
     Long userId = 1L;
     User user = createUser(userId, false, false);
     List<UserTagRepository.UserTagProjection> userTags = List.of(
-        new TestUserTagProjection(TagType.ACTIVITY, "액티비티"),
-        new TestUserTagProjection(TagType.ACTIVITY, "맛집탐방"),
-        new TestUserTagProjection(TagType.INTEREST, "문화생활"),
-        new TestUserTagProjection(TagType.INTEREST, "사진"),
-        new TestUserTagProjection(TagType.TRAVEL_STYLE, "활발한"),
-        new TestUserTagProjection(TagType.TRAVEL_STYLE, "느긋한")
+        new TestUserTagProjection(TagType.TRAVEL_STYLE, "활발한", 0),
+        new TestUserTagProjection(TagType.ACTIVITY, "액티비티", 1),
+        new TestUserTagProjection(TagType.TRAVEL_STYLE, "느긋한", 2),
+        new TestUserTagProjection(TagType.INTEREST, "문화생활", 3),
+        new TestUserTagProjection(TagType.ACTIVITY, "맛집탐방", 4),
+        new TestUserTagProjection(TagType.INTEREST, "사진", 5)
     );
 
     given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
@@ -73,20 +73,16 @@ class UserServiceTest {
     UserProfileResult result = userService.getProfile(userId);
 
     // then
-    assertThat(result.allTags()).hasSize(3);
-    assertThat(result.allTags())
-        .extracting(TagGroupResult::tagType)
-        .containsExactly(TagType.ACTIVITY, TagType.INTEREST, TagType.TRAVEL_STYLE);
-
-    assertThat(getTags(result, TagType.ACTIVITY)).containsExactlyInAnyOrder("액티비티", "맛집탐방");
-    assertThat(getTags(result, TagType.INTEREST)).containsExactlyInAnyOrder("문화생활", "사진");
-    assertThat(getTags(result, TagType.TRAVEL_STYLE)).containsExactlyInAnyOrder("활발한", "느긋한");
-
-    assertThat(result.representativeTags()).containsExactly(
-        getTags(result, TagType.ACTIVITY).get(0),
-        getTags(result, TagType.INTEREST).get(0),
-        getTags(result, TagType.TRAVEL_STYLE).get(0)
-    );
+    assertThat(result.orderedTags())
+        .extracting(OrderedTagResult::name, OrderedTagResult::displayOrder)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("활발한", 0),
+            org.assertj.core.groups.Tuple.tuple("액티비티", 1),
+            org.assertj.core.groups.Tuple.tuple("느긋한", 2),
+            org.assertj.core.groups.Tuple.tuple("문화생활", 3),
+            org.assertj.core.groups.Tuple.tuple("맛집탐방", 4),
+            org.assertj.core.groups.Tuple.tuple("사진", 5)
+        );
   }
 
   @DisplayName("타 유저 프로필 조회는 삭제된 사용자도 조회하고 삭제 여부를 결과에 포함한다")
@@ -97,9 +93,9 @@ class UserServiceTest {
     User user = createUser(userId, false, false);
     ReflectionTestUtils.setField(user, "deletedAt", LocalDateTime.of(2026, 7, 10, 12, 0));
     List<UserTagRepository.UserTagProjection> userTags = List.of(
-        new TestUserTagProjection(TagType.ACTIVITY, "액티비티"),
-        new TestUserTagProjection(TagType.INTEREST, "문화생활"),
-        new TestUserTagProjection(TagType.TRAVEL_STYLE, "활발한")
+        new TestUserTagProjection(TagType.ACTIVITY, "액티비티", 0),
+        new TestUserTagProjection(TagType.INTEREST, "문화생활", 1),
+        new TestUserTagProjection(TagType.TRAVEL_STYLE, "활발한", 2)
     );
 
     given(userRepository.findById(userId)).willReturn(Optional.of(user));
@@ -110,11 +106,9 @@ class UserServiceTest {
 
     // then
     assertThat(result.user().getDeletedAt()).isNotNull();
-    assertThat(result.representativeTags()).containsExactlyInAnyOrder("액티비티", "문화생활", "활발한");
-    assertThat(result.allTags()).hasSize(3);
-    assertThat(getTags(result, TagType.ACTIVITY)).containsExactly("액티비티");
-    assertThat(getTags(result, TagType.INTEREST)).containsExactly("문화생활");
-    assertThat(getTags(result, TagType.TRAVEL_STYLE)).containsExactly("활발한");
+    assertThat(result.orderedTags())
+        .extracting(OrderedTagResult::name)
+        .containsExactly("액티비티", "문화생활", "활발한");
   }
 
   @DisplayName("타 유저 게시글 조회는 삭제된 사용자가 작성한 게시글도 조회한다")
@@ -267,15 +261,6 @@ class UserServiceTest {
         .build();
   }
 
-  private List<String> getTags(UserProfileResult response, TagType tagType) {
-    return response.allTags()
-        .stream()
-        .filter(tagGroup -> tagGroup.tagType() == tagType)
-        .findFirst()
-        .orElseThrow()
-        .tags();
-  }
-
   private User createUser(Long id, boolean universityVerified, boolean exchangeVerified) {
     return baseUserBuilder(id)
         .universityVerified(universityVerified)
@@ -294,7 +279,8 @@ class UserServiceTest {
 
   private record TestUserTagProjection(
       TagType tagType,
-      String tagName
+      String tagName,
+      int displayOrder
   ) implements UserTagRepository.UserTagProjection {
 
     @Override
@@ -305,6 +291,16 @@ class UserServiceTest {
     @Override
     public String getTagName() {
       return tagName;
+    }
+
+    @Override
+    public Long getTagId() {
+      return (long) displayOrder + 1;
+    }
+
+    @Override
+    public int getDisplayOrder() {
+      return displayOrder;
     }
   }
 }

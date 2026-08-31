@@ -1,10 +1,12 @@
 package org.sopt.buddys.domain.user.repository;
 
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,6 +14,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      select u
+      from User u
+      where u.id = :userId
+        and u.deletedAt is null
+      """)
+  Optional<User> findByIdForProfileUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u.notificationEnabled
@@ -31,6 +42,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByIdWithExchangeCountry(@Param("userId") Long userId);
 
   boolean existsByIdAndDeletedAtIsNull(Long id);
+
+  boolean existsByNicknameAndIdNot(String nickname, Long id);
 
   @Query("""
       select u
