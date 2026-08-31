@@ -6,22 +6,17 @@ import org.sopt.buddys.domain.user.entity.User;
 
 public record UserProfileResult(
     User user,
-    List<String> representativeTags,
-    List<TagGroupResult> allTags
+    List<OrderedTagResult> orderedTags
 ) {
 
   public UserProfileResult {
-    representativeTags = List.copyOf(representativeTags);
-    allTags = List.copyOf(allTags);
+    orderedTags = List.copyOf(orderedTags);
   }
 
-  public record TagGroupResult(
+  public record OrderedTagResult(
+      Long id,
+      String name,
       TagType tagType,
-      List<String> tags
-  ) {
-
-    public TagGroupResult {
-      tags = List.copyOf(tags);
-    }
-  }
+      int displayOrder
+  ) {}
 }

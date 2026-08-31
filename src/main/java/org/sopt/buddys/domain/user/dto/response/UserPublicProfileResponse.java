@@ -8,35 +8,46 @@ import org.sopt.buddys.domain.user.entity.VerificationBadge;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 
 public record UserPublicProfileResponse(
-    @Schema(description = "사용자 ID", example = "1")
+    @Schema(description = "사용자 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     Long userId,
 
-    @Schema(description = "닉네임", example = "버디")
+    @Schema(description = "닉네임", example = "버디", requiredMode = Schema.RequiredMode.REQUIRED)
     String nickname,
 
-    @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.png")
+    @Schema(
+        description = "프로필 이미지 URL",
+        example = "https://example.com/profile.png",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     String profileImageUrl,
 
-    @Schema(description = "자기소개", example = "같이 여행해요!")
+    @Schema(description = "자기소개", example = "같이 여행해요!", requiredMode = Schema.RequiredMode.REQUIRED)
     String bio,
 
-    @Schema(description = "프로필에 표시할 인증 뱃지", example = "SOCIAL_LOGIN")
+    @Schema(
+        description = "프로필에 표시할 인증 뱃지",
+        example = "SOCIAL_LOGIN",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     VerificationBadge verificationBadge,
 
-    @Schema(description = "대표 취향 태그", example = "[\"문화생활\", \"액티비티\", \"활발한\"]")
-    List<String> representativeTags,
-
-    @Schema(description = "전체 취향 태그")
-    List<TagGroupResponse> allTags,
+    @Schema(
+        description = "사용자가 지정한 순서의 상위 3개 대표 취향 태그",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
+    List<OrderedTagResponse> representativeTags,
 
     @JsonProperty("isDeleted")
-    @Schema(description = "삭제된 사용자 여부", example = "false")
+    @Schema(
+        description = "삭제된 사용자 여부",
+        example = "false",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
     boolean deleted
 ) {
 
   public UserPublicProfileResponse {
     representativeTags = List.copyOf(representativeTags);
-    allTags = List.copyOf(allTags);
   }
 
   public static UserPublicProfileResponse from(UserProfileResult result) {
@@ -47,10 +58,9 @@ public record UserPublicProfileResponse(
         user.getProfileImageUrl(),
         user.getIntroduction(),
         VerificationBadge.from(user),
-        result.representativeTags(),
-        result.allTags()
-            .stream()
-            .map(TagGroupResponse::from)
+        result.orderedTags().stream()
+            .limit(3)
+            .map(OrderedTagResponse::from)
             .toList(),
         user.getDeletedAt() != null
     );

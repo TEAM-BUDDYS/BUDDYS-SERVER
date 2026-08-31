@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface PostAgeConditionRepository extends JpaRepository<PostAgeCondition, PostAgeConditionId> {
 
+  void deleteAllByPostId(Long postId);
+
   @Query("""
       select pac.id.ageCondition
       from PostAgeCondition pac

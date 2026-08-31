@@ -16,6 +16,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("""
+      select u
+      from User u
+      where u.id = :userId
+        and u.deletedAt is null
+      """)
+  Optional<User> findByIdForProfileUpdate(@Param("userId") Long userId);
+
+  @Query("""
+      select u.notificationEnabled
+      from User u
+      where u.id = :userId
+        and u.deletedAt is null
+      """)
+  Optional<Boolean> findNotificationEnabledById(@Param("userId") Long userId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select u from User u where u.id = :userId")
   Optional<User> findByIdForUpdate(@Param("userId") Long userId);
 
@@ -29,6 +46,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Optional<User> findByIdWithExchangeCountry(@Param("userId") Long userId);
 
   boolean existsByIdAndDeletedAtIsNull(Long id);
+
+  boolean existsByNicknameAndIdNot(String nickname, Long id);
 
   @Query("""
       select u

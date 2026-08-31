@@ -10,12 +10,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Duration;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
+import org.sopt.buddys.domain.auth.controller.swagger.LogoutSwagger;
 import org.sopt.buddys.domain.auth.dto.response.AuthTokens;
 import org.sopt.buddys.domain.auth.dto.response.LoginResponse;
 import org.sopt.buddys.domain.auth.service.AuthService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.response.BaseResponse;
+import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.sopt.buddys.global.security.jwt.JwtProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -110,6 +112,28 @@ public class AuthController {
         .secure(true)
         .path("/api/v1/auth/reissue")
         .maxAge(Duration.ofMillis(jwtProperties.refreshTokenExpiration()))
+        .sameSite("None")
+        .build();
+    response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+  }
+
+  @LogoutSwagger
+  @PostMapping("/logout")
+  public ResponseEntity<BaseResponse<Void>> logout(
+      @Parameter(hidden = true) @LoginUser Long userId,
+      HttpServletResponse response
+  ) {
+    authService.logout(userId);
+    deleteRefreshTokenCookie(response);
+    return ResponseEntity.ok(BaseResponse.success(GlobalSuccessCode.OK));
+  }
+
+  private void deleteRefreshTokenCookie(HttpServletResponse response) {
+    ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
+        .httpOnly(true)
+        .secure(true)
+        .path("/api/v1/auth/reissue")
+        .maxAge(Duration.ZERO)
         .sameSite("None")
         .build();
     response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

@@ -34,7 +34,7 @@ public class CommentService {
 
   public CommentListResult getComments(Long postId, int page, int size) {
     validatePageRequest(page, size);
-    if (!postRepository.existsById(postId)) {
+    if (!postRepository.existsByIdAndDeletedAtIsNull(postId)) {
       throw new BaseException(PostErrorCode.POST_NOT_FOUND);
     }
 
@@ -72,7 +72,7 @@ public class CommentService {
   ) {
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    Post post = postRepository.findById(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     Comment comment = commentRepository.save(new Comment(

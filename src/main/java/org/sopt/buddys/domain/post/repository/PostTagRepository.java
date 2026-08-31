@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface PostTagRepository extends JpaRepository<PostTag, PostTagId> {
 
+  void deleteAllByPostId(Long postId);
+
   @Query("""
       select pt
       from PostTag pt

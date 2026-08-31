@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.tag.dto.response.TagGroupListResponse;
 import org.sopt.buddys.domain.tag.dto.response.TagResponse;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.service.TagService;
@@ -25,12 +26,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class TagController {
   private final TagService tagService;
 
+  @Operation(summary = "전체 태그 목록 조회", description = "프로필 태그 편집에 사용할 전체 태그를 카테고리별로 반환합니다.")
+  @ApiResponse(responseCode = "200", description = "조회 성공")
+  @GetMapping
+  public BaseResponse<List<TagGroupListResponse>> getAllTags() {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        tagService.getAllTagGroups().stream()
+            .map(TagGroupListResponse::from)
+            .toList()
+    );
+  }
+
   @Operation(summary = "태그 목록 조회", description = "type(ACTIVITY, INTEREST, TRAVEL_STYLE)에 해당하는 태그 목록을 반환합니다.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "조회 성공"),
       @ApiResponse(responseCode = "400", description = "유효하지 않은 태그 타입")
   })
-
   @GetMapping("/{type}")
   public ResponseEntity<BaseResponse<List<TagResponse>>> getTags(
       @Parameter(description = "태그 타입", example = "ACTIVITY")

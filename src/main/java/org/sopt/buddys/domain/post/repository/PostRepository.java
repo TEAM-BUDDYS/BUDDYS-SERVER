@@ -14,7 +14,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface PostRepository extends JpaRepository<Post, Long>, PostRepositoryCustom {
 
-  Slice<Post> findByAuthorId(Long authorId, Pageable pageable);
+  Slice<Post> findByAuthorIdAndDeletedAtIsNull(Long authorId, Pageable pageable);
+
+  Optional<Post> findByIdAndDeletedAtIsNull(Long id);
+
+  boolean existsByIdAndDeletedAtIsNull(Long id);
 
   @Query("""
       select p
@@ -24,6 +28,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       where p.country.id = :countryId
         and p.status = :status
         and p.author.id <> :excludeAuthorId
+        and p.deletedAt is null
       """)
   List<Post> findByCountryIdAndStatusAndAuthorIdNot(
       @Param("countryId") Long countryId,
@@ -38,6 +43,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       where p.country.id = :countryId
         and p.status = :status
         and p.author.id <> :excludeAuthorId
+        and p.deletedAt is null
         and exists (select 1 from PostImage pi where pi.post = p)
       """)
   List<Post> findByCountryIdAndStatusAndAuthorIdNotAndHasImage(
@@ -46,7 +52,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       @Param("excludeAuthorId") Long excludeAuthorId
   );
 
-  @Query("select p.author.id as authorId, count(p) as postCount from Post p where p.author.id in :authorIds group by p.author.id")
+  @Query("select p.author.id as authorId, count(p) as postCount from Post p where p.author.id in :authorIds and p.deletedAt is null group by p.author.id")
   List<AuthorPostCountProjection> countByAuthorIdIn(@Param("authorIds") Collection<Long> authorIds);
 
   @Query("""
@@ -57,6 +63,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       join fetch p.country
       join fetch p.city
       where p.id = :postId
+        and p.deletedAt is null
       """)
   Optional<Post> findDetailById(@Param("postId") Long postId);
 
@@ -65,6 +72,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       update Post p
       set p.viewCount = p.viewCount + 1
       where p.id = :postId
+        and p.deletedAt is null
       """)
   int increaseViewCount(@Param("postId") Long postId);
 
@@ -73,6 +81,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       update Post p
       set p.commentCount = p.commentCount + 1
       where p.id = :postId
+        and p.deletedAt is null
       """)
   int increaseCommentCount(@Param("postId") Long postId);
 
