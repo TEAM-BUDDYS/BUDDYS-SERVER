@@ -73,7 +73,7 @@ public class CourseCommentService {
   ) {
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
+    Course course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     CourseComment comment = courseCommentRepository.save(new CourseComment(
@@ -81,9 +81,7 @@ public class CourseCommentService {
         author,
         content.trim()
     ));
-    if (courseRepository.increaseCommentCount(courseId) == 0) {
-      throw new BaseException(CourseErrorCode.COURSE_NOT_FOUND);
-    }
+    courseRepository.increaseCommentCount(courseId);
     return comment;
   }
 

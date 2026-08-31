@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -37,31 +39,27 @@ class CourseCommentServiceTest {
   @Mock
   private UserRepository userRepository;
 
-  @DisplayName("댓글 저장과 코스 조회 사이에 코스가 삭제되면(commentCount 증가 0건) 예외가 발생한다")
+  @DisplayName("코스가 이미 삭제됐으면 쓰기 락 조회에서 걸러져 댓글을 저장하지 않고 예외가 발생한다")
   @Test
-  void createComment_courseDeletedBetweenSaveAndCountIncrease_throwsCourseNotFound() {
+  void createComment_deletedCourse_throwsCourseNotFound() {
     // given
     Long userId = 1L;
     Long courseId = 2L;
-    User author = mock(User.class);
-    Course course = mock(Course.class);
-    CourseComment savedComment = mock(CourseComment.class);
-
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(author));
-    given(courseRepository.findByIdAndDeletedAtIsNull(courseId)).willReturn(Optional.of(course));
-    given(courseCommentRepository.save(any(CourseComment.class))).willReturn(savedComment);
-    given(courseRepository.increaseCommentCount(courseId)).willReturn(0);
+    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(mock(User.class)));
+    given(courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)).willReturn(Optional.empty());
 
     // when, then
     assertThatThrownBy(() -> courseCommentService.createComment(userId, courseId, "댓글"))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
         );
+    then(courseCommentRepository).should(never()).save(any());
+    then(courseRepository).should(never()).increaseCommentCount(any());
   }
 
-  @DisplayName("commentCount 증가가 정상적으로 반영되면 댓글이 그대로 반환된다")
+  @DisplayName("쓰기 락으로 코스를 잡은 뒤 댓글을 저장하고 commentCount를 증가시킨다")
   @Test
-  void createComment_countIncreased_returnsSavedComment() {
+  void createComment_locksCourseThenSavesAndIncreasesCount() {
     // given
     Long userId = 1L;
     Long courseId = 2L;
@@ -70,14 +68,14 @@ class CourseCommentServiceTest {
     CourseComment savedComment = mock(CourseComment.class);
 
     given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(author));
-    given(courseRepository.findByIdAndDeletedAtIsNull(courseId)).willReturn(Optional.of(course));
+    given(courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)).willReturn(Optional.of(course));
     given(courseCommentRepository.save(any(CourseComment.class))).willReturn(savedComment);
-    given(courseRepository.increaseCommentCount(courseId)).willReturn(1);
 
     // when
     CourseComment result = courseCommentService.createComment(userId, courseId, "댓글");
 
     // then
     assertThat(result).isEqualTo(savedComment);
+    then(courseRepository).should().increaseCommentCount(courseId);
   }
 }

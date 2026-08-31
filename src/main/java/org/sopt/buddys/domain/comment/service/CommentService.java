@@ -73,7 +73,7 @@ public class CommentService {
   ) {
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     Comment comment = commentRepository.save(new Comment(
