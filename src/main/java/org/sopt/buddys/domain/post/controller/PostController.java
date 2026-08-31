@@ -21,6 +21,8 @@ import org.sopt.buddys.domain.post.dto.response.PostDetailResponse;
 import org.sopt.buddys.domain.post.dto.response.UpdatePostStatusResponse;
 import org.sopt.buddys.domain.post.dto.response.UpdatePostResponse;
 import org.sopt.buddys.domain.post.dto.response.UpdatePostSuccessResponse;
+import org.sopt.buddys.domain.post.dto.response.DeletePostResponse;
+import org.sopt.buddys.domain.post.dto.response.DeletePostSuccessResponse;
 import org.sopt.buddys.domain.post.service.PostService;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
@@ -32,6 +34,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -160,6 +163,31 @@ public class PostController {
     return BaseResponse.success(
         PostSuccessCode.POST_UPDATED,
         UpdatePostResponse.from(postService.updatePost(userId, postId, request.toCommand()))
+    );
+  }
+
+  @Operation(summary = "동행 게시글 삭제", description = "작성자의 게시글을 소프트 삭제합니다. 연관 데이터와 이미지 파일은 삭제하지 않습니다.")
+  @ApiResponses({
+      @ApiResponse(
+          responseCode = "200",
+          description = "삭제 성공",
+          content = @Content(schema = @Schema(implementation = DeletePostSuccessResponse.class))
+      ),
+      @ApiResponse(responseCode = "403", description = "게시글 작성자가 아님"),
+      @ApiResponse(responseCode = "404", description = "게시글이 존재하지 않거나 이미 삭제됨")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @DeleteMapping("/{postId}")
+  public BaseResponse<DeletePostResponse> deletePost(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "삭제할 게시글 ID", example = "1", required = true)
+      @PathVariable @Positive Long postId
+  ) {
+    return BaseResponse.success(
+        PostSuccessCode.POST_DELETED,
+        DeletePostResponse.from(postService.deletePost(userId, postId))
     );
   }
 

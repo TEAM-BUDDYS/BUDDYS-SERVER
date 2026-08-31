@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.post.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -118,7 +119,7 @@ public class PostService {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
 
-    Post post = postRepository.findById(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     if (!post.getAuthor().getId().equals(userId)) {
@@ -178,6 +179,18 @@ public class PostService {
       postImageRepository.deleteAllByPostId(postId);
       savePostImages(post, command.imageUrls());
     }
+    return post;
+  }
+
+  @Transactional
+  public Post deletePost(Long userId, Long postId) {
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
+    if (!post.getAuthor().getId().equals(userId)) {
+      throw new BaseException(GlobalErrorCode.FORBIDDEN);
+    }
+
+    post.softDelete(LocalDateTime.now());
     return post;
   }
 
