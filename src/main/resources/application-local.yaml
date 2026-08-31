@@ -4,3 +4,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  security:
+    jwt:
+      access-token-expiration: 3600000 # 1 hour

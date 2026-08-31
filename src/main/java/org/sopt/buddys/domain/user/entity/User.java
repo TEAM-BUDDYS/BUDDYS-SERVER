@@ -162,6 +162,10 @@ public class User extends BaseEntity {
     return user;
   }
 
+  public void updateNotificationEnabled(boolean notificationEnabled) {
+    this.notificationEnabled = notificationEnabled;
+  }
+
   public void completeOnboarding(
       String nickname,
       Gender gender,
@@ -186,6 +190,18 @@ public class User extends BaseEntity {
     this.exchangeEndDate = exchangeEndDate;
     this.interestCountry = interestCountry;
     this.interestCity = interestCity;
+  }
+
+  public void updateProfile(
+      String nickname,
+      Gender gender,
+      LocalDate birthDate,
+      String introduction
+  ) {
+    this.nickname = nickname;
+    this.gender = gender;
+    this.birthDate = birthDate;
+    this.introduction = introduction;
   }
 
   public void verifyUniversity(University university) {
