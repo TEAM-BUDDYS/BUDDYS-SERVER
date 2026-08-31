@@ -412,6 +412,9 @@ public class PostService {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
     }
+    if (command.isProvided(Field.COUNTRY_ID) && !command.isProvided(Field.CITY_ID)) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
     if ((command.isProvided(Field.TITLE)
             && (command.title().isBlank() || command.title().length() > 120))
         || (command.isProvided(Field.CONTENT) && command.content().isBlank())

@@ -19,9 +19,9 @@ public class UpdatePostRequest {
   @JsonIgnore
   private final EnumSet<Field> providedFields = EnumSet.noneOf(Field.class);
 
-  @Schema(description = "전달하면 국가를 수정하고, 미전달 시 기존 값을 유지합니다. null 불가", example = "1")
+  @Schema(description = "전달하면 국가를 수정하며 cityId도 함께 전달해야 합니다. 미전달 시 기존 국가 유지, null 불가", example = "1")
   private Long countryId;
-  @Schema(description = "전달하면 도시를 수정하고, 미전달 시 기존 값을 유지합니다. null 불가", example = "10")
+  @Schema(description = "도시만 변경하면 기존 국가, 국가와 함께 변경하면 변경할 국가에 속한 도시여야 합니다. 미전달 시 기존 도시 유지, null 불가", example = "10")
   private Long cityId;
   @Schema(description = "전달하면 시작일을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가", example = "2026-09-06")
   private LocalDate startDate;
