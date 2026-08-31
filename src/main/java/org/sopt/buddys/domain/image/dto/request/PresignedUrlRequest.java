@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Positive;
 import org.sopt.buddys.domain.image.entity.ImageDomain;
 
 public record PresignedUrlRequest(
-    @Schema(description = "이미지가 사용될 도메인 (POST: 게시글, PROFILE: 프로필)", example = "POST")
+    @Schema(description = "이미지가 사용될 도메인 (POST: 게시글, PROFILE: 프로필, COURSE: 코스)", example = "POST")
     @NotNull
     ImageDomain imageDomain,
 
