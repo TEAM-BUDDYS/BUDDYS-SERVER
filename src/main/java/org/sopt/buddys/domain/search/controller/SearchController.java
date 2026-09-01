@@ -9,8 +9,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.search.code.SearchSuccessCode;
 import org.sopt.buddys.domain.search.dto.request.SearchRequest;
+import org.sopt.buddys.domain.search.dto.request.SearchSuggestionRequest;
 import org.sopt.buddys.domain.search.dto.response.SearchResponse;
+import org.sopt.buddys.domain.search.dto.response.SearchSuggestionResponse;
 import org.sopt.buddys.domain.search.service.SearchService;
+import org.sopt.buddys.domain.search.service.SearchSuggestionService;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.sopt.buddys.global.swagger.CommonErrorResponses;
@@ -30,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SearchController {
 
   private final SearchService searchService;
+  private final SearchSuggestionService searchSuggestionService;
 
   @Operation(
       summary = "통합 검색",
@@ -52,6 +56,31 @@ public class SearchController {
             userId,
             request.normalizedKeyword(),
             request.pageOrDefault(),
+            request.sizeOrDefault()
+        ))
+    );
+  }
+
+  @Operation(
+      summary = "검색어 자동완성",
+      description = "DB에 존재하는 국가, 도시, 장소, 사용자, 코스 및 모집 중 동행 게시글에서 자동완성 검색어를 조회합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "자동완성 검색어 조회 성공. 결과가 없으면 빈 목록 반환")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @GetMapping("/suggestions")
+  public BaseResponse<SearchSuggestionResponse> getSearchSuggestions(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @ParameterObject @Valid @ModelAttribute SearchSuggestionRequest request
+  ) {
+    return BaseResponse.success(
+        SearchSuccessCode.SEARCH_SUGGESTIONS_FOUND,
+        SearchSuggestionResponse.from(searchSuggestionService.getSuggestions(
+            userId,
+            request.normalizedKeyword(),
             request.sizeOrDefault()
         ))
     );
