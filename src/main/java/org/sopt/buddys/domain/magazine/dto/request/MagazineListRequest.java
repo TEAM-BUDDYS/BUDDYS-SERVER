@@ -11,7 +11,8 @@ public record MagazineListRequest(
             + "둘 다 생략하면 Asia/Seoul 기준 현재 연도가 적용됩니다.",
         example = "2026"
     )
-    @Min(1)
+    @Min(1000)
+    @Max(9999)
     Integer year,
 
     @Schema(

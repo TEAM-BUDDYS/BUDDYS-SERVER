@@ -178,6 +178,8 @@ class MagazineControllerTest {
     for (String[] params : List.of(
         new String[]{"year", "0"},
         new String[]{"year", "-1"},
+        new String[]{"year", "999"},
+        new String[]{"year", "10000"},
         new String[]{"month", "0"},
         new String[]{"month", "13"}
     )) {
