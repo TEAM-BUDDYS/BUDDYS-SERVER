@@ -160,13 +160,13 @@ class MagazineControllerTest {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId()))
             .param("year", "2026"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("GLB-E001"));
+        .andExpect(jsonPath("$.code").value("MAGAZINE-E002"));
 
     mockMvc.perform(get("/api/v1/magazines")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId()))
             .param("month", "8"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("GLB-E001"));
+        .andExpect(jsonPath("$.code").value("MAGAZINE-E002"));
   }
 
   @DisplayName("유효하지 않은 연도 또는 월이면 실패한다")

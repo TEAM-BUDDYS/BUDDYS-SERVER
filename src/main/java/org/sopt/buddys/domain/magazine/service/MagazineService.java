@@ -15,7 +15,6 @@ import org.sopt.buddys.domain.magazine.repository.MagazineRepository;
 import org.sopt.buddys.domain.magazine.service.result.MagazineBookmarkResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult.MagazineSummaryResult;
-import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -85,12 +84,12 @@ public class MagazineService {
       return YearMonth.now(SEOUL_ZONE);
     }
     if (year == null || month == null) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+      throw new BaseException(MagazineErrorCode.INVALID_YEAR_MONTH);
     }
     try {
       return YearMonth.of(year, month);
     } catch (DateTimeException e) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+      throw new BaseException(MagazineErrorCode.INVALID_YEAR_MONTH);
     }
   }
 
