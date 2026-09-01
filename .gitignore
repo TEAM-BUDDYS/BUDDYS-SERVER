@@ -44,3 +44,6 @@ logs/
 .env.*
 !.env.docker.example
 .DS_Store
+
+### Editor temp files ###
+*.tmp.*

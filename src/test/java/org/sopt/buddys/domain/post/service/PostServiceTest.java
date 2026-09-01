@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -344,6 +345,30 @@ class PostServiceTest {
     assertThat(response.commentCount()).isEqualTo(3L);
     assertThat(response.createdAt()).isNotNull();
     assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(1L);
+  }
+
+  @DisplayName("탈퇴한 작성자의 게시글을 상세 조회하면 닉네임과 프로필 이미지가 가려진다")
+  @Test
+  void getPostDetail_withdrawnAuthor_masksNicknameAndProfileImage() {
+    // given
+    Long countryId = insertCountry("일본", "JP");
+    Long cityId = insertCity(countryId, "Tokyo", "도쿄", 14_000_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    User author = userRepository.save(createUser(
+        "author@test.com", "provider-author", "김가윤", countryId, LocalDate.now().minusYears(25), Gender.FEMALE));
+    Post post = postService.createPost(author.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+    jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), author.getId());
+
+    // when
+    PostDetailResponse response = PostDetailResponse.from(
+        postService.getPostDetail(author.getId(), post.getId())
+    );
+
+    // then
+    assertThat(response.author().nickname()).isEqualTo("탈퇴한 사용자");
+    assertThat(response.author().profileImageUrl()).isNull();
+    assertThat(response.author().country()).isEqualTo("일본");
+    assertThat(response.author().gender()).isEqualTo(Gender.FEMALE);
   }
 
   @DisplayName("도시 한글명이 없으면 상세 조회에서 도시 이름을 한글명 필드에 반환한다")
