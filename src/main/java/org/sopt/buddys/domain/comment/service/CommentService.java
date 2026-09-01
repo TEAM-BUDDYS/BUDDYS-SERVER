@@ -1,6 +1,5 @@
 package org.sopt.buddys.domain.comment.service;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +13,8 @@ import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.AuthorProfileMapper;
+import org.sopt.buddys.global.common.TimeAgoFormatter;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
@@ -48,11 +49,11 @@ public class CommentService {
         .map(comment -> new CommentResult(
             comment.getId(),
             comment.getAuthor().getId(),
-            comment.getAuthor().getNickname(),
-            comment.getAuthor().getProfileImageUrl(),
+            AuthorProfileMapper.maskedNickname(comment.getAuthor()),
+            AuthorProfileMapper.maskedProfileImageUrl(comment.getAuthor()),
             comment.getContent(),
             comment.getCreatedAt(),
-            toTimeAgo(comment.getCreatedAt(), now)
+            TimeAgoFormatter.format(comment.getCreatedAt(), now)
         ))
         .toList();
 
@@ -72,7 +73,7 @@ public class CommentService {
   ) {
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     Comment comment = commentRepository.save(new Comment(
@@ -88,33 +89,5 @@ public class CommentService {
     if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
-  }
-
-  private String toTimeAgo(LocalDateTime createdAt, LocalDateTime now) {
-    long seconds = Math.max(0, Duration.between(createdAt, now).getSeconds());
-    if (seconds < 60) {
-      return "방금 전";
-    }
-
-    long minutes = seconds / 60;
-    if (minutes < 60) {
-      return "%d분 전".formatted(minutes);
-    }
-
-    long hours = minutes / 60;
-    if (hours < 24) {
-      return "%d시간 전".formatted(hours);
-    }
-
-    long days = hours / 24;
-    if (days < 30) {
-      return "%d일 전".formatted(days);
-    }
-
-    if (days < 365) {
-      return "%d개월 전".formatted(Math.min(days / 30, 11));
-    }
-
-    return "%d년 전".formatted(days / 365);
   }
 }

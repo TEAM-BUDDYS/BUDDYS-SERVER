@@ -2,7 +2,6 @@ package org.sopt.buddys.domain.post.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -42,11 +41,13 @@ import org.sopt.buddys.domain.post.service.result.PostBookmarkResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult.PostSummaryResult;
 import org.sopt.buddys.domain.tag.entity.Tag;
-import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
+import org.sopt.buddys.domain.tag.service.TagTypeCountValidator;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.user.service.AuthorProfileMapper;
+import org.sopt.buddys.domain.user.service.result.AuthorProfile;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
@@ -58,10 +59,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
-
-  private static final int MAX_ACTIVITY_TAG_COUNT = 3;
-  private static final int MAX_INTEREST_TAG_COUNT = 2;
-  private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 2;
 
   private final PostRepository postRepository;
   private final PostBookmarkRepository postBookmarkRepository;
@@ -125,10 +122,12 @@ public class PostService {
 
     Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     post.updateStatus(status);
     return post;
@@ -138,11 +137,14 @@ public class PostService {
   public Post updatePost(Long userId, Long postId, UpdatePostCommand command) {
     validateUpdateRequest(command);
 
-    Post post = postRepository.findDetailById(postId)
+    Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     Country country = command.isProvided(Field.COUNTRY_ID)
         ? countryRepository.findById(command.countryId())
@@ -193,6 +195,9 @@ public class PostService {
     if (!post.getAuthor().getId().equals(userId)) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+
+    post = postRepository.findByIdAndDeletedAtIsNullForUpdate(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
 
     post.softDelete(LocalDateTime.now());
     return post;
@@ -265,15 +270,15 @@ public class PostService {
   }
 
   private PostDetailResult.AuthorResult toAuthorResult(User author) {
-    Country country = author.getExchangeCountry();
+    AuthorProfile profile = AuthorProfileMapper.toAuthorProfile(author);
     return new PostDetailResult.AuthorResult(
-        author.getId(),
-        author.getNickname(),
-        author.getProfileImageUrl(),
-        country == null ? null : country.getName(),
-        toAge(author.getBirthDate()),
-        toAgeRange(author.getBirthDate()),
-        author.getGender()
+        profile.userId(),
+        profile.nickname(),
+        profile.profileImageUrl(),
+        profile.country(),
+        profile.age(),
+        profile.ageRange(),
+        profile.gender()
     );
   }
 
@@ -322,24 +327,6 @@ public class PostService {
             postTag.getTag().getTagType()
         ))
         .toList();
-  }
-
-  private String toAgeRange(LocalDate birthDate) {
-    Integer age = toAge(birthDate);
-    if (age == null) {
-      return null;
-    }
-    if (age < 10) {
-      return "10대 미만";
-    }
-    return "%d0대".formatted(age / 10);
-  }
-
-  private Integer toAge(LocalDate birthDate) {
-    if (birthDate == null) {
-      return null;
-    }
-    return Period.between(birthDate, LocalDate.now()).getYears();
   }
 
   private City getCity(Long countryId, Long cityId) {
@@ -425,26 +412,8 @@ public class PostService {
     if (tags.size() != distinctTagIds.size()) {
       throw new BaseException(PostErrorCode.TAG_NOT_FOUND);
     }
-    validateTagTypeCounts(tags);
+    TagTypeCountValidator.validate(tags, PostErrorCode.ACTIVITY_TAG_REQUIRED, PostErrorCode.TAG_LIMIT_EXCEEDED);
     return tags;
-  }
-
-  private void validateTagTypeCounts(List<Tag> tags) {
-    long activityTagCount = countTagsByType(tags, TagType.ACTIVITY);
-    if (activityTagCount == 0) {
-      throw new BaseException(PostErrorCode.ACTIVITY_TAG_REQUIRED);
-    }
-    if (activityTagCount > MAX_ACTIVITY_TAG_COUNT
-        || countTagsByType(tags, TagType.INTEREST) > MAX_INTEREST_TAG_COUNT
-        || countTagsByType(tags, TagType.TRAVEL_STYLE) > MAX_TRAVEL_STYLE_TAG_COUNT) {
-      throw new BaseException(PostErrorCode.TAG_LIMIT_EXCEEDED);
-    }
-  }
-
-  private long countTagsByType(List<Tag> tags, TagType tagType) {
-    return tags.stream()
-        .filter(tag -> tag.getTagType() == tagType)
-        .count();
   }
 
   private void savePostImages(Post post, List<String> imageUrls) {
