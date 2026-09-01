@@ -8,12 +8,11 @@ import java.util.List;
 import java.util.Locale;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.QCourse;
+import org.sopt.buddys.domain.course.entity.QCourseCity;
 import org.sopt.buddys.domain.course.entity.QCourseCountry;
 import org.sopt.buddys.domain.course.entity.QCourseDay;
 import org.sopt.buddys.domain.course.entity.QCoursePlace;
 import org.sopt.buddys.domain.course.service.command.CourseSearchCondition;
-import org.sopt.buddys.domain.location.entity.QCity;
-import org.sopt.buddys.domain.location.entity.QCountry;
 import org.sopt.buddys.domain.place.entity.QPlace;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -23,11 +22,10 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
 
   private static final QCourse course = QCourse.course;
   private static final QCourseCountry courseCountry = QCourseCountry.courseCountry;
+  private static final QCourseCity courseCity = QCourseCity.courseCity;
   private static final QCourseDay courseDay = QCourseDay.courseDay;
   private static final QCoursePlace coursePlace = QCoursePlace.coursePlace;
   private static final QPlace place = QPlace.place;
-  private static final QCountry country = QCountry.country;
-  private static final QCity city = QCity.city;
 
   private final JPAQueryFactory queryFactory;
 
@@ -67,13 +65,21 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
                         .from(coursePlace)
                         .join(coursePlace.courseDay, courseDay)
                         .join(coursePlace.place, place)
-                        .leftJoin(place.country, country)
-                        .leftJoin(place.city, city)
+                        .where(place.name.lower().contains(normalizedKeyword))
+                ))
+                .or(course.id.in(
+                    JPAExpressions
+                        .select(courseCountry.course.id)
+                        .from(courseCountry)
+                        .where(courseCountry.country.name.lower().contains(normalizedKeyword))
+                ))
+                .or(course.id.in(
+                    JPAExpressions
+                        .select(courseCity.course.id)
+                        .from(courseCity)
                         .where(
-                            place.name.lower().contains(normalizedKeyword)
-                                .or(country.name.lower().contains(normalizedKeyword))
-                                .or(city.name.lower().contains(normalizedKeyword))
-                                .or(city.koreanName.lower().contains(normalizedKeyword))
+                            courseCity.city.name.lower().contains(normalizedKeyword)
+                                .or(courseCity.city.koreanName.lower().contains(normalizedKeyword))
                         )
                 ))
         )

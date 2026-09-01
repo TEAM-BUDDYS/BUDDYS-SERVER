@@ -94,20 +94,26 @@ class SearchControllerTest extends IntegrationTestSupport {
   void searchCourse_matchesAllFieldsWithoutDuplicateAndDeletedCourse() throws Exception {
     User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
     User author = saveUser("author@test.com", "author", "작성자", AccountStatus.ACTIVE);
-    Location location = saveLocation("Matchland", "ML", "MatchCity", "매치시");
-    Course course = saveCourse(author, location, "PARIS Art Journey", "A special Story", null);
-    savePlace(course, location, "Match Museum", "place-match");
-    Course deletedCourse = saveCourse(author, location, "Another Art", "Story", null);
-    savePlace(deletedCourse, location, "Match Museum Annex", "place-deleted");
+    Location textLocation = saveLocation("France", "FR", "Paris", "파리");
+    Course textAndPlaceCourse = saveCourse(
+        author, textLocation, "Shared PARIS Art Journey", "A Shared special Story", null);
+    savePlace(textAndPlaceCourse, "Shared Match Museum", "place-match");
+    Location countryLocation = saveLocation("Matchland", "ML", "CountryCity", "국가도시");
+    Course countryCourse = saveCourse(author, countryLocation, "국가 검색 코스", "내용", null);
+    Location cityLocation = saveLocation("Cityland", "CL", "MatchCity", "매치시");
+    Course cityCourse = saveCourse(author, cityLocation, "도시 검색 코스", "내용", null);
+    Course deletedCourse = saveCourse(author, textLocation, "Another Art", "Story", null);
+    savePlace(deletedCourse, "Match Museum Annex", "place-deleted");
     deletedCourse.delete();
     courseRepository.saveAndFlush(deletedCourse);
 
-    assertSingleCourse(viewer, "  aRt  ", course.getId());
-    assertSingleCourse(viewer, "story", course.getId());
-    assertSingleCourse(viewer, "museum", course.getId());
-    assertSingleCourse(viewer, "MATCHLAND", course.getId());
-    assertSingleCourse(viewer, "matchcity", course.getId());
-    assertSingleCourse(viewer, "매치시", course.getId());
+    assertSingleCourse(viewer, "  aRt  ", textAndPlaceCourse.getId());
+    assertSingleCourse(viewer, "story", textAndPlaceCourse.getId());
+    assertSingleCourse(viewer, "museum", textAndPlaceCourse.getId());
+    assertSingleCourse(viewer, "shared", textAndPlaceCourse.getId());
+    assertSingleCourse(viewer, "MATCHLAND", countryCourse.getId());
+    assertSingleCourse(viewer, "matchcity", cityCourse.getId());
+    assertSingleCourse(viewer, "매치시", cityCourse.getId());
   }
 
   @DisplayName("코스 검색은 같은 page와 size를 적용하고 다음 페이지 여부를 반환한다")
@@ -358,14 +364,12 @@ class SearchControllerTest extends IntegrationTestSupport {
     return course;
   }
 
-  private void savePlace(Course course, Location location, String name, String googlePlaceId) {
+  private void savePlace(Course course, String name, String googlePlaceId) {
     CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now()));
     Place place = placeRepository.saveAndFlush(Place.builder()
         .googlePlaceId(googlePlaceId)
         .name(name)
         .category(PlaceCategory.TOURISM)
-        .country(location.country())
-        .city(location.city())
         .build());
     coursePlaceRepository.saveAndFlush(new CoursePlace(day, place, (short) 0, null, null));
   }
