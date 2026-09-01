@@ -3,10 +3,7 @@ package org.sopt.buddys.domain.user.controller;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.user.controller.swagger.CheckNicknameAvailabilitySwagger;
 import org.sopt.buddys.domain.user.controller.swagger.CompleteOnboardingSwagger;
@@ -189,10 +186,10 @@ public class UserController {
   }
 
   @GetUserCoursesSwagger
-  @GetMapping("/{userId}/courses")
+  @GetMapping("/{use용rId}/courses")
   public BaseResponse<UserCoursesResponse> getUserCourses(
       @Parameter(description = "조회할 사용자 ID", example = "1")
-      @PathVariable Long userId,
+      @PathVariable @Positive Long userId,
       @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
       @RequestParam(defaultValue = "0") @Min(0) int page,
       @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "18")
