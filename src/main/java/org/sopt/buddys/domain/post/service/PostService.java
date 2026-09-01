@@ -211,7 +211,7 @@ public class PostService {
 
   @Transactional
   public PostBookmarkResult removePostBookmark(Long userId, Long postId) {
-    if (!postRepository.existsByIdAndDeletedAtIsNull(postId)) {
+    if (!postRepository.existsById(postId)) {
       throw new BaseException(PostErrorCode.POST_NOT_FOUND);
     }
 
@@ -244,6 +244,7 @@ public class PostService {
         post.getId(),
         toAuthorResult(post.getAuthor()),
         post.getAuthor().getId().equals(userId),
+        postBookmarkRepository.existsById(new PostBookmarkId(userId, post.getId())),
         post.getStatus(),
         post.getTitle(),
         postImageRepository.findImageUrlsByPostId(post.getId()),

@@ -23,6 +23,9 @@ public record PostDetailResponse(
     @Schema(description = "로그인 사용자의 게시글 여부", example = "false")
     boolean isMine,
 
+    @Schema(description = "로그인 사용자의 게시글 저장 여부", example = "false")
+    boolean isBookmarked,
+
     @Schema(description = "모집 상태", example = "RECRUITING")
     PostStatus recruitmentStatus,
 
@@ -72,6 +75,7 @@ public record PostDetailResponse(
         result.postId(),
         AuthorResponse.from(result.author()),
         result.isMine(),
+        result.isBookmarked(),
         result.recruitmentStatus(),
         result.title(),
         result.imageUrls(),

@@ -944,6 +944,24 @@ class PostControllerTest {
         .andExpect(jsonPath("$.data.isBookmarked").value(false));
   }
 
+  @DisplayName("소프트 삭제된 게시글도 저장을 취소할 수 있다")
+  @Test
+  void removePostBookmark_softDeletedPost_succeeds() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+    postBookmarkRepository.saveAndFlush(new PostBookmark(user, post));
+    post.softDelete(java.time.LocalDateTime.now());
+    postRepository.saveAndFlush(post);
+
+    mockMvc.perform(delete("/api/v1/posts/{postId}/bookmarks", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("POST-S007"))
+        .andExpect(jsonPath("$.data.isBookmarked").value(false));
+
+    assertThat(postBookmarkRepository.count()).isZero();
+  }
+
   @DisplayName("게시글 저장과 저장 취소는 게시글 존재 여부, postId와 인증을 검증한다")
   @Test
   void postBookmark_invalidRequests_returnExpectedErrors() throws Exception {
