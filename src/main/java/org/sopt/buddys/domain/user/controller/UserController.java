@@ -186,7 +186,7 @@ public class UserController {
   }
 
   @GetUserCoursesSwagger
-  @GetMapping("/{use용rId}/courses")
+  @GetMapping("/{userId}/courses")
   public BaseResponse<UserCoursesResponse> getUserCourses(
       @Parameter(description = "조회할 사용자 ID", example = "1")
       @PathVariable @Positive Long userId,
