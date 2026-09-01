@@ -10,11 +10,11 @@ public record SearchRequest(
     @NotBlank
     String keyword,
 
-    @Schema(description = "페이지 번호. 0 이상입니다.", example = "0")
+    @Schema(description = "페이지 번호. 0 이상입니다.", example = "0", defaultValue = "0")
     @Min(0)
     Integer page,
 
-    @Schema(description = "페이지 크기. 1 이상 100 이하입니다.", example = "5")
+    @Schema(description = "페이지 크기. 1 이상 100 이하입니다.", example = "5", defaultValue = "5")
     @Min(1)
     @Max(100)
     Integer size
