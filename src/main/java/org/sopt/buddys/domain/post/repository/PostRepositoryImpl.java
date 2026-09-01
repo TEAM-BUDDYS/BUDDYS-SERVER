@@ -5,6 +5,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
@@ -49,6 +50,21 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
       posts = posts.subList(0, pageable.getPageSize());
     }
     return new SliceImpl<>(posts, pageable, hasNext);
+  }
+
+  @Override
+  public List<Post> findClosingSoonPosts(LocalDate today, int limit) {
+    return queryFactory
+        .selectFrom(post)
+        .join(post.country).fetchJoin()
+        .where(
+            post.startDate.eq(today),
+            post.status.eq(PostStatus.RECRUITING),
+            post.deletedAt.isNull()
+        )
+        .orderBy(post.createdAt.asc())
+        .limit(limit)
+        .fetch();
   }
 
   private BooleanBuilder toPredicate(PostSearchCondition condition) {
