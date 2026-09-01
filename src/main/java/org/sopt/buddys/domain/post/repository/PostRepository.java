@@ -96,6 +96,28 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       """)
   int increaseCommentCount(@Param("postId") Long postId);
 
+  @Query("""
+      select p.title
+      from Post p
+      where lower(p.title) like :containsPattern escape '!'
+        and p.status = :status
+        and p.deletedAt is null
+      order by case
+          when lower(p.title) = :exactKeyword then 0
+          when lower(p.title) like :prefixPattern escape '!' then 1
+          else 2
+        end,
+        lower(p.title) asc,
+        p.id asc
+      """)
+  List<String> findSuggestionTitles(
+      @Param("exactKeyword") String exactKeyword,
+      @Param("prefixPattern") String prefixPattern,
+      @Param("containsPattern") String containsPattern,
+      @Param("status") PostStatus status,
+      Pageable pageable
+  );
+
   interface AuthorPostCountProjection {
     Long getAuthorId();
     Long getPostCount();

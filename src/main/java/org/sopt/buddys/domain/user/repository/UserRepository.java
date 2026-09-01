@@ -78,4 +78,28 @@ public interface UserRepository extends JpaRepository<User, Long> {
       @Param("accountStatus") AccountStatus accountStatus,
       Pageable pageable
   );
+
+  @Query("""
+      select u.nickname
+      from User u
+      where lower(u.nickname) like :containsPattern escape '!'
+        and u.id <> :excludeUserId
+        and u.accountStatus = :accountStatus
+        and u.deletedAt is null
+      order by case
+          when lower(u.nickname) = :exactKeyword then 0
+          when lower(u.nickname) like :prefixPattern escape '!' then 1
+          else 2
+        end,
+        lower(u.nickname) asc,
+        u.id asc
+      """)
+  List<String> findSuggestionNicknames(
+      @Param("exactKeyword") String exactKeyword,
+      @Param("prefixPattern") String prefixPattern,
+      @Param("containsPattern") String containsPattern,
+      @Param("excludeUserId") Long excludeUserId,
+      @Param("accountStatus") AccountStatus accountStatus,
+      Pageable pageable
+  );
 }
