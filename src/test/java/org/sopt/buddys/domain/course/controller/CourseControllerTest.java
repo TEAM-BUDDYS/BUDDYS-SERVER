@@ -76,6 +76,44 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
+  @DisplayName("코스 목록을 태그로 필터링하여 조회한다")
+  @Test
+  void getCourses_filteredByTag_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long walkingTagId = insertTag("도보여행", "ACTIVITY");
+    Long foodTagId = insertTag("맛집탐방", "ACTIVITY");
+
+    createCourseViaApi(author, countryId, cityId, walkingTagId, "도보 코스");
+    createCourseViaApi(author, countryId, cityId, foodTagId, "맛집 코스");
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses")
+            .queryParam("tagId", String.valueOf(walkingTagId))
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.content.length()").value(1))
+        .andExpect(jsonPath("$.data.content[0].title").value("도보 코스"));
+  }
+
+  @DisplayName("코스 목록 조회 시 tagId가 0 이하이면 실패한다")
+  @Test
+  void getCourses_nonPositiveTagId_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses")
+            .queryParam("tagId", "-1")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
   @DisplayName("저장한 코스 목록을 조회한다")
   @Test
   void getBookmarkedCourses_returnsOk() throws Exception {

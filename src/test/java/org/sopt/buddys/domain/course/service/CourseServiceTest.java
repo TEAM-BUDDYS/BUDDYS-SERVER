@@ -921,7 +921,7 @@ class CourseServiceTest {
     courseService.bookmarkCourse(viewer.getId(), course.getId());
 
     // when
-    CourseListResult result = courseService.getCourses(viewer.getId(), new CourseSearchCondition(null), 0, 20);
+    CourseListResult result = courseService.getCourses(viewer.getId(), new CourseSearchCondition(null, null), 0, 20);
 
     // then
     assertThat(result.content()).hasSize(1);
@@ -954,11 +954,36 @@ class CourseServiceTest {
         createDefaultCommand(japanId, tokyoId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
 
     // when
-    CourseListResult result = courseService.getCourses(author.getId(), new CourseSearchCondition(franceId), 0, 20);
+    CourseListResult result = courseService.getCourses(author.getId(), new CourseSearchCondition(franceId, null), 0, 20);
 
     // then
     assertThat(result.content()).hasSize(1);
     assertThat(result.content().get(0).courseId()).isEqualTo(franceCourse.getId());
+  }
+
+  @DisplayName("태그로 필터링하면 해당 태그를 가진 코스만 반환된다")
+  @Test
+  void getCourses_filtersByTagId() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long franceId = insertCountry("프랑스", "FR");
+    Long parisId = insertCity(franceId, "Paris", "파리", 2_000_000L);
+    Long walkingTagId = insertTag("도보여행", "ACTIVITY");
+    Long foodTagId = insertTag("맛집탐방", "ACTIVITY");
+
+    Course walkingCourse = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(franceId, parisId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), walkingTagId));
+    courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(franceId, parisId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), foodTagId));
+
+    // when
+    CourseListResult result = courseService.getCourses(author.getId(), new CourseSearchCondition(null, walkingTagId), 0, 20);
+
+    // then
+    assertThat(result.content()).hasSize(1);
+    assertThat(result.content().get(0).courseId()).isEqualTo(walkingCourse.getId());
   }
 
   @DisplayName("저장한 코스 목록을 조회하면 저장한 코스만 반환되고 isBookmarked는 항상 true다")
