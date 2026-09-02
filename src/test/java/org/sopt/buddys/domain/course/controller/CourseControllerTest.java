@@ -49,7 +49,7 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.courses.length()").value(1))
         .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
         .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
-            .value("https://example.com/thumbnail.jpg"))
+            .value("https://example.com/day1.jpg"))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.size").value(18))
         .andExpect(jsonPath("$.data.hasNext").value(false));
@@ -75,13 +75,13 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.courses.length()").value(1))
         .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
         .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
-            .value("https://example.com/thumbnail.jpg"))
+            .value("https://example.com/day1.jpg"))
         .andExpect(jsonPath("$.data.size").value(18));
   }
 
-  @DisplayName("코스 대표 사진이 없으면 가장 이른 일차의 첫 사진을 프로필 썸네일로 반환한다")
+  @DisplayName("일차가 역순으로 등록되어도 가장 이른 일차의 첫 사진을 프로필 썸네일로 반환한다")
   @Test
-  void getMyCourses_withoutThumbnail_returnsFirstImageOfEarliestDay() throws Exception {
+  void getMyCourses_returnsFirstImageOfEarliestDay() throws Exception {
     // given
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");

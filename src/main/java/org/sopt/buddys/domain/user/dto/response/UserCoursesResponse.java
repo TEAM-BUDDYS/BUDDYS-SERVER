@@ -58,7 +58,7 @@ public record UserCoursesResponse(
       Long courseId,
 
       @Schema(
-          description = "프로필에 표시할 코스 썸네일 URL (대표 사진이 없으면 가장 이른 일차의 첫 사진)",
+          description = "프로필에 표시할 코스 썸네일 URL (가장 이른 일차의 첫 사진)",
           example = "https://example.com/course-thumbnail.png",
           requiredMode = Schema.RequiredMode.REQUIRED,
           nullable = true

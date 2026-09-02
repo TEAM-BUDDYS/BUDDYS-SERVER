@@ -154,6 +154,10 @@ class UserServiceTest {
     given(userRepository.existsByIdAndDeletedAtIsNull(userId)).willReturn(true);
     given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
         .willReturn(new SliceImpl<>(List.of(course), pageable, true));
+    given(courseImageRepository.findImageUrlsByCourseIdIn(List.of(course.getId())))
+        .willReturn(List.of(
+            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg")
+        ));
 
     // when
     UserCoursesResult result = userService.getCourses(userId, 0, 12);
@@ -162,7 +166,7 @@ class UserServiceTest {
     assertThat(result.courses()).hasSize(1);
     assertThat(result.courses().get(0).courseId()).isEqualTo(course.getId());
     assertThat(result.courses().get(0).thumbnailImageUrl())
-        .isEqualTo("https://example.com/thumbnail.jpg");
+        .isEqualTo("https://example.com/day1-first.jpg");
     assertThat(result.page()).isZero();
     assertThat(result.size()).isEqualTo(12);
     assertThat(result.hasNext()).isTrue();

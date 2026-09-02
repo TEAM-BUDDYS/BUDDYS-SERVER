@@ -147,15 +147,13 @@ public class UserService {
         Sort.by(Sort.Direction.DESC, "createdAt", "id")
     );
     Slice<Course> courses = courseRepository.findByAuthorIdAndDeletedAtIsNull(userId, pageable);
-    Map<Long, String> fallbackImageUrls = getFallbackCourseImageUrls(courses.getContent());
+    Map<Long, String> thumbnailImageUrls = getCourseThumbnailImageUrls(courses.getContent());
 
     List<CourseResult> courseResults = courses.getContent()
         .stream()
         .map(course -> new CourseResult(
             course.getId(),
-            hasText(course.getThumbnailImageUrl())
-                ? course.getThumbnailImageUrl()
-                : fallbackImageUrls.get(course.getId())
+            thumbnailImageUrls.get(course.getId())
         ))
         .toList();
 
@@ -167,27 +165,22 @@ public class UserService {
     );
   }
 
-  private Map<Long, String> getFallbackCourseImageUrls(List<Course> courses) {
-    List<Long> courseIdsWithoutThumbnail = courses.stream()
-        .filter(course -> !hasText(course.getThumbnailImageUrl()))
+  private Map<Long, String> getCourseThumbnailImageUrls(List<Course> courses) {
+    List<Long> courseIds = courses.stream()
         .map(Course::getId)
         .toList();
 
-    if (courseIdsWithoutThumbnail.isEmpty()) {
+    if (courseIds.isEmpty()) {
       return Map.of();
     }
 
-    return courseImageRepository.findImageUrlsByCourseIdIn(courseIdsWithoutThumbnail)
+    return courseImageRepository.findImageUrlsByCourseIdIn(courseIds)
         .stream()
         .collect(Collectors.toMap(
             CourseImageRepository.CourseImageUrlProjection::getCourseId,
             CourseImageRepository.CourseImageUrlProjection::getImageUrl,
             (first, ignored) -> first
         ));
-  }
-
-  private boolean hasText(String value) {
-    return value != null && !value.isBlank();
   }
 
   private void validatePageRequest(int page, int size) {
