@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.verification.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.lettuce.core.cluster.SlotHash;
 import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,7 @@ class RedisUniversityVerificationRepositoryTest {
 
     redisTemplate = new StringRedisTemplate(connectionFactory);
     redisTemplate.afterPropertiesSet();
-    redisTemplate.delete(KEY_PREFIX + USER_ID);
+    redisTemplate.delete(key(USER_ID));
     repository = new RedisUniversityVerificationRepository(redisTemplate);
   }
 
@@ -70,9 +71,12 @@ class RedisUniversityVerificationRepositoryTest {
         .isEqualTo(verification);
     assertThat(repository.verifyCode(USER_ID, "ZZZZZZ", MAX_ATTEMPTS).status())
         .isEqualTo(Status.INVALID);
-    assertThat(redisTemplate.getExpire(KEY_PREFIX + USER_ID))
+    assertThat(redisTemplate.getExpire(key(USER_ID)))
         .isPositive()
         .isLessThanOrEqualTo(TTL.toSeconds());
+    assertThat(redisTemplate.hasKey(attemptsKey(USER_ID))).isTrue();
+    assertThat(SlotHash.getSlot(key(USER_ID)))
+        .isEqualTo(SlotHash.getSlot(attemptsKey(USER_ID)));
   }
 
   @DisplayName("같은 사용자가 재발송하면 이전 코드는 무효화된다")
@@ -134,7 +138,7 @@ class RedisUniversityVerificationRepositoryTest {
     // then
     assertThat(repository.verifyCode(USER_ID, verification.code(), MAX_ATTEMPTS).status())
         .isEqualTo(Status.ATTEMPT_LIMIT_EXCEEDED);
-    assertThat(redisTemplate.hasKey(KEY_PREFIX + USER_ID)).isFalse();
+    assertThat(redisTemplate.hasKey(key(USER_ID))).isFalse();
   }
 
   @DisplayName("새 인증 코드를 발급하면 이전 코드의 실패 횟수도 초기화된다")
@@ -159,5 +163,13 @@ class RedisUniversityVerificationRepositoryTest {
     }
     assertThat(repository.verifyCode(USER_ID, current.code(), MAX_ATTEMPTS).verification())
         .isEqualTo(current);
+  }
+
+  private String key(long userId) {
+    return KEY_PREFIX + "{" + userId + "}";
+  }
+
+  private String attemptsKey(long userId) {
+    return key(userId) + ":attempts";
   }
 }
