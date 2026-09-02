@@ -170,6 +170,12 @@ public class CourseService {
     return toCourseListResult(userId, courses);
   }
 
+  public CourseListResult searchCourses(Long userId, String keyword, int page, int size) {
+    validatePageRequest(page, size);
+    Slice<Course> courses = courseRepository.searchCoursesByKeyword(keyword, PageRequest.of(page, size));
+    return toCourseListResult(userId, courses);
+  }
+
   public CourseListResult getBookmarkedCourses(Long userId, int page, int size) {
     validatePageRequest(page, size);
     Slice<Course> courses = courseBookmarkRepository.findBookmarkedCoursesByUserId(userId, PageRequest.of(page, size));

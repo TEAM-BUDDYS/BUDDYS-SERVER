@@ -1,8 +1,10 @@
 package org.sopt.buddys.domain.course.repository;
 
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import org.sopt.buddys.domain.course.entity.Course;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -51,4 +53,24 @@ public interface CourseRepository extends JpaRepository<Course, Long>, CourseRep
         and c.deletedAt is null
       """)
   int increaseCommentCount(@Param("courseId") Long courseId);
+
+  @Query("""
+      select c.title
+      from Course c
+      where lower(c.title) like :containsPattern escape '!'
+        and c.deletedAt is null
+      order by case
+          when lower(c.title) = :exactKeyword then 0
+          when lower(c.title) like :prefixPattern escape '!' then 1
+          else 2
+        end,
+        lower(c.title) asc,
+        c.id asc
+      """)
+  List<String> findSuggestionTitles(
+      @Param("exactKeyword") String exactKeyword,
+      @Param("prefixPattern") String prefixPattern,
+      @Param("containsPattern") String containsPattern,
+      Pageable pageable
+  );
 }
