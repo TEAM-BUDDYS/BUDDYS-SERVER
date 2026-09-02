@@ -3,8 +3,11 @@ package org.sopt.buddys.domain.user.repository;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -59,4 +62,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
   );
 
   List<User> findByInterestCountryIdAndIdNotAndDeletedAtIsNull(Long interestCountryId, Long excludeUserId);
+
+  @Query("""
+      select u
+      from User u
+      where lower(u.nickname) like lower(concat('%', :keyword, '%'))
+        and u.id <> :excludeUserId
+        and u.accountStatus = :accountStatus
+        and u.deletedAt is null
+      order by u.createdAt desc, u.id desc
+      """)
+  Slice<User> searchActiveUsersByNickname(
+      @Param("keyword") String keyword,
+      @Param("excludeUserId") Long excludeUserId,
+      @Param("accountStatus") AccountStatus accountStatus,
+      Pageable pageable
+  );
 }

@@ -8,4 +8,6 @@ import org.springframework.data.domain.Slice;
 public interface CourseRepositoryCustom {
 
   Slice<Course> searchCourses(CourseSearchCondition condition, Pageable pageable);
+
+  Slice<Course> searchCoursesByKeyword(String keyword, Pageable pageable);
 }
