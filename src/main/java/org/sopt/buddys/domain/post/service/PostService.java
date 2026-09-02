@@ -36,6 +36,8 @@ import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
 import org.sopt.buddys.domain.post.service.command.UpdatePostCommand;
+import org.sopt.buddys.domain.post.service.result.ClosingSoonPostResult;
+import org.sopt.buddys.domain.post.service.result.ClosingSoonPostResult.ClosingSoonPostSummaryResult;
 import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.post.service.result.PostBookmarkResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult;
@@ -59,6 +61,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
+
+  private static final int CLOSING_SOON_POST_LIMIT = 4;
 
   private final PostRepository postRepository;
   private final PostBookmarkRepository postBookmarkRepository;
@@ -241,6 +245,22 @@ public class PostService {
         posts.getNumber(),
         posts.getSize(),
         posts.hasNext()
+    );
+  }
+
+  public ClosingSoonPostResult getClosingSoonPosts(Long userId) {
+    List<Post> posts = postRepository.findClosingSoonPosts(LocalDate.now(), CLOSING_SOON_POST_LIMIT);
+    Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts);
+    Set<Long> bookmarkedPostIds = getBookmarkedPostIds(userId, posts);
+
+    return new ClosingSoonPostResult(
+        posts.stream()
+            .map(post -> new ClosingSoonPostSummaryResult(
+                post,
+                thumbnailImageUrls.get(post.getId()),
+                bookmarkedPostIds.contains(post.getId())
+            ))
+            .toList()
     );
   }
 
@@ -517,5 +537,17 @@ public class PostService {
             PostThumbnailProjection::getThumbnailImageUrl,
             (first, second) -> first
         ));
+  }
+
+  private Set<Long> getBookmarkedPostIds(Long userId, List<Post> posts) {
+    List<Long> postIds = posts.stream()
+        .map(Post::getId)
+        .toList();
+
+    if (postIds.isEmpty()) {
+      return Set.of();
+    }
+
+    return Set.copyOf(postBookmarkRepository.findBookmarkedPostIds(userId, postIds));
   }
 }
