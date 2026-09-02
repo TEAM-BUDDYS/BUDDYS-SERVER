@@ -8,6 +8,7 @@ public record GooglePlace(
     String primaryType,
     List<String> types,
     String formattedAddress,
+    List<GoogleAddressComponent> addressComponents,
     GoogleLatLng location,
     List<GooglePhoto> photos
 ) {
