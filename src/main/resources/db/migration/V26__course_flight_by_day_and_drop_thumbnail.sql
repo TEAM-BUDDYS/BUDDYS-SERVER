@@ -1,5 +1,3 @@
--- 항공편을 코스 전체가 아닌 일자(course_day)에 종속시킨다.
--- 기존 course_flight는 특정 일자와 연결되지 않아 마이그레이션할 대상 일자를 알 수 없으므로 기존 데이터는 비운다.
 DELETE FROM course_flight;
 
 ALTER TABLE course_flight
