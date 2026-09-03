@@ -11,7 +11,7 @@ public record RecommendedPostResponse(
     @Schema(description = "게시글 내용") String content,
     @Schema(description = "모집 기간") PeriodResponse period,
     @Schema(description = "썸네일 이미지 주소", nullable = true) String thumbnailUrl,
-    @Schema(description = "작성자 프로필 이미지 URL", nullable = true) String authorProfileImageUrl,
+    @Schema(description = "작성자 정보") RecommendedPostAuthorResponse author,
     @Schema(description = "게시글 국가") RecommendedPostCountryResponse country,
     @Schema(description = "조회수", example = "10") Long viewCount
 ) {
@@ -23,7 +23,7 @@ public record RecommendedPostResponse(
         post.getContent(),
         new PeriodResponse(post.getStartDate(), post.getEndDate()),
         result.thumbnailUrl(),
-        post.getAuthor().getProfileImageUrl(),
+        RecommendedPostAuthorResponse.from(post),
         RecommendedPostCountryResponse.from(post),
         post.getViewCount()
     );
@@ -33,6 +33,21 @@ public record RecommendedPostResponse(
       @Schema(description = "시작일", example = "2027-03-01") LocalDate startDate,
       @Schema(description = "종료일", example = "2027-08-31") LocalDate endDate
   ) {}
+
+  public record RecommendedPostAuthorResponse(
+      @Schema(description = "작성자 ID", example = "10") Long userId,
+      @Schema(description = "작성자 닉네임", example = "김가윤") String nickname,
+      @Schema(description = "작성자 프로필 이미지 URL", nullable = true) String profileImageUrl
+  ) {
+
+    private static RecommendedPostAuthorResponse from(Post post) {
+      return new RecommendedPostAuthorResponse(
+          post.getAuthor().getId(),
+          post.getAuthor().getNickname(),
+          post.getAuthor().getProfileImageUrl()
+      );
+    }
+  }
 
   public record RecommendedPostCountryResponse(
       @Schema(description = "국가 ID", example = "1") Long countryId,
