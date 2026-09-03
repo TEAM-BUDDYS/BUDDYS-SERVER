@@ -26,8 +26,8 @@ public class CourseFlight {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "course_id", nullable = false)
-  private Course course;
+  @JoinColumn(name = "course_day_id", nullable = false)
+  private CourseDay courseDay;
 
   @Column(nullable = false, length = 100)
   private String airline;
@@ -55,7 +55,7 @@ public class CourseFlight {
   private LocalDateTime createdAt;
 
   public CourseFlight(
-      Course course,
+      CourseDay courseDay,
       String airline,
       String flightNumber,
       String departureAirport,
@@ -64,7 +64,7 @@ public class CourseFlight {
       LocalDateTime arrivalAt,
       Short orderNo
   ) {
-    this.course = course;
+    this.courseDay = courseDay;
     this.airline = airline;
     this.flightNumber = flightNumber;
     this.departureAirport = departureAirport;

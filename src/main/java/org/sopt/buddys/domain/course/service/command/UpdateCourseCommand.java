@@ -8,11 +8,9 @@ public record UpdateCourseCommand(
     List<Long> cityIds,
     String title,
     String content,
-    String thumbnailImageUrl,
     LocalDate startDate,
     LocalDate endDate,
     List<Long> tagIds,
-    List<CourseDayCommand> days,
-    List<CourseFlightCommand> flights
+    List<CourseDayCommand> days
 ) {
 }
