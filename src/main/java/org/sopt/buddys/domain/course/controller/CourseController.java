@@ -330,13 +330,11 @@ public class CourseController {
         request.cityIds(),
         request.title(),
         request.content(),
-        request.thumbnailImageUrl(),
         request.startDate(),
         request.endDate(),
         request.tagIds(),
         request.companionUserIds(),
-        request.days() == null ? null : request.days().stream().map(this::toCommand).toList(),
-        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
+        request.days() == null ? null : request.days().stream().map(this::toCommand).toList()
     );
   }
 
@@ -346,12 +344,10 @@ public class CourseController {
         request.cityIds(),
         request.title(),
         request.content(),
-        request.thumbnailImageUrl(),
         request.startDate(),
         request.endDate(),
         request.tagIds(),
-        request.days() == null ? null : request.days().stream().map(this::toCommand).toList(),
-        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
+        request.days() == null ? null : request.days().stream().map(this::toCommand).toList()
     );
   }
 
@@ -360,7 +356,8 @@ public class CourseController {
         request.dayNumber(),
         request.date(),
         request.imageUrls(),
-        request.places() == null ? null : request.places().stream().map(this::toCommand).toList()
+        request.places() == null ? null : request.places().stream().map(this::toCommand).toList(),
+        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
     );
   }
 

@@ -55,7 +55,7 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.content[0].title").value("파리 코스"))
         .andExpect(jsonPath("$.data.content[0].countries").value("프랑스"))
         .andExpect(jsonPath("$.data.content[0].cities").value("파리"))
-        .andExpect(jsonPath("$.data.content[0].images[0]").value("https://example.com/thumbnail.jpg"))
+        .andExpect(jsonPath("$.data.content[0].images[0]").value("https://example.com/day1.jpg"))
         .andExpect(jsonPath("$.data.content[0].isBookmarked").value(false))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.hasNext").value(false));
@@ -144,17 +144,17 @@ class CourseControllerTest extends IntegrationTestSupport {
                           "memo": "예약 필수",
                           "cost": 22000
                         }
+                      ],
+                      "flights": [
+                        {
+                          "airline": "대한항공",
+                          "flightNumber": "KE901",
+                          "departureAirport": "ICN",
+                          "departureAt": "2026-09-01T13:00:00",
+                          "arrivalAirport": "CDG",
+                          "arrivalAt": "2026-09-01T18:30:00"
+                        }
                       ]
-                    }
-                  ],
-                  "flights": [
-                    {
-                      "airline": "대한항공",
-                      "flightNumber": "KE901",
-                      "departureAirport": "ICN",
-                      "departureAt": "2026-09-01T13:00:00",
-                      "arrivalAirport": "CDG",
-                      "arrivalAt": "2026-09-01T18:30:00"
                     }
                   ]
                 }
@@ -313,8 +313,13 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ],
-                  "flights": [ null ]
+                  "days": [
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": ["https://example.com/day1.jpg"],
+                      "flights": [ null ]
+                    }
+                  ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isBadRequest())
@@ -499,7 +504,6 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "cityIds": [%d],
                   "title": "파리 5일 코스",
                   "content": "루브르부터...",
-                  "thumbnailImageUrl": "https://example.com/thumbnail.jpg",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
@@ -520,7 +524,6 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.code").value("COURSE-S001"))
         .andExpect(jsonPath("$.data.courseId").value(courseId))
         .andExpect(jsonPath("$.data.title").value("파리 5일 코스"))
-        .andExpect(jsonPath("$.data.thumbnailImageUrl").value("https://example.com/thumbnail.jpg"))
         .andExpect(jsonPath("$.data.isMine").value(true))
         .andExpect(jsonPath("$.data.isBookmarked").value(false))
         .andExpect(jsonPath("$.data.commentCount").value(0))
@@ -712,7 +715,6 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "countryIds": [%d],
                   "cityIds": [%d],
                   "title": "%s",
-                  "thumbnailImageUrl": "https://example.com/thumbnail.jpg",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],

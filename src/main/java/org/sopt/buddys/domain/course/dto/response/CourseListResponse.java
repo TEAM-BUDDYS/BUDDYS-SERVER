@@ -51,8 +51,8 @@ public record CourseListResponse(
           requiredMode = Schema.RequiredMode.REQUIRED)
       boolean isBookmarked,
 
-      @Schema(description = "대표 사진과 일자별 사진을 합친 이미지 목록",
-          example = "[\"https://example.com/thumbnail.jpg\"]",
+      @Schema(description = "일자별 사진을 합친 이미지 목록",
+          example = "[\"https://example.com/day1.jpg\"]",
           requiredMode = Schema.RequiredMode.REQUIRED)
       List<String> images,
 

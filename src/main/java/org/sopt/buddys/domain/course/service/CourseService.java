@@ -97,8 +97,8 @@ public class CourseService {
   @Transactional
   public Course createCourse(Long userId, CreateCourseCommand command) {
     validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
-        command.endDate(), command.tagIds(), command.days(), command.flights());
-    validateDateRanges(command.startDate(), command.endDate(), command.flights());
+        command.endDate(), command.tagIds(), command.days());
+    validateDateRanges(command.startDate(), command.endDate(), command.days());
     validateDayNumbersUnique(command.days());
 
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
@@ -108,7 +108,6 @@ public class CourseService {
         author,
         command.title().trim(),
         command.content() != null ? command.content().trim() : null,
-        command.thumbnailImageUrl() != null ? command.thumbnailImageUrl().trim() : null,
         command.startDate(),
         command.endDate()
     ));
@@ -118,7 +117,6 @@ public class CourseService {
     saveCourseTags(course, command.tagIds());
     saveCourseCompanions(course, command.companionUserIds());
     saveCourseDays(course, command.days());
-    saveCourseFlights(course, command.flights());
 
     return course;
   }
@@ -135,14 +133,13 @@ public class CourseService {
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
     validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
-        command.endDate(), command.tagIds(), command.days(), command.flights());
-    validateDateRanges(command.startDate(), command.endDate(), command.flights());
+        command.endDate(), command.tagIds(), command.days());
+    validateDateRanges(command.startDate(), command.endDate(), command.days());
     validateDayNumbersUnique(command.days());
 
     course.update(
         command.title().trim(),
         command.content() != null ? command.content().trim() : null,
-        command.thumbnailImageUrl() != null ? command.thumbnailImageUrl().trim() : null,
         command.startDate(),
         command.endDate()
     );
@@ -159,7 +156,6 @@ public class CourseService {
     saveCourseCities(course, command.cityIds());
     saveCourseTags(course, command.tagIds());
     saveCourseDays(course, command.days());
-    saveCourseFlights(course, command.flights());
 
     return course;
   }
@@ -246,8 +242,7 @@ public class CourseService {
       LocalDate startDate,
       LocalDate endDate,
       List<Long> tagIds,
-      List<CourseDayCommand> days,
-      List<CourseFlightCommand> flights
+      List<CourseDayCommand> days
   ) {
     if (countryIds == null || countryIds.isEmpty()
         || cityIds == null || cityIds.isEmpty()
@@ -263,7 +258,11 @@ public class CourseService {
           || day.imageUrls() == null || day.imageUrls().isEmpty()) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
+      validateFlightFields(day.flights());
     }
+  }
+
+  private void validateFlightFields(List<CourseFlightCommand> flights) {
     if (flights == null) {
       return;
     }
@@ -278,10 +277,16 @@ public class CourseService {
     }
   }
 
-  private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseFlightCommand> flights) {
+  private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseDayCommand> days) {
     if (endDate.isBefore(startDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
+    for (CourseDayCommand day : days) {
+      validateFlightDateRanges(day.flights());
+    }
+  }
+
+  private void validateFlightDateRanges(List<CourseFlightCommand> flights) {
     if (flights == null) {
       return;
     }
@@ -360,6 +365,7 @@ public class CourseService {
 
     for (int i = 0; i < days.size(); i++) {
       saveCourseImages(courseDays.get(i), days.get(i).imageUrls());
+      saveCourseFlights(courseDays.get(i), days.get(i).flights());
     }
 
     saveCoursePlaces(courseDays, days);
@@ -459,7 +465,7 @@ public class CourseService {
     }
   }
 
-  private void saveCourseFlights(Course course, List<CourseFlightCommand> flights) {
+  private void saveCourseFlights(CourseDay courseDay, List<CourseFlightCommand> flights) {
     if (flights == null || flights.isEmpty()) {
       return;
     }
@@ -467,7 +473,7 @@ public class CourseService {
         .mapToObj(index -> {
           CourseFlightCommand flightCommand = flights.get(index);
           return new CourseFlight(
-              course,
+              courseDay,
               flightCommand.airline().trim(),
               flightCommand.flightNumber() != null ? flightCommand.flightNumber().trim() : null,
               flightCommand.departureAirport().trim(),
@@ -515,22 +521,13 @@ public class CourseService {
             course.getTitle(),
             course.getContent(),
             bookmarkedCourseIds.contains(course.getId()),
-            toImages(course.getThumbnailImageUrl(), dayImagesByCourseId.getOrDefault(course.getId(), List.of())),
+            dayImagesByCourseId.getOrDefault(course.getId(), List.of()),
             countriesByCourseId.getOrDefault(course.getId(), ""),
             citiesByCourseId.getOrDefault(course.getId(), "")
         ))
         .toList();
 
     return new CourseListResult(content, courses.getNumber(), courses.getSize(), courses.hasNext());
-  }
-
-  private List<String> toImages(String thumbnailImageUrl, List<String> dayImageUrls) {
-    List<String> images = new ArrayList<>();
-    if (thumbnailImageUrl != null) {
-      images.add(thumbnailImageUrl);
-    }
-    images.addAll(dayImageUrls);
-    return images;
   }
 
   private Map<Long, String> getCourseCountriesDisplay(List<Long> courseIds) {
@@ -586,14 +583,12 @@ public class CourseService {
         bookmarkSummary.getBookmarkedCount() > 0,
         course.getTitle(),
         course.getContent(),
-        course.getThumbnailImageUrl(),
         getCourseCountryResults(course.getId()),
         getCourseCityResults(course.getId()),
         course.getStartDate(),
         course.getEndDate(),
         getCourseTagResults(course.getId()),
         getCompanionResults(course.getId()),
-        getFlightResults(course.getId()),
         getDayResults(course.getId()),
         course.getViewCount(),
         course.getCommentCount(),
@@ -669,33 +664,21 @@ public class CourseService {
     );
   }
 
-  private List<CourseDetailResult.FlightResult> getFlightResults(Long courseId) {
-    return courseFlightRepository.findAllByCourseIdOrderByOrderNoAsc(courseId)
-        .stream()
-        .map(flight -> new CourseDetailResult.FlightResult(
-            flight.getAirline(),
-            flight.getFlightNumber(),
-            flight.getDepartureAirport(),
-            flight.getDepartureAt(),
-            flight.getArrivalAirport(),
-            flight.getArrivalAt()
-        ))
-        .toList();
-  }
-
   private List<CourseDetailResult.DayResult> getDayResults(Long courseId) {
     List<CourseDay> days = courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(courseId);
     List<Long> dayIds = days.stream().map(CourseDay::getId).toList();
 
     Map<Long, List<String>> imageUrlsByDayId = groupImageUrlsByDayId(dayIds);
     Map<Long, List<CourseDetailResult.PlaceResult>> placesByDayId = groupPlacesByDayId(dayIds);
+    Map<Long, List<CourseDetailResult.FlightResult>> flightsByDayId = groupFlightsByDayId(dayIds);
 
     return days.stream()
         .map(day -> new CourseDetailResult.DayResult(
             day.getDayNumber(),
             day.getDate(),
             imageUrlsByDayId.getOrDefault(day.getId(), List.of()),
-            placesByDayId.getOrDefault(day.getId(), List.of())
+            placesByDayId.getOrDefault(day.getId(), List.of()),
+            flightsByDayId.getOrDefault(day.getId(), List.of())
         ))
         .toList();
   }
@@ -724,6 +707,30 @@ public class CourseService {
             LinkedHashMap::new,
             Collectors.mapping(this::toCoursePlaceResult, Collectors.toList())
         ));
+  }
+
+  private Map<Long, List<CourseDetailResult.FlightResult>> groupFlightsByDayId(List<Long> dayIds) {
+    if (dayIds.isEmpty()) {
+      return Map.of();
+    }
+    return courseFlightRepository.findAllByCourseDayIdIn(dayIds)
+        .stream()
+        .collect(Collectors.groupingBy(
+            flight -> flight.getCourseDay().getId(),
+            LinkedHashMap::new,
+            Collectors.mapping(this::toFlightResult, Collectors.toList())
+        ));
+  }
+
+  private CourseDetailResult.FlightResult toFlightResult(CourseFlight flight) {
+    return new CourseDetailResult.FlightResult(
+        flight.getAirline(),
+        flight.getFlightNumber(),
+        flight.getDepartureAirport(),
+        flight.getDepartureAt(),
+        flight.getArrivalAirport(),
+        flight.getArrivalAt()
+    );
   }
 
   private CourseDetailResult.PlaceResult toCoursePlaceResult(CoursePlace coursePlace) {

@@ -7,6 +7,7 @@ public record CourseDayCommand(
     Short dayNumber,
     LocalDate date,
     List<String> imageUrls,
-    List<CoursePlaceCommand> places
+    List<CoursePlaceCommand> places,
+    List<CourseFlightCommand> flights
 ) {
 }
