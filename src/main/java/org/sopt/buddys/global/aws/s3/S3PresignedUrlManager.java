@@ -21,10 +21,18 @@ public class S3PresignedUrlManager {
   private final S3Properties s3Properties;
 
   public S3PresignedUploadResult createUploadUrl(String key, String contentType, long fileSize) {
+    return new S3PresignedUploadResult(
+        createPutUrl(key, contentType, fileSize),
+        buildPublicUrl(key)
+    );
+  }
+
+  public String createPutUrl(String key, String contentType, long fileSize) {
     PutObjectRequest objectRequest = PutObjectRequest.builder()
         .bucket(s3Properties.getBucket())
         .key(key)
         .contentType(contentType)
+        .contentLength(fileSize)
         .build();
 
     PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(
@@ -34,7 +42,7 @@ public class S3PresignedUrlManager {
             .build()
     );
 
-    return new S3PresignedUploadResult(presigned.url().toString(), buildPublicUrl(key));
+    return presigned.url().toString();
   }
 
   private String buildPublicUrl(String key) {
