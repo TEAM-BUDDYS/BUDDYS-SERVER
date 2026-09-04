@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -59,4 +61,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
   );
 
   List<User> findByInterestCountryIdAndIdNotAndDeletedAtIsNull(Long interestCountryId, Long excludeUserId);
+
+  @Query("""
+      select u
+      from User u
+      where u.deletedAt is null
+        and u.id <> :excludeUserId
+        and lower(u.nickname) like lower(concat('%', :keyword, '%'))
+      order by u.nickname asc
+      """)
+  Slice<User> searchByNicknameContaining(
+      @Param("keyword") String keyword,
+      @Param("excludeUserId") Long excludeUserId,
+      Pageable pageable
+  );
 }

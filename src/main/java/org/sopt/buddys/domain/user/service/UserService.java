@@ -20,6 +20,7 @@ import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
   private static final int REQUIRED_ONBOARDING_TAG_COUNT = 3;
+  private static final int MAX_SEARCH_RESULT_SIZE = 100;
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
@@ -87,6 +89,16 @@ public class UserService {
     return new UserProfileResult(user, orderedTags);
   }
 
+  public Slice<User> searchUsersByNickname(Long userId, String keyword, int page, int size) {
+    validateSearchPageRequest(page, size);
+
+    if (keyword == null || keyword.isBlank()) {
+      return new SliceImpl<>(List.of(), PageRequest.of(page, size), false);
+    }
+
+    return userRepository.searchByNicknameContaining(keyword.trim(), userId, PageRequest.of(page, size));
+  }
+
   public UserPostsResult getPosts(Long userId, int page, int size) {
     validateUserExists(userId);
 
@@ -121,6 +133,12 @@ public class UserService {
 
   private void validatePageRequest(int page, int size) {
     if (page < 0 || size < 1) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
+  private void validateSearchPageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_SEARCH_RESULT_SIZE) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
   }
