@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.lettuce.core.cluster.SlotHash;
 import java.time.Duration;
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -172,7 +171,7 @@ class RedisUniversityVerificationRepositoryTest {
   }
 
   private String attemptsKey(long userId) {
-    return key(userId) + ":attempts";
+    return key(userId) + ATTEMPTS_KEY_SUFFIX;
   }
 
   @DisplayName("회원 탈퇴 시 인증 정보와 실패 횟수를 모두 삭제한다")
@@ -183,11 +182,14 @@ class RedisUniversityVerificationRepositoryTest {
     repository.save(verification, TTL);
     repository.verifyCode(USER_ID, "WRONG1", MAX_ATTEMPTS);
 
+    assertThat(redisTemplate.hasKey(key(USER_ID))).isTrue();
+    assertThat(redisTemplate.hasKey(attemptsKey(USER_ID))).isTrue();
+
     // when
     repository.deleteByUserId(USER_ID);
 
     // then
-    assertThat(redisTemplate.hasKey(KEY_PREFIX + USER_ID)).isFalse();
-    assertThat(redisTemplate.hasKey(KEY_PREFIX + USER_ID + ATTEMPTS_KEY_SUFFIX)).isFalse();
+    assertThat(redisTemplate.hasKey(key(USER_ID))).isFalse();
+    assertThat(redisTemplate.hasKey(attemptsKey(USER_ID))).isFalse();
   }
 }

@@ -18,7 +18,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
-import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
@@ -62,9 +61,6 @@ class UserServiceTest {
   private RefreshTokenRepository refreshTokenRepository;
 
   @Mock
-  private PlaceBookmarkRepository placeBookmarkRepository;
-
-  @Mock
   private ApplicationEventPublisher eventPublisher;
 
   @DisplayName("회원 탈퇴 시 사용자를 soft delete하고 리프레시 토큰을 폐기한다")
@@ -83,7 +79,6 @@ class UserServiceTest {
     assertThat(user.getDeletedAt()).isNotNull();
     then(userRepository).should().saveAndFlush(user);
     then(userTagRepository).should().deleteByUserId(userId);
-    then(placeBookmarkRepository).should().deleteByUserId(userId);
     then(refreshTokenRepository).should().deleteByUserId(userId);
     then(eventPublisher).should().publishEvent(any(UserWithdrawnEvent.class));
   }
@@ -101,7 +96,6 @@ class UserServiceTest {
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND));
     then(refreshTokenRepository).shouldHaveNoInteractions();
-    then(placeBookmarkRepository).shouldHaveNoInteractions();
     then(eventPublisher).shouldHaveNoInteractions();
   }
 
@@ -120,7 +114,6 @@ class UserServiceTest {
     // then
     then(userRepository).should(never()).saveAndFlush(any());
     then(userTagRepository).shouldHaveNoInteractions();
-    then(placeBookmarkRepository).shouldHaveNoInteractions();
     then(refreshTokenRepository).shouldHaveNoInteractions();
     then(eventPublisher).shouldHaveNoInteractions();
   }
