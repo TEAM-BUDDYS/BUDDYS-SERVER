@@ -3,17 +3,16 @@ package org.sopt.buddys.domain.user.controller;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.user.controller.swagger.CheckNicknameAvailabilitySwagger;
 import org.sopt.buddys.domain.user.controller.swagger.CompleteOnboardingSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.GetMyCoursesSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetProfileEditSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetNotificationSettingSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.GetUserCoursesSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.UpdateProfileSwagger;
@@ -25,6 +24,7 @@ import org.sopt.buddys.domain.user.dto.request.UpdateNotificationSettingRequest;
 import org.sopt.buddys.domain.user.dto.response.NotificationSettingResponse;
 import org.sopt.buddys.domain.user.dto.response.OnboardingResponse;
 import org.sopt.buddys.domain.user.dto.response.ProfileEditResponse;
+import org.sopt.buddys.domain.user.dto.response.UserCoursesResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPublicProfileResponse;
@@ -141,6 +141,22 @@ public class UserController {
     );
   }
 
+  @GetMyCoursesSwagger
+  @GetMapping("/me/courses")
+  public BaseResponse<UserCoursesResponse> getMyCourses(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "18")
+      @RequestParam(defaultValue = "18") @Min(1) @Max(100) int size
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        UserCoursesResponse.from(userService.getCourses(userId, page, size))
+    );
+  }
+
   @GetUserProfileSwagger
   @GetMapping("/{userId}")
   public BaseResponse<UserPublicProfileResponse> getUserProfile(
@@ -166,6 +182,22 @@ public class UserController {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
         UserPostsResponse.from(userService.getPublicPosts(userId, page, size))
+    );
+  }
+
+  @GetUserCoursesSwagger
+  @GetMapping("/{userId}/courses")
+  public BaseResponse<UserCoursesResponse> getUserCourses(
+      @Parameter(description = "조회할 사용자 ID", example = "1")
+      @PathVariable @Positive Long userId,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "18")
+      @RequestParam(defaultValue = "18") @Min(1) @Max(100) int size
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        UserCoursesResponse.from(userService.getPublicCourses(userId, page, size))
     );
   }
 

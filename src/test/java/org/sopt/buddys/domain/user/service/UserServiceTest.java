@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +16,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.repository.CourseImageRepository;
+import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
@@ -24,6 +28,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.global.exception.BaseException;
@@ -31,6 +36,7 @@ import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagRe
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +56,12 @@ class UserServiceTest {
 
   @Mock
   private PostImageRepository postImageRepository;
+
+  @Mock
+  private CourseRepository courseRepository;
+
+  @Mock
+  private CourseImageRepository courseImageRepository;
 
   @DisplayName("프로필 태그는 카테고리와 무관하게 displayOrder 순서대로 반환한다")
   @Test
@@ -129,6 +141,70 @@ class UserServiceTest {
     assertThat(result.page()).isZero();
     assertThat(result.size()).isEqualTo(10);
     assertThat(result.hasNext()).isFalse();
+  }
+
+  @DisplayName("내가 작성한 코스 목록을 Slice로 조회한다")
+  @Test
+  void getCourses_returnsCourses() {
+    // given
+    Long userId = 1L;
+    Course course = createCourse(userId, 10L, "https://example.com/thumbnail.jpg");
+    PageRequest pageable = PageRequest.of(0, 12);
+
+    given(userRepository.existsByIdAndDeletedAtIsNull(userId)).willReturn(true);
+    given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
+        .willReturn(new SliceImpl<>(List.of(course), pageable, true));
+    given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
+        .willReturn(List.of(
+            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg")
+        ));
+
+    // when
+    UserCoursesResult result = userService.getCourses(userId, 0, 12);
+
+    // then
+    assertThat(result.courses()).hasSize(1);
+    assertThat(result.courses().get(0).courseId()).isEqualTo(course.getId());
+    assertThat(result.courses().get(0).thumbnailImageUrl())
+        .isEqualTo("https://example.com/day1-first.jpg");
+    assertThat(result.page()).isZero();
+    assertThat(result.size()).isEqualTo(12);
+    assertThat(result.hasNext()).isTrue();
+    then(courseRepository).should().findByAuthorIdAndDeletedAtIsNull(
+        userId,
+        PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
+    );
+  }
+
+  @DisplayName("타 유저 코스 조회는 삭제된 사용자가 작성한 코스도 조회한다")
+  @Test
+  void getPublicCourses_deletedUser_returnsCourses() {
+    // given
+    Long userId = 1L;
+    Course course = createCourse(userId, 10L, null);
+    PageRequest pageable = PageRequest.of(0, 12);
+
+    given(userRepository.existsById(userId)).willReturn(true);
+    given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
+        .willReturn(new SliceImpl<>(List.of(course), pageable, false));
+    given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
+        .willReturn(List.of(
+            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg")
+        ));
+
+    // when
+    UserCoursesResult result = userService.getPublicCourses(userId, 0, 12);
+
+    // then
+    assertThat(result.courses()).hasSize(1);
+    assertThat(result.courses().get(0).courseId()).isEqualTo(course.getId());
+    assertThat(result.courses().get(0).thumbnailImageUrl())
+        .isEqualTo("https://example.com/day1-first.jpg");
+    assertThat(result.hasNext()).isFalse();
+    then(courseRepository).should().findByAuthorIdAndDeletedAtIsNull(
+        userId,
+        PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
+    );
   }
 
   @DisplayName("성별이 없으면 온보딩이 완료되지 않은 것으로 판단한다")
@@ -261,6 +337,19 @@ class UserServiceTest {
         .build();
   }
 
+  private Course createCourse(Long authorId, Long courseId, String thumbnailImageUrl) {
+    Course course = new Course(
+        baseUserBuilder(authorId).build(),
+        "파리 미술관 코스",
+        null,
+        thumbnailImageUrl,
+        LocalDate.of(2026, 9, 1),
+        LocalDate.of(2026, 9, 5)
+    );
+    ReflectionTestUtils.setField(course, "id", courseId);
+    return course;
+  }
+
   private User createUser(Long id, boolean universityVerified, boolean exchangeVerified) {
     return baseUserBuilder(id)
         .universityVerified(universityVerified)
@@ -301,6 +390,22 @@ class UserServiceTest {
     @Override
     public int getDisplayOrder() {
       return displayOrder;
+    }
+  }
+
+  private record TestCourseImageUrlProjection(
+      Long courseId,
+      String imageUrl
+  ) implements CourseImageRepository.CourseImageUrlProjection {
+
+    @Override
+    public Long getCourseId() {
+      return courseId;
+    }
+
+    @Override
+    public String getImageUrl() {
+      return imageUrl;
     }
   }
 }
