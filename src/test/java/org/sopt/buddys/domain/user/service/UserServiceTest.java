@@ -154,7 +154,7 @@ class UserServiceTest {
     given(userRepository.existsByIdAndDeletedAtIsNull(userId)).willReturn(true);
     given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
         .willReturn(new SliceImpl<>(List.of(course), pageable, true));
-    given(courseImageRepository.findImageUrlsByCourseIdIn(List.of(course.getId())))
+    given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
         .willReturn(List.of(
             new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg")
         ));
@@ -187,10 +187,9 @@ class UserServiceTest {
     given(userRepository.existsById(userId)).willReturn(true);
     given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
         .willReturn(new SliceImpl<>(List.of(course), pageable, false));
-    given(courseImageRepository.findImageUrlsByCourseIdIn(List.of(course.getId())))
+    given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
         .willReturn(List.of(
-            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg"),
-            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day2-first.jpg")
+            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg")
         ));
 
     // when

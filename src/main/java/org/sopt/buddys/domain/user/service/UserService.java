@@ -174,12 +174,11 @@ public class UserService {
       return Map.of();
     }
 
-    return courseImageRepository.findImageUrlsByCourseIdIn(courseIds)
+    return courseImageRepository.findThumbnailImageUrlsByCourseIds(courseIds)
         .stream()
         .collect(Collectors.toMap(
             CourseImageRepository.CourseImageUrlProjection::getCourseId,
-            CourseImageRepository.CourseImageUrlProjection::getImageUrl,
-            (first, ignored) -> first
+            CourseImageRepository.CourseImageUrlProjection::getImageUrl
         ));
   }
 
