@@ -297,7 +297,7 @@ class UserServiceTest {
         .notificationEnabled(true)
         .build();
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.of(user));
 
     // when
     boolean result = userService.updateNotificationSetting(userId, false);
@@ -312,7 +312,7 @@ class UserServiceTest {
   void updateNotificationSetting_userNotFound_throwsException() {
     // given
     Long userId = 1L;
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.empty());
 
     // when & then
     assertThatThrownBy(() -> userService.updateNotificationSetting(userId, false))

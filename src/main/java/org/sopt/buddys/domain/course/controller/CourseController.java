@@ -230,7 +230,7 @@ public class CourseController {
           )
       ),
       @ApiResponse(responseCode = "403", description = "코스 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "코스, 국가, 도시 또는 태그를 찾을 수 없음")
+      @ApiResponse(responseCode = "404", description = "코스, 국가, 도시 또는 태그를 찾을 수 없거나 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @CommonErrorResponses
   @PutMapping("/{courseId}")
@@ -270,7 +270,7 @@ public class CourseController {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "삭제 성공"),
       @ApiResponse(responseCode = "403", description = "코스 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "코스를 찾을 수 없음")
+      @ApiResponse(responseCode = "404", description = "코스를 찾을 수 없거나 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @CommonErrorResponses
   @DeleteMapping("/{courseId}")

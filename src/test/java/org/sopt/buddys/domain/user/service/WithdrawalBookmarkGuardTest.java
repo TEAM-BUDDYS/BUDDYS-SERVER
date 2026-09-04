@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.Optional;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,6 +42,7 @@ class WithdrawalBookmarkGuardTest {
   @InjectMocks private MagazineService magazineService;
   @InjectMocks private CourseBookmarkTransactionService courseBookmarkTransactionService;
 
+  @DisplayName("탈퇴했거나 존재하지 않는 사용자는 게시글을 저장할 수 없다")
   @Test
   void postBookmark_inactiveUser_rejectsInsert() {
     given(postRepository.findByIdAndDeletedAtIsNull(2L)).willReturn(Optional.of(mock(Post.class)));
@@ -50,6 +52,7 @@ class WithdrawalBookmarkGuardTest {
     verifyNoInteractions(postBookmarkRepository);
   }
 
+  @DisplayName("탈퇴했거나 존재하지 않는 사용자는 매거진을 저장할 수 없다")
   @Test
   void magazineBookmark_inactiveUser_rejectsInsert() {
     given(magazineRepository.existsById(2L)).willReturn(true);
@@ -59,6 +62,7 @@ class WithdrawalBookmarkGuardTest {
     verifyNoInteractions(magazineBookmarkRepository);
   }
 
+  @DisplayName("사용자 조회 후 탈퇴가 완료되면 코스 저장을 거부한다")
   @Test
   void courseBookmark_userWithdrawnAfterOuterRead_rejectsInsert() {
     CourseBookmark bookmark = courseBookmark();
@@ -68,6 +72,7 @@ class WithdrawalBookmarkGuardTest {
     verifyNoInteractions(courseBookmarkRepository);
   }
 
+  @DisplayName("게시글 저장 전에 활성 사용자 잠금을 획득한다")
   @Test
   void postBookmark_locksActiveUserBeforeInsert() {
     given(postRepository.findByIdAndDeletedAtIsNull(2L)).willReturn(Optional.of(mock(Post.class)));
@@ -80,6 +85,7 @@ class WithdrawalBookmarkGuardTest {
     order.verify(postBookmarkRepository).insertOrKeep(1L, 2L);
   }
 
+  @DisplayName("매거진 저장 전에 활성 사용자 잠금을 획득한다")
   @Test
   void magazineBookmark_locksActiveUserBeforeInsert() {
     given(magazineRepository.existsById(2L)).willReturn(true);
@@ -92,6 +98,7 @@ class WithdrawalBookmarkGuardTest {
     order.verify(magazineBookmarkRepository).insertOrKeep(1L, 2L);
   }
 
+  @DisplayName("코스 저장 트랜잭션 안에서 활성 사용자 잠금을 획득한다")
   @Test
   void courseBookmark_locksActiveUserInInsertTransaction() {
     CourseBookmark bookmark = courseBookmark();

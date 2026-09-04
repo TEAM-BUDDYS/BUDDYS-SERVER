@@ -121,7 +121,7 @@ public class PostController {
       @ApiResponse(responseCode = "200", description = "변경 성공"),
       @ApiResponse(responseCode = "401", description = "인증 필요"),
       @ApiResponse(responseCode = "403", description = "게시글 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
+      @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없거나 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @InvalidRequestResponse
   @CommonErrorResponses
@@ -147,7 +147,7 @@ public class PostController {
           content = @Content(schema = @Schema(implementation = UpdatePostSuccessResponse.class))
       ),
       @ApiResponse(responseCode = "403", description = "게시글 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "국가, 도시, 태그 또는 게시글을 찾을 수 없음")
+      @ApiResponse(responseCode = "404", description = "국가, 도시, 태그 또는 게시글을 찾을 수 없거나 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @InvalidRequestResponse
   @CommonErrorResponses
@@ -177,7 +177,7 @@ public class PostController {
           content = @Content(schema = @Schema(implementation = DeletePostSuccessResponse.class))
       ),
       @ApiResponse(responseCode = "403", description = "게시글 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "게시글이 존재하지 않거나 이미 삭제됨")
+      @ApiResponse(responseCode = "404", description = "게시글이 존재하지 않거나 이미 삭제됨, 또는 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @InvalidRequestResponse
   @CommonErrorResponses

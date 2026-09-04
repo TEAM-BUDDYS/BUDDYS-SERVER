@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
@@ -46,6 +47,7 @@ class WithdrawalBookmarkRetentionTest {
   @Autowired private EntityManager entityManager;
   @Autowired private UserService userService;
 
+  @DisplayName("탈퇴해도 장소·게시글·코스·매거진 저장 내역과 작성한 글은 유지된다")
   @Test
   void withdraw_preservesAllBookmarksAndAuthoredContent() {
     User withdrawing = persistUser("withdrawing");

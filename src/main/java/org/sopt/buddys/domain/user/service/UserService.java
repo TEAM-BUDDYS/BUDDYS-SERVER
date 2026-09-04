@@ -85,7 +85,7 @@ public class UserService {
 
   @Transactional
   public boolean updateNotificationSetting(Long userId, boolean notificationEnabled) {
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+    User user = userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     user.updateNotificationEnabled(notificationEnabled);
