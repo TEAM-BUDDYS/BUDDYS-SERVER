@@ -207,7 +207,7 @@ public class PostService {
   public PostBookmarkResult bookmarkPost(Long userId, Long postId) {
     postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-    userRepository.findByIdAndDeletedAtIsNull(userId)
+    userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     postBookmarkRepository.insertOrKeep(userId, postId);
