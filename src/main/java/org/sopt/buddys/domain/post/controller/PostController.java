@@ -16,12 +16,15 @@ import org.sopt.buddys.domain.post.dto.request.PostListRequest;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostStatusRequest;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostRequest;
 import org.sopt.buddys.domain.post.dto.response.PostListResponse;
+import org.sopt.buddys.domain.post.dto.response.PostBookmarkResponse;
+import org.sopt.buddys.domain.post.dto.response.PostBookmarkSuccessResponse;
 import org.sopt.buddys.domain.post.dto.response.CreatePostResponse;
 import org.sopt.buddys.domain.post.dto.response.PostDetailResponse;
 import org.sopt.buddys.domain.post.dto.response.UpdatePostStatusResponse;
 import org.sopt.buddys.domain.post.dto.response.UpdatePostResponse;
 import org.sopt.buddys.domain.post.dto.response.UpdatePostSuccessResponse;
 import org.sopt.buddys.domain.post.dto.response.DeletePostResponse;
+import org.sopt.buddys.domain.post.dto.response.DeletePostBookmarkSuccessResponse;
 import org.sopt.buddys.domain.post.dto.response.DeletePostSuccessResponse;
 import org.sopt.buddys.domain.post.service.PostService;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
@@ -188,6 +191,54 @@ public class PostController {
     return BaseResponse.success(
         PostSuccessCode.POST_DELETED,
         DeletePostResponse.from(postService.deletePost(userId, postId))
+    );
+  }
+
+  @Operation(summary = "동행 게시글 저장", description = "로그인한 사용자가 동행 게시글을 저장합니다.")
+  @ApiResponses({
+      @ApiResponse(
+          responseCode = "200",
+          description = "저장 성공",
+          content = @Content(schema = @Schema(implementation = PostBookmarkSuccessResponse.class))
+      ),
+      @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @PostMapping("/{postId}/bookmarks")
+  public BaseResponse<PostBookmarkResponse> bookmarkPost(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "저장할 게시글 ID", example = "1", required = true)
+      @PathVariable @Positive Long postId
+  ) {
+    return BaseResponse.success(
+        PostSuccessCode.POST_BOOKMARKED,
+        PostBookmarkResponse.from(postService.bookmarkPost(userId, postId))
+    );
+  }
+
+  @Operation(summary = "동행 게시글 저장 취소", description = "로그인한 사용자가 저장한 동행 게시글을 저장 취소합니다.")
+  @ApiResponses({
+      @ApiResponse(
+          responseCode = "200",
+          description = "저장 취소 성공",
+          content = @Content(schema = @Schema(implementation = DeletePostBookmarkSuccessResponse.class))
+      ),
+      @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @DeleteMapping("/{postId}/bookmarks")
+  public BaseResponse<PostBookmarkResponse> removePostBookmark(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "저장 취소할 게시글 ID", example = "1", required = true)
+      @PathVariable @Positive Long postId
+  ) {
+    return BaseResponse.success(
+        PostSuccessCode.POST_BOOKMARK_REMOVED,
+        PostBookmarkResponse.from(postService.removePostBookmark(userId, postId))
     );
   }
 
