@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
-import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
@@ -39,7 +38,6 @@ public class UserService {
   private final PostRepository postRepository;
   private final PostImageRepository postImageRepository;
   private final RefreshTokenRepository refreshTokenRepository;
-  private final PlaceBookmarkRepository placeBookmarkRepository;
   private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
@@ -53,7 +51,6 @@ public class UserService {
     user.withdraw();
     userRepository.saveAndFlush(user);
     userTagRepository.deleteByUserId(userId);
-    placeBookmarkRepository.deleteByUserId(userId);
     refreshTokenRepository.deleteByUserId(userId);
     eventPublisher.publishEvent(new UserWithdrawnEvent(userId));
   }
