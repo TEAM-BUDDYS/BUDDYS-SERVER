@@ -69,7 +69,9 @@ class UniversityVerificationServiceTest {
         universityRepository,
         userRepository,
         properties,
-        mailSender
+        mailSender,
+        new UniversityVerificationIssueService(
+            userRepository, universityRepository, universityVerificationRepository, properties)
     );
   }
 
@@ -77,7 +79,7 @@ class UniversityVerificationServiceTest {
   @Test
   void sendVerification_savesCodeWithTtlAndSendsMail() {
     // given
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
     given(universityRepository.findFirstByDomainIgnoreCase("university.ac.kr"))
         .willReturn(Optional.of(university));
     given(university.getId()).willReturn(UNIVERSITY_ID);
@@ -106,7 +108,7 @@ class UniversityVerificationServiceTest {
   @Test
   void sendVerification_mailFailure_deletesSavedCode() {
     // given
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
     given(universityRepository.findFirstByDomainIgnoreCase("university.ac.kr"))
         .willReturn(Optional.of(university));
     given(university.getId()).willReturn(UNIVERSITY_ID);
@@ -123,6 +125,17 @@ class UniversityVerificationServiceTest {
         ArgumentCaptor.forClass(UniversityVerification.class);
     then(universityVerificationRepository).should().deleteIfMatches(verificationCaptor.capture());
     assertThat(verificationCaptor.getValue().userId()).isEqualTo(USER_ID);
+  }
+
+  @DisplayName("탈퇴한 사용자는 인증 정보를 저장하거나 메일을 발송할 수 없다")
+  @Test
+  void sendVerification_withdrawnUser_rejectsBeforeSaveAndMail() {
+    assertThatThrownBy(() -> universityVerificationService.sendVerification(USER_ID, EMAIL))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND);
+    then(universityVerificationRepository).shouldHaveNoInteractions();
+    then(mailSender).shouldHaveNoInteractions();
   }
 
   @DisplayName("코드가 일치하면 사용자의 학교를 인증하고 코드를 한 번만 삭제한다")
