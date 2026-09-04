@@ -26,10 +26,12 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagResult;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -252,6 +254,79 @@ class UserServiceTest {
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+  }
+
+  @DisplayName("키워드가 없으면 저장소를 조회하지 않고 빈 결과를 반환한다")
+  @Test
+  void searchUsersByNickname_nullKeyword_returnsEmpty() {
+    // given
+    Long userId = 1L;
+
+    // when
+    Slice<User> result = userService.searchUsersByNickname(userId, null, 0, 20);
+
+    // then
+    assertThat(result.getContent()).isEmpty();
+    assertThat(result.hasNext()).isFalse();
+  }
+
+  @DisplayName("키워드가 공백 문자만으로 이루어지면 빈 결과를 반환한다")
+  @Test
+  void searchUsersByNickname_blankKeyword_returnsEmpty() {
+    // given
+    Long userId = 1L;
+
+    // when
+    Slice<User> result = userService.searchUsersByNickname(userId, "   ", 0, 20);
+
+    // then
+    assertThat(result.getContent()).isEmpty();
+  }
+
+  @DisplayName("키워드가 있으면 앞뒤 공백을 제거하고 본인을 제외해 저장소에서 검색한다")
+  @Test
+  void searchUsersByNickname_validKeyword_delegatesToRepository() {
+    // given
+    Long userId = 1L;
+    User other = baseUserBuilder(2L).nickname("버디").build();
+    given(userRepository.searchByNicknameContaining("버디", userId, PageRequest.of(0, 20)))
+        .willReturn(new SliceImpl<>(List.of(other), PageRequest.of(0, 20), false));
+
+    // when
+    Slice<User> result = userService.searchUsersByNickname(userId, "  버디  ", 0, 20);
+
+    // then
+    assertThat(result.getContent()).containsExactly(other);
+  }
+
+  @DisplayName("page가 음수이면 예외가 발생한다")
+  @Test
+  void searchUsersByNickname_negativePage_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> userService.searchUsersByNickname(1L, "버디", -1, 20))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+  }
+
+  @DisplayName("size가 0 이하이면 예외가 발생한다")
+  @Test
+  void searchUsersByNickname_zeroSize_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> userService.searchUsersByNickname(1L, "버디", 0, 0))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+  }
+
+  @DisplayName("size가 최대 허용치를 초과하면 예외가 발생한다")
+  @Test
+  void searchUsersByNickname_sizeExceedsMax_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> userService.searchUsersByNickname(1L, "버디", 0, 101))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
   }
 
   private User createOnboardedProfileUser(Long userId) {
