@@ -14,7 +14,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
       from Comment c
       join fetch c.author
       where c.post.id = :postId
-      order by c.createdAt asc
+        and c.post.deletedAt is null
+      order by c.createdAt asc, c.id asc
       """)
   Slice<Comment> findAllByPostIdWithAuthorOrderByCreatedAtAsc(
       @Param("postId") Long postId,

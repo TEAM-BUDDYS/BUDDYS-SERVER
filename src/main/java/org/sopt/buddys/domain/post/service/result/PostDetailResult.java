@@ -15,6 +15,7 @@ public record PostDetailResult(
     Long postId,
     AuthorResult author,
     boolean isMine,
+    boolean isBookmarked,
     PostStatus recruitmentStatus,
     String title,
     List<String> imageUrls,

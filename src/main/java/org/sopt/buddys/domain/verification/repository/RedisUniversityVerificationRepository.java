@@ -148,7 +148,7 @@ public class RedisUniversityVerificationRepository implements UniversityVerifica
   }
 
   private String key(Long userId) {
-    return KEY_PREFIX + userId;
+    return KEY_PREFIX + "{" + userId + "}";
   }
 
   private String attemptsKey(Long userId) {
