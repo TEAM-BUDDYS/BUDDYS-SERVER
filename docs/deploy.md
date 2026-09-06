@@ -2,7 +2,7 @@
 
 ## Server Structure
 
-Client -> HTTPS -> Nginx(80/443) -> Spring Boot Blue/Green(127.0.0.1:8081 or 127.0.0.1:8082) -> RDS MySQL
+Client -> HTTPS -> Nginx(80/443) -> Spring Boot Blue/Green(127.0.0.1:8081 or 127.0.0.1:8082) -> RDS MySQL / ElastiCache Valkey
 
 ## EC2 Paths
 
@@ -14,6 +14,18 @@ Client -> HTTPS -> Nginx(80/443) -> Spring Boot Blue/Green(127.0.0.1:8081 or 127
 - Nginx backend snippet: `/etc/nginx/snippets/buddys-backend.conf`
 
 ## First-Time EC2 Setup
+
+Set `REDIS_MODE=cluster`, `REDIS_HOST` to the ElastiCache Serverless endpoint, and
+`REDIS_SSL_ENABLED=true` in `/home/ubuntu/BUDDYS-SERVER/docker/.env`. If RBAC is
+enabled, also set `REDIS_USERNAME` and `REDIS_PASSWORD`. The ElastiCache security
+group must allow ports 6379 and 6380 from the EC2 security group.
+
+For local development, start the optional Valkey container and use the default
+standalone connection (`localhost:6379`, TLS disabled).
+
+```bash
+docker compose -f docker/docker-compose.yml --profile local up -d valkey
+```
 
 Create the shared `buddys-monitoring` Docker network first. Prometheus and the Blue/Green `app` containers run as separate Compose projects (separate default networks), so this external network is what lets Prometheus reach `app-8081`/`app-8082` by name instead of depending on host-published ports. `deploy-blue-green.sh` also creates it automatically if missing, but creating it upfront avoids a first-run ordering issue with whichever stack (monitoring or app) starts first.
 

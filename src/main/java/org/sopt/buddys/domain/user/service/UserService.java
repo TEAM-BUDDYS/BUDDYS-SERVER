@@ -1,17 +1,12 @@
 package org.sopt.buddys.domain.user.service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
-import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -19,12 +14,13 @@ import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult.PostResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
-import org.sopt.buddys.domain.user.service.result.UserProfileResult.TagGroupResult;
+import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagResult;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
   private static final int REQUIRED_ONBOARDING_TAG_COUNT = 3;
-
+  private static final int MAX_SEARCH_RESULT_SIZE = 100;
+  private static final String LIKE_ESCAPE_CHAR = "\\";
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
@@ -64,14 +61,44 @@ public class UserService {
     return getProfileResult(user);
   }
 
+  public boolean getNotificationSetting(Long userId) {
+    return userRepository.findNotificationEnabledById(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+  }
+
+  @Transactional
+  public boolean updateNotificationSetting(Long userId, boolean notificationEnabled) {
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    user.updateNotificationEnabled(notificationEnabled);
+    return user.isNotificationEnabled();
+  }
+
   private UserProfileResult getProfileResult(User user) {
     Long userId = user.getId();
     List<UserTagRepository.UserTagProjection> userTags = userTagRepository.findTagsByUserId(userId);
-    Map<TagType, List<String>> tagsByType = shuffleTagsByType(groupTagsByType(userTags));
-    List<String> representativeTags = getFirstTagsByType(tagsByType);
-    List<TagGroupResult> allTags = toTagGroupResponses(tagsByType);
+    List<OrderedTagResult> orderedTags = userTags.stream()
+        .map(userTag -> new OrderedTagResult(
+            userTag.getTagId(),
+            userTag.getTagName(),
+            userTag.getTagType(),
+            userTag.getDisplayOrder()
+        ))
+        .toList();
 
-    return new UserProfileResult(user, representativeTags, allTags);
+    return new UserProfileResult(user, orderedTags);
+  }
+
+  public Slice<User> searchUsersByNickname(Long userId, String keyword, int page, int size) {
+    validateSearchPageRequest(page, size);
+
+    if (keyword == null || keyword.isBlank()) {
+      return new SliceImpl<>(List.of(), PageRequest.of(page, size), false);
+    }
+
+    String escapedKeyword = escapeLikeWildcards(keyword.trim());
+    return userRepository.searchByNicknameContaining(escapedKeyword, userId, PageRequest.of(page, size));
   }
 
   public UserPostsResult getPosts(Long userId, int page, int size) {
@@ -90,7 +117,7 @@ public class UserService {
     validatePageRequest(page, size);
 
     Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-    Slice<Post> posts = postRepository.findByAuthorId(userId, pageable);
+    Slice<Post> posts = postRepository.findByAuthorIdAndDeletedAtIsNull(userId, pageable);
     Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts);
 
     List<PostResult> postResults = posts.getContent()
@@ -112,6 +139,19 @@ public class UserService {
     }
   }
 
+  private void validateSearchPageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_SEARCH_RESULT_SIZE) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
+  private String escapeLikeWildcards(String keyword) {
+    return keyword
+        .replace(LIKE_ESCAPE_CHAR, LIKE_ESCAPE_CHAR + LIKE_ESCAPE_CHAR)
+        .replace("%", LIKE_ESCAPE_CHAR + "%")
+        .replace("_", LIKE_ESCAPE_CHAR + "_");
+  }
+
   private void validateUserExists(Long userId) {
     if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
       throw new BaseException(UserErrorCode.USER_NOT_FOUND);
@@ -122,41 +162,6 @@ public class UserService {
     if (!userRepository.existsById(userId)) {
       throw new BaseException(UserErrorCode.USER_NOT_FOUND);
     }
-  }
-
-  private Map<TagType, List<String>> groupTagsByType(
-      List<UserTagRepository.UserTagProjection> userTags
-  ) {
-
-    return userTags.stream()
-        .collect(Collectors.groupingBy(
-            UserTagRepository.UserTagProjection::getTagType,
-            () -> new EnumMap<>(TagType.class),
-            Collectors.mapping(UserTagRepository.UserTagProjection::getTagName, Collectors.toList())
-        ));
-  }
-
-  private Map<TagType, List<String>> shuffleTagsByType(Map<TagType, List<String>> tagsByType) {
-    tagsByType.replaceAll((tagType, tags) -> {
-      List<String> shuffledTags = new ArrayList<>(tags);
-      Collections.shuffle(shuffledTags);
-      return shuffledTags;
-    });
-    return tagsByType;
-  }
-
-  private List<String> getFirstTagsByType(Map<TagType, List<String>> tagsByType) {
-    return Stream.of(TagType.ACTIVITY, TagType.INTEREST, TagType.TRAVEL_STYLE)
-        .map(tagsByType::get)
-        .filter(tags -> tags != null && !tags.isEmpty())
-        .map(tags -> tags.get(0))
-        .toList();
-  }
-
-  private List<TagGroupResult> toTagGroupResponses(Map<TagType, List<String>> tagsByType) {
-    return Stream.of(TagType.ACTIVITY, TagType.INTEREST, TagType.TRAVEL_STYLE)
-        .map(tagType -> new TagGroupResult(tagType, tagsByType.getOrDefault(tagType, List.of())))
-        .toList();
   }
 
   private Map<Long, String> getThumbnailImageUrls(Slice<Post> posts) {

@@ -34,13 +34,17 @@ public class UserTag {
   @JoinColumn(name = "tag_id", nullable = false)
   private Tag tag;
 
+  @Column(name = "display_order", nullable = false)
+  private int displayOrder;
+
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
-  public UserTag(User user, Tag tag) {
+  public UserTag(User user, Tag tag, int displayOrder) {
     this.user = user;
     this.tag = tag;
+    this.displayOrder = displayOrder;
     this.id = new UserTagId(user.getId(), tag.getId());
   }
 }

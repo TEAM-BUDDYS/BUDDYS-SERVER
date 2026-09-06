@@ -1,10 +1,12 @@
 package org.sopt.buddys.domain.user.service;
 
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
@@ -17,7 +19,6 @@ import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
-import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.entity.UserTag;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -85,8 +86,10 @@ public class UserOnboardingService {
       throw new BaseException(AuthErrorCode.DUPLICATE_NICKNAME, e);
     }
 
-    List<UserTag> userTags = allTagIds.stream()
-        .map(tagId -> new UserTag(user, tagsById.get(tagId)))
+    List<Long> orderedTagIds = interleaveByCategory(
+        request.activityTagIds(), request.interestTagIds(), request.travelStyleTagIds());
+    List<UserTag> userTags = IntStream.range(0, orderedTagIds.size())
+        .mapToObj(order -> new UserTag(user, tagsById.get(orderedTagIds.get(order)), order))
         .toList();
     try {
       userTagRepository.saveAll(userTags);
@@ -99,6 +102,24 @@ public class UserOnboardingService {
     }
 
     return user;
+  }
+
+  /**
+   * 온보딩에는 드래그앤드롭 정렬이 없으므로, 카테고리를 번갈아 배치해 상위 3개(=대표 태그)가
+   * 카테고리별 1개씩 노출되도록 순서를 만든다.
+   */
+  @SafeVarargs
+  private List<Long> interleaveByCategory(List<Long>... tagIdGroups) {
+    List<Long> ordered = new ArrayList<>();
+    int maxSize = Stream.of(tagIdGroups).mapToInt(List::size).max().orElse(0);
+    for (int index = 0; index < maxSize; index++) {
+      for (List<Long> group : tagIdGroups) {
+        if (index < group.size()) {
+          ordered.add(group.get(index));
+        }
+      }
+    }
+    return ordered;
   }
 
   private void validateNotAlreadyOnboarded(Long userId) {

@@ -1,10 +1,15 @@
 package org.sopt.buddys.domain.tag.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
+import org.sopt.buddys.domain.tag.service.result.TagGroupResult;
+import org.sopt.buddys.domain.tag.service.result.TagGroupResult.TagResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,5 +21,18 @@ public class TagService {
 
   public List<Tag> getTagsByType(TagType type) {
     return tagRepository.findAllByTagTypeOrderByIdAsc(type);
+  }
+
+  public List<TagGroupResult> getAllTagGroups() {
+    Map<TagType, List<Tag>> tagsByType = tagRepository.findAllByOrderByIdAsc().stream()
+        .collect(Collectors.groupingBy(Tag::getTagType));
+    return Stream.of(TagType.ACTIVITY, TagType.INTEREST, TagType.TRAVEL_STYLE)
+        .map(type -> new TagGroupResult(
+            type,
+            tagsByType.getOrDefault(type, List.of()).stream()
+                .map(tag -> new TagResult(tag.getId(), tag.getName()))
+                .toList()
+        ))
+        .toList();
   }
 }

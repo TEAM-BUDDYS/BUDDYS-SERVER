@@ -17,6 +17,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  data:
+    redis:
+      repositories:
+        enabled: false
+
   security:
     jwt:
       secret: ${JWT_SECRET}
@@ -52,6 +57,27 @@ cloud:
     s3:
       bucket: ${AWS_S3_BUCKET}
       region: ${AWS_S3_REGION}
+    ses:
+      region: ${AWS_SES_REGION:ap-northeast-2}
+
+mail:
+  sender: ${MAIL_SENDER:no-reply@buddys.co.kr}
+
+verification:
+  university-email:
+    code-expiration: 15m
+    max-attempts: ${UNIVERSITY_VERIFICATION_MAX_ATTEMPTS:5}
+
+buddys:
+  redis:
+    mode: ${REDIS_MODE:standalone}
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:}
+    ssl-enabled: ${REDIS_SSL_ENABLED:false}
+    connect-timeout: ${REDIS_CONNECT_TIMEOUT:3s}
+    command-timeout: ${REDIS_COMMAND_TIMEOUT:3s}
 
 management:
   endpoints:

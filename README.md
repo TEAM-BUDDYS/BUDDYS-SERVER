@@ -73,7 +73,7 @@ BUDDYS 서비스의 백엔드 레포지토리입니다.
 | 인증 / 보안 | Spring Security, OAuth 2.0, JWT, JJWT |
 | 소셜 로그인 | Kakao Login |
 | 데이터 접근 | Spring Data JPA, Hibernate, QueryDSL, Jakarta Validation, Flyway |
-| 데이터베이스 / 저장소 | MySQL, AWS RDS for MySQL, AWS S3 |
+| 데이터베이스 / 저장소 | MySQL, AWS RDS for MySQL, AWS ElastiCache for Valkey, AWS S3 |
 | 실시간 통신 | WebSocket, STOMP |
 | 인프라 / 배포 | AWS EC2, Docker Compose, Nginx, GitHub Actions |
 | API 문서화 | springdoc-openapi, Swagger UI |
