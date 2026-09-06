@@ -28,9 +28,6 @@ public record CourseDetailResponse(
     @Schema(description = "코스 소개", example = "루브르부터...", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
     String content,
 
-    @Schema(description = "대표 사진 URL", example = "https://example.com/thumbnail.jpg", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
-    String thumbnailImageUrl,
-
     @Schema(description = "여행 국가 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<CourseCountryResponse> countries,
 
@@ -48,9 +45,6 @@ public record CourseDetailResponse(
 
     @Schema(description = "함께한 유저 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<CompanionResponse> companions,
-
-    @Schema(description = "항공편 목록", requiredMode = Schema.RequiredMode.REQUIRED)
-    List<FlightResponse> flights,
 
     @Schema(description = "일자별 코스 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<DayResponse> days,
@@ -73,7 +67,6 @@ public record CourseDetailResponse(
     cities = List.copyOf(cities);
     tags = List.copyOf(tags);
     companions = List.copyOf(companions);
-    flights = List.copyOf(flights);
     days = List.copyOf(days);
   }
 
@@ -85,14 +78,12 @@ public record CourseDetailResponse(
         result.isBookmarked(),
         result.title(),
         result.content(),
-        result.thumbnailImageUrl(),
         result.countries().stream().map(CourseCountryResponse::from).toList(),
         result.cities().stream().map(CourseCityResponse::from).toList(),
         result.startDate(),
         result.endDate(),
         result.tags().stream().map(CourseTagResponse::from).toList(),
         result.companions().stream().map(CompanionResponse::from).toList(),
-        result.flights().stream().map(FlightResponse::from).toList(),
         result.days().stream().map(DayResponse::from).toList(),
         result.viewCount(),
         result.commentCount(),
@@ -195,6 +186,40 @@ public record CourseDetailResponse(
     }
   }
 
+  public record DayResponse(
+      @Schema(description = "일차 (1부터 시작)", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+      Short dayNumber,
+
+      @Schema(description = "해당 일자의 실제 날짜", example = "2026-09-01", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
+      LocalDate date,
+
+      @Schema(description = "해당 일자의 사진 목록", requiredMode = Schema.RequiredMode.REQUIRED)
+      List<String> imageUrls,
+
+      @Schema(description = "해당 일자에 방문한 장소 목록", requiredMode = Schema.RequiredMode.REQUIRED)
+      List<PlaceResponse> places,
+
+      @Schema(description = "해당 일자의 항공편 목록", requiredMode = Schema.RequiredMode.REQUIRED)
+      List<FlightResponse> flights
+  ) {
+
+    public DayResponse {
+      imageUrls = List.copyOf(imageUrls);
+      places = List.copyOf(places);
+      flights = List.copyOf(flights);
+    }
+
+    private static DayResponse from(CourseDetailResult.DayResult day) {
+      return new DayResponse(
+          day.dayNumber(),
+          day.date(),
+          day.imageUrls(),
+          day.places().stream().map(PlaceResponse::from).toList(),
+          day.flights().stream().map(FlightResponse::from).toList()
+      );
+    }
+  }
+
   public record FlightResponse(
       @Schema(description = "항공사", example = "대한항공", requiredMode = Schema.RequiredMode.REQUIRED)
       String airline,
@@ -223,35 +248,6 @@ public record CourseDetailResponse(
           flight.departureAt(),
           flight.arrivalAirport(),
           flight.arrivalAt()
-      );
-    }
-  }
-
-  public record DayResponse(
-      @Schema(description = "일차 (1부터 시작)", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-      Short dayNumber,
-
-      @Schema(description = "해당 일자의 실제 날짜", example = "2026-09-01", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
-      LocalDate date,
-
-      @Schema(description = "해당 일자의 사진 목록", requiredMode = Schema.RequiredMode.REQUIRED)
-      List<String> imageUrls,
-
-      @Schema(description = "해당 일자에 방문한 장소 목록", requiredMode = Schema.RequiredMode.REQUIRED)
-      List<PlaceResponse> places
-  ) {
-
-    public DayResponse {
-      imageUrls = List.copyOf(imageUrls);
-      places = List.copyOf(places);
-    }
-
-    private static DayResponse from(CourseDetailResult.DayResult day) {
-      return new DayResponse(
-          day.dayNumber(),
-          day.date(),
-          day.imageUrls(),
-          day.places().stream().map(PlaceResponse::from).toList()
       );
     }
   }
