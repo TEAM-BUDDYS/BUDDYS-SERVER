@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.user.controller.swagger.GetProfileEditSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetNotificationSettingSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetUserProfileSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.SearchUsersByNicknameSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.UpdateProfileSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.UpdateNotificationSettingSwagger;
 import org.sopt.buddys.domain.user.dto.request.OnboardingRequest;
@@ -28,6 +29,7 @@ import org.sopt.buddys.domain.user.dto.response.ProfileEditResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPublicProfileResponse;
+import org.sopt.buddys.domain.user.dto.response.UserSearchResponse;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.service.UserOnboardingService;
 import org.sopt.buddys.domain.user.service.UserProfileEditService;
@@ -138,6 +140,28 @@ public class UserController {
     return BaseResponse.success(
         GlobalSuccessCode.OK,
         UserPostsResponse.from(userService.getPosts(userId, page, size))
+    );
+  }
+
+  @SearchUsersByNicknameSwagger
+  @GetMapping("/search")
+  public BaseResponse<UserSearchResponse> searchUsers(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(
+          description = "검색 키워드. 대소문자 구분 없이 닉네임에 부분 일치합니다. "
+              + "생략하거나 빈 문자열/공백만 전달하면 빈 리스트가 반환됩니다.",
+          example = "버디"
+      )
+      @RequestParam(required = false) String keyword,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        UserSearchResponse.from(userService.searchUsersByNickname(userId, keyword, page, size))
     );
   }
 
