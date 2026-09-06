@@ -303,6 +303,79 @@ class MagazineControllerTest {
         .andExpect(jsonPath("$.code").value("GLB-E002"));
   }
 
+  @DisplayName("저장한 매거진만 최신 저장순으로 페이지 조회한다")
+  @Test
+  void getBookmarkedMagazines_returnsLatestBookmarksForUser() throws Exception {
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른 사용자"));
+    Magazine older = magazineRepository.save(createMagazine("먼저 저장한 매거진", LocalDate.of(2026, 7, 10)));
+    Magazine newer = magazineRepository.save(createMagazine("최근 저장한 매거진", LocalDate.of(2026, 8, 10)));
+    Magazine notMine = magazineRepository.save(createMagazine("다른 사용자의 매거진", LocalDate.of(2026, 9, 10)));
+
+    magazineBookmarkRepository.saveAndFlush(new MagazineBookmark(viewer, older));
+    magazineBookmarkRepository.saveAndFlush(new MagazineBookmark(viewer, newer));
+    magazineBookmarkRepository.saveAndFlush(new MagazineBookmark(other, notMine));
+    jdbcTemplate.update(
+        "UPDATE magazine_bookmark SET created_at = ? WHERE user_id = ? AND magazine_id = ?",
+        LocalDateTime.of(2026, 8, 1, 10, 0), viewer.getId(), older.getId()
+    );
+    jdbcTemplate.update(
+        "UPDATE magazine_bookmark SET created_at = ? WHERE user_id = ? AND magazine_id = ?",
+        LocalDateTime.of(2026, 8, 2, 10, 0), viewer.getId(), newer.getId()
+    );
+
+    mockMvc.perform(get("/api/v1/magazines/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "0")
+            .param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("MAGAZINE-S004"))
+        .andExpect(jsonPath("$.message").value("저장한 매거진 목록 조회에 성공했습니다."))
+        .andExpect(jsonPath("$.data.magazines.length()").value(1))
+        .andExpect(jsonPath("$.data.magazines[0].magazineId").value(newer.getId()))
+        .andExpect(jsonPath("$.data.magazines[0].title").value("최근 저장한 매거진"))
+        .andExpect(jsonPath("$.data.magazines[0].summary").value("요약 문구"))
+        .andExpect(jsonPath("$.data.magazines[0].thumbnailImageUrl")
+            .value("https://example.com/magazines/thumbnail.png"))
+        .andExpect(jsonPath("$.data.magazines[0].publishedAt").value("2026-08-10"))
+        .andExpect(jsonPath("$.data.magazines[0].externalUrl")
+            .value("https://www.instagram.com/p/ABC123/"))
+        .andExpect(jsonPath("$.data.magazines[0].isBookmarked").doesNotExist())
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(1))
+        .andExpect(jsonPath("$.data.hasNext").value(true));
+
+    mockMvc.perform(get("/api/v1/magazines/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "1")
+            .param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.magazines.length()").value(1))
+        .andExpect(jsonPath("$.data.magazines[0].magazineId").value(older.getId()))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
+  @DisplayName("저장한 매거진 목록은 인증과 페이지 범위를 검증한다")
+  @Test
+  void getBookmarkedMagazines_validatesAuthenticationAndPagination() throws Exception {
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    mockMvc.perform(get("/api/v1/magazines/bookmarks"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("GLB-E002"));
+    mockMvc.perform(get("/api/v1/magazines/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "-1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+    mockMvc.perform(get("/api/v1/magazines/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("size", "101"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
   @DisplayName("매거진을 반복 저장해도 북마크 한 건만 생성된다")
   @Test
   void bookmarkMagazine_repeatedRequests_areIdempotent() throws Exception {
