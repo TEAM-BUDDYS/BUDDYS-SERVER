@@ -2,7 +2,6 @@ package org.sopt.buddys.domain.place.service;
 
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.place.entity.Place;
-import org.sopt.buddys.domain.place.entity.PlaceBookmarkId;
 import org.sopt.buddys.domain.place.repository.PlaceBookmarkRepository;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.springframework.stereotype.Service;
@@ -27,6 +26,6 @@ public class PlaceBookmarkTransactionService {
 
   @Transactional
   public void deleteBookmark(Long userId, Long placeId) {
-    placeBookmarkRepository.deleteById(new PlaceBookmarkId(userId, placeId));
+    placeBookmarkRepository.deleteByUserIdAndPlaceId(userId, placeId);
   }
 }

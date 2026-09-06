@@ -125,6 +125,66 @@ class PlaceBookmarkTransactionServiceTest {
     placeBookmarkTransactionService.saveBookmark(userId, placeId);
   }
 
+  @DisplayName("존재하지 않는 북마크를 삭제해도 예외 없이 아무 일도 일어나지 않는다")
+  @Test
+  void deleteBookmark_nonExistentBookmark_noOp() {
+    // given
+    User user = userRepository.save(createUser());
+    Place place = placeRepository.save(createPlace());
+
+    // when, then
+    placeBookmarkTransactionService.deleteBookmark(user.getId(), place.getId());
+    assertThat(placeBookmarkRepository.count()).isZero();
+  }
+
+  @DisplayName("같은 북마크에 대한 삭제 요청이 동시에 와도 두 요청 모두 예외 없이 성공하고 북마크는 삭제된다")
+  @Test
+  void deleteBookmark_concurrentRequests_bothSucceedAndBookmarkRemoved() throws Exception {
+    // given
+    User user = userRepository.save(createUser());
+    Place place = placeRepository.save(createPlace());
+    placeBookmarkTransactionService.saveBookmark(user.getId(), place.getId());
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    CountDownLatch readyLatch = new CountDownLatch(2);
+    CountDownLatch startLatch = new CountDownLatch(1);
+
+    try {
+      Future<?> first = executorService.submit(
+          () -> deleteBookmarkAfterSignal(user.getId(), place.getId(), readyLatch, startLatch));
+      Future<?> second = executorService.submit(
+          () -> deleteBookmarkAfterSignal(user.getId(), place.getId(), readyLatch, startLatch));
+
+      assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+      startLatch.countDown();
+
+      // then: 둘 다 예외 없이 완료된다
+      first.get(10, TimeUnit.SECONDS);
+      second.get(10, TimeUnit.SECONDS);
+      assertThat(placeBookmarkRepository.count()).isZero();
+    } finally {
+      executorService.shutdownNow();
+      assertThat(executorService.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+    }
+  }
+
+  private void deleteBookmarkAfterSignal(
+      Long userId,
+      Long placeId,
+      CountDownLatch readyLatch,
+      CountDownLatch startLatch
+  ) {
+    readyLatch.countDown();
+    try {
+      if (!startLatch.await(5, TimeUnit.SECONDS)) {
+        throw new IllegalStateException("동시 삭제 시작 신호를 기다리는 중 시간 초과");
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException(e);
+    }
+    placeBookmarkTransactionService.deleteBookmark(userId, placeId);
+  }
+
   private User createUser() {
     return User.builder()
         .email("user@test.com")

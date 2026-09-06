@@ -25,6 +25,17 @@ public interface PlaceBookmarkRepository extends JpaRepository<PlaceBookmark, Pl
       @Param("placeId") Long placeId
   );
 
+  @Modifying
+  @Query("""
+      delete from PlaceBookmark pb
+      where pb.user.id = :userId
+        and pb.place.id = :placeId
+      """)
+  void deleteByUserIdAndPlaceId(
+      @Param("userId") Long userId,
+      @Param("placeId") Long placeId
+  );
+
   @Query("""
       select pb.place.googlePlaceId
       from PlaceBookmark pb
