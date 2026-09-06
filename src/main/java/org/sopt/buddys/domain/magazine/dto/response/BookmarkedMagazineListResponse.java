@@ -54,7 +54,10 @@ public record BookmarkedMagazineListResponse(
 
       @Schema(description = "인스타그램 게시물 링크", example = "https://www.instagram.com/p/ABC123/",
           requiredMode = RequiredMode.REQUIRED)
-      String externalUrl
+      String externalUrl,
+
+      @Schema(description = "로그인한 사용자의 저장 여부", example = "true", requiredMode = RequiredMode.REQUIRED)
+      boolean isBookmarked
   ) {
 
     private static BookmarkedMagazineResponse from(Magazine magazine) {
@@ -64,7 +67,8 @@ public record BookmarkedMagazineListResponse(
           magazine.getSummary(),
           magazine.getThumbnailImageUrl(),
           magazine.getPublishedAt(),
-          magazine.getExternalUrl()
+          magazine.getExternalUrl(),
+          true
       );
     }
   }

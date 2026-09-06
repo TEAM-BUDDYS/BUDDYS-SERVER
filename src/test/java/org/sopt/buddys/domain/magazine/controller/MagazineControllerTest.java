@@ -341,7 +341,7 @@ class MagazineControllerTest {
         .andExpect(jsonPath("$.data.magazines[0].publishedAt").value("2026-08-10"))
         .andExpect(jsonPath("$.data.magazines[0].externalUrl")
             .value("https://www.instagram.com/p/ABC123/"))
-        .andExpect(jsonPath("$.data.magazines[0].isBookmarked").doesNotExist())
+        .andExpect(jsonPath("$.data.magazines[0].isBookmarked").value(true))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.size").value(1))
         .andExpect(jsonPath("$.data.hasNext").value(true));
