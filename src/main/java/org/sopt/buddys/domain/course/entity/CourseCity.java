@@ -6,6 +6,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AccessLevel;
@@ -51,5 +53,11 @@ public class CourseCity implements Persistable<CourseCityId> {
   @Override
   public boolean isNew() {
     return isNew;
+  }
+
+  @PostPersist
+  @PostLoad
+  private void markNotNew() {
+    this.isNew = false;
   }
 }
