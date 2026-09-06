@@ -7,16 +7,18 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.sopt.buddys.domain.location.entity.City;
+import org.springframework.data.domain.Persistable;
 
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "course_city")
-public class CourseCity {
+public class CourseCity implements Persistable<CourseCityId> {
 
   @EmbeddedId
   private CourseCityId id;
@@ -31,9 +33,23 @@ public class CourseCity {
   @JoinColumn(name = "city_id", nullable = false)
   private City city;
 
+  @Transient
+  private boolean isNew;
+
   public CourseCity(Course course, City city) {
     this.course = course;
     this.city = city;
     this.id = new CourseCityId(course.getId(), city.getId());
+    this.isNew = true;
+  }
+
+  @Override
+  public CourseCityId getId() {
+    return id;
+  }
+
+  @Override
+  public boolean isNew() {
+    return isNew;
   }
 }
