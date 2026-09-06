@@ -26,6 +26,10 @@ public record CourseDayRequest(
 
     @Schema(description = "해당 일자에 방문한 장소 목록 (최대 10곳)")
     @Size(max = 10)
-    List<@NotNull @Valid CoursePlaceRequest> places
+    List<@NotNull @Valid CoursePlaceRequest> places,
+
+    @Schema(description = "해당 일자의 항공편 목록 (최대 5개)")
+    @Size(max = 5)
+    List<@NotNull @Valid CourseFlightRequest> flights
 ) {
 }

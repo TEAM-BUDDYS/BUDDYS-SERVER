@@ -11,6 +11,10 @@ public record CourseListRequest(
     @Positive
     Long countryId,
 
+    @Schema(description = "태그 ID", example = "1")
+    @Positive
+    Long tagId,
+
     @Schema(description = "페이지 번호. 0 이상입니다.", example = "0")
     @Min(0)
     Integer page,
@@ -30,6 +34,6 @@ public record CourseListRequest(
   }
 
   public CourseSearchCondition toCondition() {
-    return new CourseSearchCondition(countryId);
+    return new CourseSearchCondition(countryId, tagId);
   }
 }
