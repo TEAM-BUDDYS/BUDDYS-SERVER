@@ -32,6 +32,7 @@ public class UserService {
 
   private static final int REQUIRED_ONBOARDING_TAG_COUNT = 3;
   private static final int MAX_SEARCH_RESULT_SIZE = 100;
+  private static final String LIKE_ESCAPE_CHAR = "\\";
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
@@ -96,7 +97,8 @@ public class UserService {
       return new SliceImpl<>(List.of(), PageRequest.of(page, size), false);
     }
 
-    return userRepository.searchByNicknameContaining(keyword.trim(), userId, PageRequest.of(page, size));
+    String escapedKeyword = escapeLikeWildcards(keyword.trim());
+    return userRepository.searchByNicknameContaining(escapedKeyword, userId, PageRequest.of(page, size));
   }
 
   public UserPostsResult getPosts(Long userId, int page, int size) {
@@ -141,6 +143,13 @@ public class UserService {
     if (page < 0 || size < 1 || size > MAX_SEARCH_RESULT_SIZE) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
+  }
+
+  private String escapeLikeWildcards(String keyword) {
+    return keyword
+        .replace(LIKE_ESCAPE_CHAR, LIKE_ESCAPE_CHAR + LIKE_ESCAPE_CHAR)
+        .replace("%", LIKE_ESCAPE_CHAR + "%")
+        .replace("_", LIKE_ESCAPE_CHAR + "_");
   }
 
   private void validateUserExists(Long userId) {

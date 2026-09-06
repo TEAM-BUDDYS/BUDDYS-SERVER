@@ -3,7 +3,9 @@ package org.sopt.buddys.domain.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -297,6 +299,23 @@ class UserServiceTest {
 
     // then
     assertThat(result.getContent()).containsExactly(other);
+  }
+
+  @DisplayName("키워드에 LIKE 와일드카드 문자가 포함되면 이스케이프하여 저장소에 전달한다")
+  @Test
+  void searchUsersByNickname_escapesLikeWildcardsBeforeDelegating() {
+    // given
+    Long userId = 1L;
+    given(userRepository.searchByNicknameContaining(any(), any(), any()))
+        .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 20), false));
+
+    // when
+    userService.searchUsersByNickname(userId, "버디_1%모임\\", 0, 20);
+
+    // then
+    verify(userRepository).searchByNicknameContaining(
+        eq("버디\\_1\\%모임\\\\"), eq(userId), eq(PageRequest.of(0, 20))
+    );
   }
 
   @DisplayName("page가 음수이면 예외가 발생한다")

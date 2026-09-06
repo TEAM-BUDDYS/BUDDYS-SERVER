@@ -135,6 +135,24 @@ public class UserRepositoryTest {
         .containsExactly("버디a", "버디b", "버디c");
   }
 
+  @DisplayName("이스케이프된 LIKE 와일드카드 문자는 특수문자가 아닌 일반 문자로 매칭된다")
+  @Test
+  void searchByNicknameContaining_escapedWildcards_matchLiterally() {
+    // given
+    User me = createUser("11111", "me@kakao.com", "나");
+    User exactMatch = createUser("22222", "exact@kakao.com", "버디_1");
+    User wildcardVictim = createUser("33333", "wildcard@kakao.com", "버디21");
+    userRepository.saveAll(List.of(me, exactMatch, wildcardVictim));
+
+    // when
+    Slice<User> result = userRepository.searchByNicknameContaining("버디\\_1", me.getId(), PageRequest.of(0, 20));
+
+    // then
+    assertThat(result.getContent())
+        .extracting(User::getNickname)
+        .containsExactly("버디_1");
+  }
+
   private User createUser(String providerId, String email, String nickname) {
     KakaoUserInfo.KakaoProfile profile = new KakaoUserInfo.KakaoProfile(nickname, "http://img.url");
     KakaoUserInfo.KakaoAccount account = new KakaoUserInfo.KakaoAccount(email, profile);

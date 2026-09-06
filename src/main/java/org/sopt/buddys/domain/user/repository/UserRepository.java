@@ -67,7 +67,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
       from User u
       where u.deletedAt is null
         and u.id <> :excludeUserId
-        and lower(u.nickname) like lower(concat('%', :keyword, '%'))
+        and lower(u.nickname) like lower(concat('%', :keyword, '%')) escape '\\'
       order by u.nickname asc
       """)
   Slice<User> searchByNicknameContaining(
