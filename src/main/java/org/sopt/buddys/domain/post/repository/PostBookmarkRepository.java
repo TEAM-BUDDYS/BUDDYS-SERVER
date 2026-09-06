@@ -18,7 +18,6 @@ public interface PostBookmarkRepository extends JpaRepository<PostBookmark, Post
       select pb.post
       from PostBookmark pb
       join fetch pb.post.country
-      join fetch pb.post.city
       where pb.user.id = :userId
         and pb.post.deletedAt is null
       order by pb.createdAt desc, pb.post.id desc

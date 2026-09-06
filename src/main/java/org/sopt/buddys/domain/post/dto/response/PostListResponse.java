@@ -50,9 +50,6 @@ public record PostListResponse(
       @Schema(description = "국가")
       PostSummaryCountryResponse country,
 
-      @Schema(description = "도시")
-      PostSummaryCityResponse city,
-
       @Schema(description = "동행 시작일", example = "2026-07-23")
       LocalDate startDate,
 
@@ -79,7 +76,6 @@ public record PostListResponse(
           post.getTitle(),
           post.getContent(),
           PostSummaryCountryResponse.from(post),
-          PostSummaryCityResponse.from(post),
           post.getStartDate(),
           post.getEndDate(),
           toDurationDays(post.getStartDate(), post.getEndDate()),
@@ -110,26 +106,6 @@ public record PostListResponse(
           post.getCountry().getId(),
           post.getCountry().getName(),
           post.getCountry().getIsoCode()
-      );
-    }
-  }
-
-  public record PostSummaryCityResponse(
-      @Schema(description = "도시 ID", example = "1")
-      Long cityId,
-
-      @Schema(description = "도시 영문 이름", example = "Paris")
-      String name,
-
-      @Schema(description = "도시 한글 이름", example = "파리")
-      String koreanName
-  ) {
-
-    private static PostSummaryCityResponse from(Post post) {
-      return new PostSummaryCityResponse(
-          post.getCity().getId(),
-          post.getCity().getName(),
-          post.getCity().getKoreanName()
       );
     }
   }

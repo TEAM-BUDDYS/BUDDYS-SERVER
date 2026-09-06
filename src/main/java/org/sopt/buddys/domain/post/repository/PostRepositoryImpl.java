@@ -38,7 +38,6 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         .selectFrom(post)
         .distinct()
         .join(post.country).fetchJoin()
-        .join(post.city).fetchJoin()
         .where(toPredicate(condition))
         .orderBy(post.createdAt.desc(), post.id.desc())
         .offset(pageable.getOffset())
