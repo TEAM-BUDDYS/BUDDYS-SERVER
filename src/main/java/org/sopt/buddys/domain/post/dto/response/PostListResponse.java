@@ -50,6 +50,9 @@ public record PostListResponse(
       @Schema(description = "국가")
       PostSummaryCountryResponse country,
 
+      @Schema(description = "도시")
+      PostSummaryCityResponse city,
+
       @Schema(description = "동행 시작일", example = "2026-07-23")
       LocalDate startDate,
 
@@ -63,7 +66,10 @@ public record PostListResponse(
       PostStatus recruitmentStatus,
 
       @Schema(description = "대표 이미지 URL", example = "https://example.com/thumbnail.png")
-      String thumbnailImageUrl
+      String thumbnailImageUrl,
+
+      @Schema(description = "로그인 사용자의 게시글 저장 여부", example = "true")
+      boolean isBookmarked
   ) {
 
     private static PostSummaryResponse from(PostListResult.PostSummaryResult result) {
@@ -73,11 +79,13 @@ public record PostListResponse(
           post.getTitle(),
           post.getContent(),
           PostSummaryCountryResponse.from(post),
+          PostSummaryCityResponse.from(post),
           post.getStartDate(),
           post.getEndDate(),
           toDurationDays(post.getStartDate(), post.getEndDate()),
           post.getStatus(),
-          result.thumbnailImageUrl()
+          result.thumbnailImageUrl(),
+          result.isBookmarked()
       );
     }
 
@@ -91,11 +99,38 @@ public record PostListResponse(
       Long countryId,
 
       @Schema(description = "국가 이름", example = "France")
-      String name
+      String name,
+
+      @Schema(description = "ISO 3166-1 alpha-2 국가 코드. 국기 표시에 사용할 수 있습니다.", example = "FR")
+      String isoCode
   ) {
 
     private static PostSummaryCountryResponse from(Post post) {
-      return new PostSummaryCountryResponse(post.getCountry().getId(), post.getCountry().getName());
+      return new PostSummaryCountryResponse(
+          post.getCountry().getId(),
+          post.getCountry().getName(),
+          post.getCountry().getIsoCode()
+      );
+    }
+  }
+
+  public record PostSummaryCityResponse(
+      @Schema(description = "도시 ID", example = "1")
+      Long cityId,
+
+      @Schema(description = "도시 영문 이름", example = "Paris")
+      String name,
+
+      @Schema(description = "도시 한글 이름", example = "파리")
+      String koreanName
+  ) {
+
+    private static PostSummaryCityResponse from(Post post) {
+      return new PostSummaryCityResponse(
+          post.getCity().getId(),
+          post.getCity().getName(),
+          post.getCity().getKoreanName()
+      );
     }
   }
 }

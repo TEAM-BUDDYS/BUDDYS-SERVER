@@ -135,8 +135,11 @@ class PostControllerTest {
         .andExpect(jsonPath("$.message").value("동행 게시글 목록 조회에 성공했습니다."))
         .andExpect(jsonPath("$.data.content[0].postId").value(post.getId()))
         .andExpect(jsonPath("$.data.content[0].title").value("동행 구해요"))
+        .andExpect(jsonPath("$.data.content[0].country.isoCode").value("KR"))
+        .andExpect(jsonPath("$.data.content[0].city.koreanName").value("서울특별시"))
         .andExpect(jsonPath("$.data.content[0].durationDays").value(4))
         .andExpect(jsonPath("$.data.content[0].recruitmentStatus").value("RECRUITING"))
+        .andExpect(jsonPath("$.data.content[0].isBookmarked").value(false))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.size").value(20))
         .andExpect(jsonPath("$.data.hasNext").value(false));
@@ -149,6 +152,107 @@ class PostControllerTest {
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("GLB-E002"));
+  }
+
+  @DisplayName("저장한 게시글만 최신 저장순으로 조회하고 삭제된 게시글은 제외한다")
+  @Test
+  void getBookmarkedPosts_returnsLatestBookmarksExcludingDeletedPosts() throws Exception {
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른 사용자"));
+    Post older = createPost(other);
+    Post newer = postRepository.save(new Post(
+        other,
+        older.getCountry(),
+        older.getCity(),
+        "최근에 저장한 게시글",
+        "최근 게시글 내용",
+        LocalDate.now().plusDays(20),
+        LocalDate.now().plusDays(22),
+        CompanionType.PARTIAL_TRIP,
+        RecruitmentCountType.THREE
+    ));
+    Post deleted = postRepository.save(new Post(
+        other,
+        older.getCountry(),
+        older.getCity(),
+        "삭제된 게시글",
+        "목록에서 제외되어야 합니다.",
+        LocalDate.now().plusDays(30),
+        LocalDate.now().plusDays(31),
+        CompanionType.FULL_TRIP,
+        RecruitmentCountType.TWO
+    ));
+    deleted.softDelete(LocalDateTime.now());
+    postRepository.saveAndFlush(deleted);
+    postImageRepository.saveAndFlush(new PostImage(newer, "https://example.com/newer.png", (short) 0));
+
+    postBookmarkRepository.saveAndFlush(new PostBookmark(viewer, older));
+    postBookmarkRepository.saveAndFlush(new PostBookmark(viewer, newer));
+    postBookmarkRepository.saveAndFlush(new PostBookmark(viewer, deleted));
+    postBookmarkRepository.saveAndFlush(new PostBookmark(other, older));
+    jdbcTemplate.update(
+        "UPDATE post_bookmark SET created_at = ? WHERE user_id = ? AND post_id = ?",
+        LocalDateTime.of(2026, 8, 1, 10, 0), viewer.getId(), older.getId()
+    );
+    jdbcTemplate.update(
+        "UPDATE post_bookmark SET created_at = ? WHERE user_id = ? AND post_id = ?",
+        LocalDateTime.of(2026, 8, 2, 10, 0), viewer.getId(), newer.getId()
+    );
+
+    mockMvc.perform(get("/api/v1/posts/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "0")
+            .param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("POST-S008"))
+        .andExpect(jsonPath("$.message").value("저장한 게시글 목록 조회에 성공했습니다."))
+        .andExpect(jsonPath("$.data.content.length()").value(1))
+        .andExpect(jsonPath("$.data.content[0].postId").value(newer.getId()))
+        .andExpect(jsonPath("$.data.content[0].title").value("최근에 저장한 게시글"))
+        .andExpect(jsonPath("$.data.content[0].content").value("최근 게시글 내용"))
+        .andExpect(jsonPath("$.data.content[0].country.name").value("대한민국"))
+        .andExpect(jsonPath("$.data.content[0].country.isoCode").value("KR"))
+        .andExpect(jsonPath("$.data.content[0].city.name").value("Seoul"))
+        .andExpect(jsonPath("$.data.content[0].city.koreanName").value("서울특별시"))
+        .andExpect(jsonPath("$.data.content[0].startDate").value(LocalDate.now().plusDays(20).toString()))
+        .andExpect(jsonPath("$.data.content[0].endDate").value(LocalDate.now().plusDays(22).toString()))
+        .andExpect(jsonPath("$.data.content[0].durationDays").value(3))
+        .andExpect(jsonPath("$.data.content[0].recruitmentStatus").value("RECRUITING"))
+        .andExpect(jsonPath("$.data.content[0].thumbnailImageUrl").value("https://example.com/newer.png"))
+        .andExpect(jsonPath("$.data.content[0].isBookmarked").value(true))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(1))
+        .andExpect(jsonPath("$.data.hasNext").value(true));
+
+    mockMvc.perform(get("/api/v1/posts/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "1")
+            .param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.content.length()").value(1))
+        .andExpect(jsonPath("$.data.content[0].postId").value(older.getId()))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
+  @DisplayName("저장한 게시글 목록은 인증과 페이지 범위를 검증한다")
+  @Test
+  void getBookmarkedPosts_validatesAuthenticationAndPagination() throws Exception {
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    mockMvc.perform(get("/api/v1/posts/bookmarks"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("GLB-E002"));
+    mockMvc.perform(get("/api/v1/posts/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("page", "-1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+    mockMvc.perform(get("/api/v1/posts/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("size", "101"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   @DisplayName("동행 게시글 목록 조회 시 page가 음수이면 실패한다")
