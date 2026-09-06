@@ -135,9 +135,9 @@ public class UserRepositoryTest {
         .containsExactly("버디a", "버디b", "버디c");
   }
 
-  @DisplayName("이스케이프된 LIKE 와일드카드 문자는 특수문자가 아닌 일반 문자로 매칭된다")
+  @DisplayName("이스케이프된 언더스코어(_)는 단일 문자 와일드카드가 아닌 일반 문자로 매칭된다")
   @Test
-  void searchByNicknameContaining_escapedWildcards_matchLiterally() {
+  void searchByNicknameContaining_escapedUnderscore_matchesLiterally() {
     // given
     User me = createUser("11111", "me@kakao.com", "나");
     User exactMatch = createUser("22222", "exact@kakao.com", "버디_1");
@@ -151,6 +151,42 @@ public class UserRepositoryTest {
     assertThat(result.getContent())
         .extracting(User::getNickname)
         .containsExactly("버디_1");
+  }
+
+  @DisplayName("이스케이프된 퍼센트(%)는 임의 문자열 와일드카드가 아닌 일반 문자로 매칭된다")
+  @Test
+  void searchByNicknameContaining_escapedPercent_matchesLiterally() {
+    // given
+    User me = createUser("11111", "me@kakao.com", "나");
+    User exactMatch = createUser("22222", "exact@kakao.com", "버디%1");
+    User wildcardVictim = createUser("33333", "wildcard@kakao.com", "버디아무거나1");
+    userRepository.saveAll(List.of(me, exactMatch, wildcardVictim));
+
+    // when
+    Slice<User> result = userRepository.searchByNicknameContaining("버디\\%1", me.getId(), PageRequest.of(0, 20));
+
+    // then
+    assertThat(result.getContent())
+        .extracting(User::getNickname)
+        .containsExactly("버디%1");
+  }
+
+  @DisplayName("이스케이프된 백슬래시(\\)는 이스케이프 문자가 아닌 일반 문자로 매칭된다")
+  @Test
+  void searchByNicknameContaining_escapedBackslash_matchesLiterally() {
+    // given
+    User me = createUser("11111", "me@kakao.com", "나");
+    User exactMatch = createUser("22222", "exact@kakao.com", "버디\\1");
+    User wildcardVictim = createUser("33333", "wildcard@kakao.com", "버디1");
+    userRepository.saveAll(List.of(me, exactMatch, wildcardVictim));
+
+    // when
+    Slice<User> result = userRepository.searchByNicknameContaining("버디\\\\1", me.getId(), PageRequest.of(0, 20));
+
+    // then
+    assertThat(result.getContent())
+        .extracting(User::getNickname)
+        .containsExactly("버디\\1");
   }
 
   private User createUser(String providerId, String email, String nickname) {
