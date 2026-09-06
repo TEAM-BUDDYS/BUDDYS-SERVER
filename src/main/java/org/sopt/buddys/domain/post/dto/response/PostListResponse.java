@@ -95,17 +95,13 @@ public record PostListResponse(
       Long countryId,
 
       @Schema(description = "국가 이름", example = "France")
-      String name,
-
-      @Schema(description = "ISO 3166-1 alpha-2 국가 코드. 국기 표시에 사용할 수 있습니다.", example = "FR")
-      String isoCode
+      String name
   ) {
 
     private static PostSummaryCountryResponse from(Post post) {
       return new PostSummaryCountryResponse(
           post.getCountry().getId(),
-          post.getCountry().getName(),
-          post.getCountry().getIsoCode()
+          post.getCountry().getName()
       );
     }
   }
