@@ -56,7 +56,7 @@ class CourseImageRepositoryTest extends IntegrationTestSupport {
   }
 
   private Course saveCourse(User author) {
-    return courseRepository.save(new Course(author, "코스", null, null,
+    return courseRepository.save(new Course(author, "코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5)));
   }
 
