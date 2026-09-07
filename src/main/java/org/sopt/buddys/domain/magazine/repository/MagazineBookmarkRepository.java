@@ -2,13 +2,24 @@ package org.sopt.buddys.domain.magazine.repository;
 
 import java.util.Collection;
 import java.util.List;
+import org.sopt.buddys.domain.magazine.entity.Magazine;
 import org.sopt.buddys.domain.magazine.entity.MagazineBookmark;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface MagazineBookmarkRepository extends JpaRepository<MagazineBookmark, Long> {
+
+  @Query("""
+      select b.magazine
+      from MagazineBookmark b
+      where b.user.id = :userId
+      order by b.createdAt desc, b.id desc
+      """)
+  Slice<Magazine> findBookmarkedMagazinesByUserId(@Param("userId") Long userId, Pageable pageable);
 
   @Modifying
   @Query(value = """

@@ -15,7 +15,8 @@ public enum PostSuccessCode implements SuccessCode {
   POST_UPDATED("POST-S004", HttpStatus.OK, "게시글 수정에 성공했습니다."),
   POST_DELETED("POST-S005", HttpStatus.OK, "게시글 삭제에 성공했습니다."),
   POST_BOOKMARKED("POST-S006", HttpStatus.OK, "게시글 저장에 성공했습니다."),
-  POST_BOOKMARK_REMOVED("POST-S007", HttpStatus.OK, "게시글 저장 취소에 성공했습니다.");
+  POST_BOOKMARK_REMOVED("POST-S007", HttpStatus.OK, "게시글 저장 취소에 성공했습니다."),
+  POST_BOOKMARK_LIST_FOUND("POST-S008", HttpStatus.OK, "저장한 게시글 목록 조회에 성공했습니다.");
 
   private final String code;
   private final HttpStatus httpStatus;

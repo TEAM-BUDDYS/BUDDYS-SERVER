@@ -63,7 +63,10 @@ public record PostListResponse(
       PostStatus recruitmentStatus,
 
       @Schema(description = "대표 이미지 URL", example = "https://example.com/thumbnail.png")
-      String thumbnailImageUrl
+      String thumbnailImageUrl,
+
+      @Schema(description = "로그인 사용자의 게시글 저장 여부", example = "true")
+      boolean isBookmarked
   ) {
 
     private static PostSummaryResponse from(PostListResult.PostSummaryResult result) {
@@ -77,7 +80,8 @@ public record PostListResponse(
           post.getEndDate(),
           toDurationDays(post.getStartDate(), post.getEndDate()),
           post.getStatus(),
-          result.thumbnailImageUrl()
+          result.thumbnailImageUrl(),
+          result.isBookmarked()
       );
     }
 
@@ -95,7 +99,10 @@ public record PostListResponse(
   ) {
 
     private static PostSummaryCountryResponse from(Post post) {
-      return new PostSummaryCountryResponse(post.getCountry().getId(), post.getCountry().getName());
+      return new PostSummaryCountryResponse(
+          post.getCountry().getId(),
+          post.getCountry().getName()
+      );
     }
   }
 }
