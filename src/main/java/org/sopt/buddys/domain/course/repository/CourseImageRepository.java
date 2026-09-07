@@ -26,6 +26,16 @@ public interface CourseImageRepository extends JpaRepository<CourseImage, Long> 
       """)
   List<CourseImageUrlProjection> findImageUrlsByCourseIdIn(@Param("courseIds") Collection<Long> courseIds);
 
+  @Query("""
+      select ci.courseDay.course.id as courseId, ci.imageUrl as imageUrl
+      from CourseImage ci
+      where ci.courseDay.course.id in :courseIds
+        and ci.courseDay.dayNumber = 1
+        and ci.orderNo = 0
+      """)
+  List<CourseImageUrlProjection> findThumbnailImageUrlsByCourseIds(
+      @Param("courseIds") Collection<Long> courseIds);
+
   @Modifying
   @Query("""
       delete from CourseImage ci
