@@ -1021,6 +1021,120 @@ class PostControllerTest {
             .value(org.hamcrest.Matchers.containsInAnyOrder("postId", "isBookmarked")));
   }
 
+  @DisplayName("마감 임박 게시글은 오늘 모집 중인 활성 게시글만 원문과 부가 정보를 포함해 반환한다")
+  @Test
+  void getClosingSoonPosts_returnsEligiblePostsWithResponseFields() throws Exception {
+    LocalDate today = LocalDate.now();
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("France", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Country country = countryRepository.findById(countryId).orElseThrow();
+    City city = cityRepository.findById(cityId).orElseThrow();
+
+    Post savedPost = createPost(author, country, city, "저장한 오늘 글", "저장한 글 본문", today, today.plusDays(3));
+    Post unsavedPost = createPost(author, country, city, "저장하지 않은 오늘 글", "저장하지 않은 글 본문", today, today);
+    createPost(author, country, city, "어제 글", "본문", today.minusDays(1), today);
+    createPost(author, country, city, "내일 글", "본문", today.plusDays(1), today.plusDays(2));
+    Post completedPost = createPost(author, country, city, "모집 완료 글", "본문", today, today.plusDays(1));
+    completedPost.updateStatus(PostStatus.COMPLETED);
+    postRepository.saveAndFlush(completedPost);
+    Post deletedPost = createPost(author, country, city, "삭제 글", "본문", today, today.plusDays(1));
+    deletedPost.softDelete(LocalDateTime.now());
+    postRepository.saveAndFlush(deletedPost);
+    postImageRepository.saveAndFlush(new PostImage(savedPost, "https://example.com/first.jpg", (short) 0));
+    postImageRepository.saveAndFlush(new PostImage(savedPost, "https://example.com/second.jpg", (short) 1));
+    postBookmarkRepository.saveAndFlush(new PostBookmark(viewer, savedPost));
+
+    mockMvc.perform(get("/api/v1/posts/closing-soon")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("GLB-S001"))
+        .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
+        .andExpect(jsonPath("$.data.content.length()").value(2))
+        .andExpect(jsonPath("$.data.content[0].postId").value(savedPost.getId()))
+        .andExpect(jsonPath("$.data.content[0].country.countryId").value(countryId))
+        .andExpect(jsonPath("$.data.content[0].country.name").value("France"))
+        .andExpect(jsonPath("$.data.content[0].title").value("저장한 오늘 글"))
+        .andExpect(jsonPath("$.data.content[0].content").value("저장한 글 본문"))
+        .andExpect(jsonPath("$.data.content[0].startDate").value(today.toString()))
+        .andExpect(jsonPath("$.data.content[0].endDate").value(today.plusDays(3).toString()))
+        .andExpect(jsonPath("$.data.content[0].durationDays").value(4))
+        .andExpect(jsonPath("$.data.content[0].thumbnailImageUrl")
+            .value("https://example.com/first.jpg"))
+        .andExpect(jsonPath("$.data.content[0].isSaved").value(true))
+        .andExpect(jsonPath("$.data.content[1].postId").value(unsavedPost.getId()))
+        .andExpect(jsonPath("$.data.content[1].durationDays").value(1))
+        .andExpect(jsonPath("$.data.content[1].thumbnailImageUrl").value((Object) null))
+        .andExpect(jsonPath("$.data.content[1].isSaved").value(false));
+  }
+
+  @DisplayName("마감 임박 게시글은 생성일이 오래된 순으로 최대 4개 반환한다")
+  @Test
+  void getClosingSoonPosts_returnsOldestFourPosts() throws Exception {
+    LocalDate today = LocalDate.now();
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("France", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Country country = countryRepository.findById(countryId).orElseThrow();
+    City city = cityRepository.findById(cityId).orElseThrow();
+
+    for (int index = 0; index < 5; index++) {
+      Post post = createPost(author, country, city, "게시글 " + index, "본문", today, today);
+      jdbcTemplate.update(
+          "UPDATE post SET created_at = ? WHERE id = ?",
+          LocalDateTime.of(2026, 1, 1, 0, 0).plusDays(index),
+          post.getId()
+      );
+    }
+    entityManager.clear();
+
+    mockMvc.perform(get("/api/v1/posts/closing-soon")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.content.length()").value(4))
+        .andExpect(jsonPath("$.data.content[0].title").value("게시글 0"))
+        .andExpect(jsonPath("$.data.content[1].title").value("게시글 1"))
+        .andExpect(jsonPath("$.data.content[2].title").value("게시글 2"))
+        .andExpect(jsonPath("$.data.content[3].title").value("게시글 3"));
+  }
+
+  @DisplayName("마감 임박 게시글이 없으면 빈 목록을 반환한다")
+  @Test
+  void getClosingSoonPosts_noResult_returnsEmptyContent() throws Exception {
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+
+    mockMvc.perform(get("/api/v1/posts/closing-soon")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("GLB-S001"))
+        .andExpect(jsonPath("$.data.content").isEmpty());
+  }
+
+  @DisplayName("로그인하지 않은 사용자는 마감 임박 게시글을 조회할 수 없다")
+  @Test
+  void getClosingSoonPosts_unauthenticatedUser_returnsUnauthorized() throws Exception {
+    mockMvc.perform(get("/api/v1/posts/closing-soon"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E002"))
+        .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+  }
+
+  @DisplayName("마감 임박 게시글 조회 OpenAPI에는 요청값이 없고 공통 응답이 문서화된다")
+  @Test
+  void getClosingSoonPosts_openApiContract_hasNoInputAndDocumentsResponses() throws Exception {
+    mockMvc.perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/closing-soon'].get.parameters").doesNotExist())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/closing-soon'].get.requestBody").doesNotExist())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/closing-soon'].get.responses['200']").exists())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/closing-soon'].get.responses['401']").exists())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/closing-soon'].get.responses['500']").exists());
+  }
+
   private Post createPost(User author) {
     Long countryId = insertCountry("대한민국", "KR");
     Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
@@ -1035,6 +1149,28 @@ class PostControllerTest {
         "함께 여행하실 분을 구합니다.",
         LocalDate.now().plusDays(10),
         LocalDate.now().plusDays(13),
+        CompanionType.FULL_TRIP,
+        RecruitmentCountType.TWO
+    ));
+  }
+
+  private Post createPost(
+      User author,
+      Country country,
+      City city,
+      String title,
+      String content,
+      LocalDate startDate,
+      LocalDate endDate
+  ) {
+    return postRepository.saveAndFlush(new Post(
+        author,
+        country,
+        city,
+        title,
+        content,
+        startDate,
+        endDate,
         CompanionType.FULL_TRIP,
         RecruitmentCountType.TWO
     ));

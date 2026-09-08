@@ -15,6 +15,7 @@ import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
 import org.sopt.buddys.domain.post.dto.request.PostListRequest;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostStatusRequest;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostRequest;
+import org.sopt.buddys.domain.post.dto.response.ClosingSoonPostResponse;
 import org.sopt.buddys.domain.post.dto.response.PostListResponse;
 import org.sopt.buddys.domain.post.dto.response.PostBookmarkResponse;
 import org.sopt.buddys.domain.post.dto.response.PostBookmarkSuccessResponse;
@@ -72,6 +73,27 @@ public class PostController {
         PostSuccessCode.POST_LIST_FOUND,
         PostListResponse.from(
             postService.getPosts(userId, request.toCondition(), request.pageOrDefault(), request.sizeOrDefault()))
+    );
+  }
+
+  @Operation(
+      summary = "마감 임박 동행 게시물 조회",
+      description = "동행 시작일이 오늘이고 모집 상태가 RECRUITING인 활성 게시물을 "
+          + "생성일 기준 오래된 순(createdAt ASC)으로 최대 4개 조회합니다. "
+          + "인증이 필요하며 조회 결과가 없어도 빈 목록과 함께 200 응답을 반환합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "마감 임박 게시글 조회 성공. 결과가 없으면 빈 목록 반환")
+  })
+  @CommonErrorResponses
+  @GetMapping("/closing-soon")
+  public BaseResponse<ClosingSoonPostResponse> getClosingSoonPosts(
+      @Parameter(hidden = true)
+      @LoginUser Long userId
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        ClosingSoonPostResponse.from(postService.getClosingSoonPosts(userId))
     );
   }
 
