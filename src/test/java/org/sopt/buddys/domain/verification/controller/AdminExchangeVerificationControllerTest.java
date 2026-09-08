@@ -69,7 +69,7 @@ class AdminExchangeVerificationControllerTest {
         .andExpect(jsonPath("$.data.content[0].verificationId").value(10))
         .andExpect(jsonPath("$.data.content[0].userId").value(2))
         .andExpect(jsonPath("$.data.content[0].nickname").value("지현"))
-        .andExpect(jsonPath("$.data.content[0].submittedAt").value("2026-08-30T14:20:00"))
+        .andExpect(jsonPath("$.data.content[0].submittedAt").value("2026-08-30T05:20:00Z"))
         .andExpect(jsonPath("$.data.content[0].status").value("PENDING"))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.size").value(20))
