@@ -61,7 +61,7 @@ class ExchangeDocumentUploadServiceTest {
     // then
     assertThat(result.uploadUrl()).isEqualTo("upload-url");
     assertThat(result.documentKey()).matches(
-        "^exchange/" + USER_ID + "/[0-9a-fA-F-]{36}" + expectedExtension + "$"
+        "^exchange-verifications/" + USER_ID + "/[0-9a-fA-F-]{36}" + expectedExtension + "$"
     );
 
     ArgumentCaptor<String> contentTypeCaptor = ArgumentCaptor.forClass(String.class);
