@@ -152,7 +152,7 @@ class UserServiceTest {
   void getCourses_returnsCourses() {
     // given
     Long userId = 1L;
-    Course course = createCourse(userId, 10L, "https://example.com/thumbnail.jpg");
+    Course course = createCourse(userId, 10L);
     PageRequest pageable = PageRequest.of(0, 12);
 
     given(userRepository.existsByIdAndDeletedAtIsNull(userId)).willReturn(true);
@@ -185,7 +185,7 @@ class UserServiceTest {
   void getPublicCourses_deletedUser_returnsCourses() {
     // given
     Long userId = 1L;
-    Course course = createCourse(userId, 10L, null);
+    Course course = createCourse(userId, 10L);
     PageRequest pageable = PageRequest.of(0, 12);
 
     given(userRepository.existsById(userId)).willReturn(true);
@@ -431,12 +431,11 @@ class UserServiceTest {
         .build();
   }
 
-  private Course createCourse(Long authorId, Long courseId, String thumbnailImageUrl) {
+  private Course createCourse(Long authorId, Long courseId) {
     Course course = new Course(
         baseUserBuilder(authorId).build(),
         "파리 미술관 코스",
         null,
-        thumbnailImageUrl,
         LocalDate.of(2026, 9, 1),
         LocalDate.of(2026, 9, 5)
     );
