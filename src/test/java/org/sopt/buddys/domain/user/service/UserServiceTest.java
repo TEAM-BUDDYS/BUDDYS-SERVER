@@ -3,7 +3,9 @@ package org.sopt.buddys.domain.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
@@ -17,6 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.repository.CourseImageRepository;
+import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
@@ -29,14 +34,19 @@ import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.event.UserWithdrawnEvent;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
+import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagResult;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,6 +66,12 @@ class UserServiceTest {
 
   @Mock
   private PostImageRepository postImageRepository;
+
+  @Mock
+  private CourseRepository courseRepository;
+
+  @Mock
+  private CourseImageRepository courseImageRepository;
 
   @Mock
   private RefreshTokenRepository refreshTokenRepository;
@@ -198,6 +214,70 @@ class UserServiceTest {
     assertThat(result.hasNext()).isFalse();
   }
 
+  @DisplayName("내가 작성한 코스 목록을 Slice로 조회한다")
+  @Test
+  void getCourses_returnsCourses() {
+    // given
+    Long userId = 1L;
+    Course course = createCourse(userId, 10L, "https://example.com/thumbnail.jpg");
+    PageRequest pageable = PageRequest.of(0, 12);
+
+    given(userRepository.existsByIdAndDeletedAtIsNull(userId)).willReturn(true);
+    given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
+        .willReturn(new SliceImpl<>(List.of(course), pageable, true));
+    given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
+        .willReturn(List.of(
+            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg")
+        ));
+
+    // when
+    UserCoursesResult result = userService.getCourses(userId, 0, 12);
+
+    // then
+    assertThat(result.courses()).hasSize(1);
+    assertThat(result.courses().get(0).courseId()).isEqualTo(course.getId());
+    assertThat(result.courses().get(0).thumbnailImageUrl())
+        .isEqualTo("https://example.com/day1-first.jpg");
+    assertThat(result.page()).isZero();
+    assertThat(result.size()).isEqualTo(12);
+    assertThat(result.hasNext()).isTrue();
+    then(courseRepository).should().findByAuthorIdAndDeletedAtIsNull(
+        userId,
+        PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
+    );
+  }
+
+  @DisplayName("타 유저 코스 조회는 삭제된 사용자가 작성한 코스도 조회한다")
+  @Test
+  void getPublicCourses_deletedUser_returnsCourses() {
+    // given
+    Long userId = 1L;
+    Course course = createCourse(userId, 10L, null);
+    PageRequest pageable = PageRequest.of(0, 12);
+
+    given(userRepository.existsById(userId)).willReturn(true);
+    given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
+        .willReturn(new SliceImpl<>(List.of(course), pageable, false));
+    given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
+        .willReturn(List.of(
+            new TestCourseImageUrlProjection(course.getId(), "https://example.com/day1-first.jpg")
+        ));
+
+    // when
+    UserCoursesResult result = userService.getPublicCourses(userId, 0, 12);
+
+    // then
+    assertThat(result.courses()).hasSize(1);
+    assertThat(result.courses().get(0).courseId()).isEqualTo(course.getId());
+    assertThat(result.courses().get(0).thumbnailImageUrl())
+        .isEqualTo("https://example.com/day1-first.jpg");
+    assertThat(result.hasNext()).isFalse();
+    then(courseRepository).should().findByAuthorIdAndDeletedAtIsNull(
+        userId,
+        PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
+    );
+  }
+
   @DisplayName("성별이 없으면 온보딩이 완료되지 않은 것으로 판단한다")
   @Test
   void isOnboardingCompleted_genderMissing_returnsFalse() {
@@ -321,11 +401,114 @@ class UserServiceTest {
         .isEqualTo(UserErrorCode.USER_NOT_FOUND);
   }
 
+  @DisplayName("키워드가 없으면 저장소를 조회하지 않고 빈 결과를 반환한다")
+  @Test
+  void searchUsersByNickname_nullKeyword_returnsEmpty() {
+    // given
+    Long userId = 1L;
+
+    // when
+    Slice<User> result = userService.searchUsersByNickname(userId, null, 0, 20);
+
+    // then
+    assertThat(result.getContent()).isEmpty();
+    assertThat(result.hasNext()).isFalse();
+  }
+
+  @DisplayName("키워드가 공백 문자만으로 이루어지면 빈 결과를 반환한다")
+  @Test
+  void searchUsersByNickname_blankKeyword_returnsEmpty() {
+    // given
+    Long userId = 1L;
+
+    // when
+    Slice<User> result = userService.searchUsersByNickname(userId, "   ", 0, 20);
+
+    // then
+    assertThat(result.getContent()).isEmpty();
+  }
+
+  @DisplayName("키워드가 있으면 앞뒤 공백을 제거하고 본인을 제외해 저장소에서 검색한다")
+  @Test
+  void searchUsersByNickname_validKeyword_delegatesToRepository() {
+    // given
+    Long userId = 1L;
+    User other = baseUserBuilder(2L).nickname("버디").build();
+    given(userRepository.searchByNicknameContaining("버디", userId, PageRequest.of(0, 20)))
+        .willReturn(new SliceImpl<>(List.of(other), PageRequest.of(0, 20), false));
+
+    // when
+    Slice<User> result = userService.searchUsersByNickname(userId, "  버디  ", 0, 20);
+
+    // then
+    assertThat(result.getContent()).containsExactly(other);
+  }
+
+  @DisplayName("키워드에 LIKE 와일드카드 문자가 포함되면 이스케이프하여 저장소에 전달한다")
+  @Test
+  void searchUsersByNickname_escapesLikeWildcardsBeforeDelegating() {
+    // given
+    Long userId = 1L;
+    given(userRepository.searchByNicknameContaining(any(), any(), any()))
+        .willReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 20), false));
+
+    // when
+    userService.searchUsersByNickname(userId, "버디_1%모임\\", 0, 20);
+
+    // then
+    verify(userRepository).searchByNicknameContaining(
+        eq("버디\\_1\\%모임\\\\"), eq(userId), eq(PageRequest.of(0, 20))
+    );
+  }
+
+  @DisplayName("page가 음수이면 예외가 발생한다")
+  @Test
+  void searchUsersByNickname_negativePage_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> userService.searchUsersByNickname(1L, "버디", -1, 20))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+  }
+
+  @DisplayName("size가 0 이하이면 예외가 발생한다")
+  @Test
+  void searchUsersByNickname_zeroSize_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> userService.searchUsersByNickname(1L, "버디", 0, 0))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+  }
+
+  @DisplayName("size가 최대 허용치를 초과하면 예외가 발생한다")
+  @Test
+  void searchUsersByNickname_sizeExceedsMax_throwsException() {
+    // when, then
+    assertThatThrownBy(() -> userService.searchUsersByNickname(1L, "버디", 0, 101))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+  }
+
   private User createOnboardedProfileUser(Long userId) {
     return baseUserBuilder(userId)
         .gender(Gender.FEMALE)
         .birthDate(LocalDate.of(2000, 1, 1))
         .build();
+  }
+
+  private Course createCourse(Long authorId, Long courseId, String thumbnailImageUrl) {
+    Course course = new Course(
+        baseUserBuilder(authorId).build(),
+        "파리 미술관 코스",
+        null,
+        thumbnailImageUrl,
+        LocalDate.of(2026, 9, 1),
+        LocalDate.of(2026, 9, 5)
+    );
+    ReflectionTestUtils.setField(course, "id", courseId);
+    return course;
   }
 
   private User createUser(Long id, boolean universityVerified, boolean exchangeVerified) {
@@ -368,6 +551,22 @@ class UserServiceTest {
     @Override
     public int getDisplayOrder() {
       return displayOrder;
+    }
+  }
+
+  private record TestCourseImageUrlProjection(
+      Long courseId,
+      String imageUrl
+  ) implements CourseImageRepository.CourseImageUrlProjection {
+
+    @Override
+    public Long getCourseId() {
+      return courseId;
+    }
+
+    @Override
+    public String getImageUrl() {
+      return imageUrl;
     }
   }
 }

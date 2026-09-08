@@ -15,14 +15,12 @@ public record CourseDetailResult(
     boolean isBookmarked,
     String title,
     String content,
-    String thumbnailImageUrl,
     List<CountryResult> countries,
     List<CityResult> cities,
     LocalDate startDate,
     LocalDate endDate,
     List<TagResult> tags,
     List<CompanionResult> companions,
-    List<FlightResult> flights,
     List<DayResult> days,
     Long viewCount,
     Long commentCount,
@@ -35,7 +33,6 @@ public record CourseDetailResult(
     cities = List.copyOf(cities);
     tags = List.copyOf(tags);
     companions = List.copyOf(companions);
-    flights = List.copyOf(flights);
     days = List.copyOf(days);
   }
 
@@ -91,12 +88,14 @@ public record CourseDetailResult(
       Short dayNumber,
       LocalDate date,
       List<String> imageUrls,
-      List<PlaceResult> places
+      List<PlaceResult> places,
+      List<FlightResult> flights
   ) {
 
     public DayResult {
       imageUrls = List.copyOf(imageUrls);
       places = List.copyOf(places);
+      flights = List.copyOf(flights);
     }
   }
 

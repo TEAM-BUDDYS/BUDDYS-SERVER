@@ -60,7 +60,7 @@ public class CourseController {
 
   private final CourseService courseService;
 
-  @Operation(summary = "코스 목록 조회", description = "여행 코스 게시글 목록을 국가로 필터링하여 조회합니다.")
+  @Operation(summary = "코스 목록 조회", description = "여행 코스 게시글 목록을 국가와 태그로 필터링하여 조회합니다.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "조회 성공")
   })
@@ -330,13 +330,11 @@ public class CourseController {
         request.cityIds(),
         request.title(),
         request.content(),
-        request.thumbnailImageUrl(),
         request.startDate(),
         request.endDate(),
         request.tagIds(),
         request.companionUserIds(),
-        request.days() == null ? null : request.days().stream().map(this::toCommand).toList(),
-        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
+        request.days() == null ? null : request.days().stream().map(this::toCommand).toList()
     );
   }
 
@@ -346,12 +344,10 @@ public class CourseController {
         request.cityIds(),
         request.title(),
         request.content(),
-        request.thumbnailImageUrl(),
         request.startDate(),
         request.endDate(),
         request.tagIds(),
-        request.days() == null ? null : request.days().stream().map(this::toCommand).toList(),
-        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
+        request.days() == null ? null : request.days().stream().map(this::toCommand).toList()
     );
   }
 
@@ -360,7 +356,8 @@ public class CourseController {
         request.dayNumber(),
         request.date(),
         request.imageUrls(),
-        request.places() == null ? null : request.places().stream().map(this::toCommand).toList()
+        request.places() == null ? null : request.places().stream().map(this::toCommand).toList(),
+        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
     );
   }
 

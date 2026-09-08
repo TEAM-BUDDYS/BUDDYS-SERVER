@@ -39,7 +39,7 @@ public class ImageController {
           - presigned URL의 유효 시간은 발급 후 5분입니다.
           - 지원하는 Content-Type: image/jpeg, image/png, image/webp
           - 응답의 uploadUrl로 이미지 바이너리를 PUT 요청하면 업로드가 완료되며,
-            imageUrl은 업로드 완료 후 게시글/프로필 등록 시 사용하는 최종 이미지 URL입니다.
+            imageUrl은 업로드 완료 후 게시글/프로필/코스 등록 시 사용하는 최종 이미지 URL입니다.
           """
   )
   @ApiResponses({
