@@ -21,11 +21,13 @@ import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostAgeCondition;
+import org.sopt.buddys.domain.post.entity.PostBookmarkId;
 import org.sopt.buddys.domain.post.entity.PostGenderCondition;
 import org.sopt.buddys.domain.post.entity.PostImage;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.PostTag;
 import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
+import org.sopt.buddys.domain.post.repository.PostBookmarkRepository;
 import org.sopt.buddys.domain.post.repository.PostGenderConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository.PostThumbnailProjection;
@@ -35,6 +37,7 @@ import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
 import org.sopt.buddys.domain.post.service.command.UpdatePostCommand;
 import org.sopt.buddys.domain.post.service.result.PostDetailResult;
+import org.sopt.buddys.domain.post.service.result.PostBookmarkResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult.PostSummaryResult;
 import org.sopt.buddys.domain.tag.entity.Tag;
@@ -58,6 +61,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostService {
 
   private final PostRepository postRepository;
+  private final PostBookmarkRepository postBookmarkRepository;
   private final PostAgeConditionRepository postAgeConditionRepository;
   private final PostGenderConditionRepository postGenderConditionRepository;
   private final PostTagRepository postTagRepository;
@@ -199,6 +203,27 @@ public class PostService {
     return post;
   }
 
+  @Transactional
+  public PostBookmarkResult bookmarkPost(Long userId, Long postId) {
+    postRepository.findByIdAndDeletedAtIsNull(postId)
+        .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
+    userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    postBookmarkRepository.insertOrKeep(userId, postId);
+    return new PostBookmarkResult(postId, true);
+  }
+
+  @Transactional
+  public PostBookmarkResult removePostBookmark(Long userId, Long postId) {
+    if (!postRepository.existsById(postId)) {
+      throw new BaseException(PostErrorCode.POST_NOT_FOUND);
+    }
+
+    postBookmarkRepository.deleteAllByIdInBatch(List.of(new PostBookmarkId(userId, postId)));
+    return new PostBookmarkResult(postId, false);
+  }
+
   public PostListResult getPosts(Long userId, PostSearchCondition condition, int page, int size) {
     validatePageRequest(page, size);
     validateSearchDateRange(condition);
@@ -224,6 +249,7 @@ public class PostService {
         post.getId(),
         toAuthorResult(post.getAuthor()),
         post.getAuthor().getId().equals(userId),
+        postBookmarkRepository.existsById(new PostBookmarkId(userId, post.getId())),
         post.getStatus(),
         post.getTitle(),
         postImageRepository.findImageUrlsByPostId(post.getId()),

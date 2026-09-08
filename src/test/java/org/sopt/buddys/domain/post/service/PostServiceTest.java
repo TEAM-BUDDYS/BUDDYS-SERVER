@@ -18,9 +18,11 @@ import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
+import org.sopt.buddys.domain.post.entity.PostBookmark;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
+import org.sopt.buddys.domain.post.repository.PostBookmarkRepository;
 import org.sopt.buddys.domain.post.repository.PostGenderConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
@@ -72,6 +74,9 @@ class PostServiceTest {
 
   @Autowired
   private PostImageRepository postImageRepository;
+
+  @Autowired
+  private PostBookmarkRepository postBookmarkRepository;
 
   @Autowired
   private UserRepository userRepository;
@@ -318,6 +323,7 @@ class PostServiceTest {
     assertThat(response.author().ageRange()).isEqualTo("20대");
     assertThat(response.author().gender()).isEqualTo(Gender.FEMALE);
     assertThat(response.isMine()).isTrue();
+    assertThat(response.isBookmarked()).isFalse();
     assertThat(response.recruitmentStatus()).isEqualTo(PostStatus.RECRUITING);
     assertThat(response.imageUrls())
         .containsExactly("https://example.com/image1.jpg", "https://example.com/image2.jpg");
@@ -345,6 +351,27 @@ class PostServiceTest {
     assertThat(response.commentCount()).isEqualTo(3L);
     assertThat(response.createdAt()).isNotNull();
     assertThat(postRepository.findById(post.getId()).orElseThrow().getViewCount()).isEqualTo(1L);
+  }
+
+  @DisplayName("저장한 게시글은 상세 조회에서 isBookmarked가 true로 반환된다")
+  @Test
+  void getPostDetail_bookmarkedPost_returnsIsBookmarkedTrue() {
+    // given
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("대한민국", "KR");
+    Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
+    Long tagId = insertTag("여행", TagType.ACTIVITY);
+    Post post = postService.createPost(author.getId(), createDefaultCommand(countryId, cityId, List.of(tagId)));
+    postBookmarkRepository.saveAndFlush(new PostBookmark(viewer, post));
+
+    // when
+    PostDetailResponse response = PostDetailResponse.from(
+        postService.getPostDetail(viewer.getId(), post.getId())
+    );
+
+    // then
+    assertThat(response.isBookmarked()).isTrue();
   }
 
   @DisplayName("탈퇴한 작성자의 게시글을 상세 조회하면 닉네임과 프로필 이미지가 가려진다")
@@ -641,6 +668,7 @@ class PostServiceTest {
   }
 
   private void cleanUp() {
+    jdbcTemplate.update("DELETE FROM post_bookmark");
     jdbcTemplate.update("DELETE FROM post_image");
     jdbcTemplate.update("DELETE FROM post_age_condition");
     jdbcTemplate.update("DELETE FROM post_gender_condition");

@@ -12,7 +12,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.persistence.EntityManager;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,12 +29,15 @@ import org.sopt.buddys.domain.location.repository.CityRepository;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.Post;
+import org.sopt.buddys.domain.post.entity.PostBookmark;
 import org.sopt.buddys.domain.post.entity.PostImage;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
+import org.sopt.buddys.domain.post.repository.PostBookmarkRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.service.PostService;
+import org.sopt.buddys.domain.post.service.result.PostBookmarkResult;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -72,6 +81,9 @@ class PostControllerTest {
 
   @Autowired
   private PostImageRepository postImageRepository;
+
+  @Autowired
+  private PostBookmarkRepository postBookmarkRepository;
 
   @Autowired
   private PostService postService;
@@ -838,6 +850,177 @@ class PostControllerTest {
             .value(org.hamcrest.Matchers.hasItem("postId")));
   }
 
+  @DisplayName("게시글을 반복 저장해도 북마크 한 건만 생성된다")
+  @Test
+  void bookmarkPost_repeatedRequests_areIdempotent() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+    LocalDateTime firstCreatedAt = null;
+
+    for (int requestCount = 0; requestCount < 2; requestCount++) {
+      mockMvc.perform(post("/api/v1/posts/{postId}/bookmarks", post.getId())
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andExpect(jsonPath("$.code").value("POST-S006"))
+          .andExpect(jsonPath("$.message").value("게시글 저장에 성공했습니다."))
+          .andExpect(jsonPath("$.data.postId").value(post.getId()))
+          .andExpect(jsonPath("$.data.isBookmarked").value(true));
+
+      LocalDateTime createdAt = jdbcTemplate.queryForObject(
+          "SELECT created_at FROM post_bookmark WHERE user_id = ? AND post_id = ?",
+          LocalDateTime.class,
+          user.getId(),
+          post.getId()
+      );
+      if (firstCreatedAt == null) {
+        firstCreatedAt = createdAt;
+      } else {
+        assertThat(createdAt).isEqualTo(firstCreatedAt);
+      }
+    }
+
+    assertThat(postBookmarkRepository.count()).isOne();
+  }
+
+  @DisplayName("동시에 같은 게시글을 최초 저장해도 두 요청이 성공하고 북마크는 한 건만 생성된다")
+  @Test
+  void bookmarkPost_concurrentFirstRequests_areIdempotent() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    CountDownLatch readyLatch = new CountDownLatch(2);
+    CountDownLatch startLatch = new CountDownLatch(1);
+
+    try {
+      Future<PostBookmarkResult> first = executorService.submit(
+          () -> bookmarkPostAfterSignal(user.getId(), post.getId(), readyLatch, startLatch));
+      Future<PostBookmarkResult> second = executorService.submit(
+          () -> bookmarkPostAfterSignal(user.getId(), post.getId(), readyLatch, startLatch));
+
+      assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+      startLatch.countDown();
+
+      assertThat(first.get(10, TimeUnit.SECONDS).isBookmarked()).isTrue();
+      assertThat(second.get(10, TimeUnit.SECONDS).isBookmarked()).isTrue();
+      assertThat(postBookmarkRepository.count()).isOne();
+    } finally {
+      executorService.shutdownNow();
+      assertThat(executorService.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+    }
+  }
+
+  @DisplayName("게시글 저장을 반복 취소해도 성공하고 북마크가 남지 않는다")
+  @Test
+  void removePostBookmark_repeatedRequests_areIdempotent() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+    postBookmarkRepository.saveAndFlush(new PostBookmark(user, post));
+
+    for (int requestCount = 0; requestCount < 2; requestCount++) {
+      mockMvc.perform(delete("/api/v1/posts/{postId}/bookmarks", post.getId())
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.success").value(true))
+          .andExpect(jsonPath("$.code").value("POST-S007"))
+          .andExpect(jsonPath("$.message").value("게시글 저장 취소에 성공했습니다."))
+          .andExpect(jsonPath("$.data.postId").value(post.getId()))
+          .andExpect(jsonPath("$.data.isBookmarked").value(false));
+    }
+
+    assertThat(postBookmarkRepository.count()).isZero();
+  }
+
+  @DisplayName("저장되지 않은 게시글의 저장 취소도 성공한다")
+  @Test
+  void removePostBookmark_notBookmarked_succeeds() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+
+    mockMvc.perform(delete("/api/v1/posts/{postId}/bookmarks", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("POST-S007"))
+        .andExpect(jsonPath("$.data.isBookmarked").value(false));
+  }
+
+  @DisplayName("소프트 삭제된 게시글도 저장을 취소할 수 있다")
+  @Test
+  void removePostBookmark_softDeletedPost_succeeds() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+    postBookmarkRepository.saveAndFlush(new PostBookmark(user, post));
+    post.softDelete(java.time.LocalDateTime.now());
+    postRepository.saveAndFlush(post);
+
+    mockMvc.perform(delete("/api/v1/posts/{postId}/bookmarks", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("POST-S007"))
+        .andExpect(jsonPath("$.data.isBookmarked").value(false));
+
+    assertThat(postBookmarkRepository.count()).isZero();
+  }
+
+  @DisplayName("게시글 저장과 저장 취소는 게시글 존재 여부, postId와 인증을 검증한다")
+  @Test
+  void postBookmark_invalidRequests_returnExpectedErrors() throws Exception {
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    Post post = createPost(user);
+
+    for (String method : List.of("POST", "DELETE")) {
+      var missingPostRequest = method.equals("POST")
+          ? post("/api/v1/posts/{postId}/bookmarks", 99999L)
+          : delete("/api/v1/posts/{postId}/bookmarks", 99999L);
+      mockMvc.perform(missingPostRequest.header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+          .andExpect(status().isNotFound())
+          .andExpect(jsonPath("$.code").value("POST-E006"));
+
+      for (long invalidPostId : List.of(0L, -1L)) {
+        var invalidIdRequest = method.equals("POST")
+            ? post("/api/v1/posts/{postId}/bookmarks", invalidPostId)
+            : delete("/api/v1/posts/{postId}/bookmarks", invalidPostId);
+        mockMvc.perform(invalidIdRequest.header(HttpHeaders.AUTHORIZATION, bearerToken(user.getId())))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("GLB-E001"));
+      }
+
+      var unauthenticatedRequest = method.equals("POST")
+          ? post("/api/v1/posts/{postId}/bookmarks", post.getId())
+          : delete("/api/v1/posts/{postId}/bookmarks", post.getId());
+      mockMvc.perform(unauthenticatedRequest)
+          .andExpect(status().isUnauthorized())
+          .andExpect(jsonPath("$.code").value("GLB-E002"));
+    }
+  }
+
+  @DisplayName("게시글 저장 API OpenAPI 스키마는 본문 없이 필수 성공 응답을 표현한다")
+  @Test
+  void postBookmark_openApiSchema_matchesContract() throws Exception {
+    mockMvc.perform(get("/v3/api-docs"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/bookmarks'].post.parameters[0].required")
+            .value(true))
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/bookmarks'].post.requestBody").doesNotExist())
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/bookmarks'].delete.parameters[0].required")
+            .value(true))
+        .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/bookmarks'].delete.requestBody").doesNotExist())
+        .andExpect(jsonPath("$.components.schemas.PostBookmarkSuccessResponse.required")
+            .value(org.hamcrest.Matchers.containsInAnyOrder("success", "code", "message", "data")))
+        .andExpect(jsonPath("$.components.schemas.PostBookmarkSuccessResponse.properties.code.example")
+            .value("POST-S006"))
+        .andExpect(jsonPath("$.components.schemas.PostBookmarkSuccessResponse.properties.message.example")
+            .value("게시글 저장에 성공했습니다."))
+        .andExpect(jsonPath("$.components.schemas.DeletePostBookmarkSuccessResponse.required")
+            .value(org.hamcrest.Matchers.containsInAnyOrder("success", "code", "message", "data")))
+        .andExpect(jsonPath("$.components.schemas.DeletePostBookmarkSuccessResponse.properties.code.example")
+            .value("POST-S007"))
+        .andExpect(jsonPath("$.components.schemas.DeletePostBookmarkSuccessResponse.properties.message.example")
+            .value("게시글 저장 취소에 성공했습니다."))
+        .andExpect(jsonPath("$.components.schemas.PostBookmarkResponse.required")
+            .value(org.hamcrest.Matchers.containsInAnyOrder("postId", "isBookmarked")));
+  }
+
   private Post createPost(User author) {
     Long countryId = insertCountry("대한민국", "KR");
     Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);
@@ -934,6 +1117,19 @@ class PostControllerTest {
         .andExpect(status().isOk());
   }
 
+  private PostBookmarkResult bookmarkPostAfterSignal(
+      Long userId,
+      Long postId,
+      CountDownLatch readyLatch,
+      CountDownLatch startLatch
+  ) throws InterruptedException {
+    readyLatch.countDown();
+    if (!startLatch.await(5, TimeUnit.SECONDS)) {
+      throw new IllegalStateException("동시 저장 시작 신호를 기다리는 중 시간 초과");
+    }
+    return postService.bookmarkPost(userId, postId);
+  }
+
   private List<Long> findPostTagIds(Long postId) {
     return jdbcTemplate.queryForList(
         "SELECT tag_id FROM post_tag WHERE post_id = ? ORDER BY tag_id",
@@ -944,6 +1140,7 @@ class PostControllerTest {
 
   private void cleanUp() {
     jdbcTemplate.update("DELETE FROM post_comment");
+    jdbcTemplate.update("DELETE FROM post_bookmark");
     jdbcTemplate.update("DELETE FROM post_image");
     jdbcTemplate.update("DELETE FROM post_age_condition");
     jdbcTemplate.update("DELETE FROM post_gender_condition");

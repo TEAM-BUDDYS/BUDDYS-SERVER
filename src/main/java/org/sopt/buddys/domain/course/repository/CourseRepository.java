@@ -3,6 +3,8 @@ package org.sopt.buddys.domain.course.repository;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.sopt.buddys.domain.course.entity.Course;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -10,6 +12,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CourseRepository extends JpaRepository<Course, Long>, CourseRepositoryCustom {
+
+  Slice<Course> findByAuthorIdAndDeletedAtIsNull(Long authorId, Pageable pageable);
 
   @Query("""
       select c

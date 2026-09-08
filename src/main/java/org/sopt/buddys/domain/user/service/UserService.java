@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.course.entity.Course;
+import org.sopt.buddys.domain.course.repository.CourseImageRepository;
+import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
@@ -11,6 +14,8 @@ import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
+import org.sopt.buddys.domain.user.service.result.UserCoursesResult.CourseResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult.PostResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
@@ -20,6 +25,7 @@ import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,10 +36,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
   private static final int REQUIRED_ONBOARDING_TAG_COUNT = 3;
+  private static final int MAX_SEARCH_RESULT_SIZE = 100;
+  private static final String LIKE_ESCAPE_CHAR = "\\";
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
   private final PostImageRepository postImageRepository;
+  private final CourseRepository courseRepository;
+  private final CourseImageRepository courseImageRepository;
 
   public boolean isOnboardingCompleted(User user) {
     return isOnboardingCompleted(user, userTagRepository.countByUserId(user.getId()));
@@ -87,6 +97,17 @@ public class UserService {
     return new UserProfileResult(user, orderedTags);
   }
 
+  public Slice<User> searchUsersByNickname(Long userId, String keyword, int page, int size) {
+    validateSearchPageRequest(page, size);
+
+    if (keyword == null || keyword.isBlank()) {
+      return new SliceImpl<>(List.of(), PageRequest.of(page, size), false);
+    }
+
+    String escapedKeyword = escapeLikeWildcards(keyword.trim());
+    return userRepository.searchByNicknameContaining(escapedKeyword, userId, PageRequest.of(page, size));
+  }
+
   public UserPostsResult getPosts(Long userId, int page, int size) {
     validateUserExists(userId);
 
@@ -119,10 +140,79 @@ public class UserService {
     );
   }
 
+  public UserCoursesResult getCourses(Long userId, int page, int size) {
+    validateUserExists(userId);
+
+    return getCoursesResult(userId, page, size);
+  }
+
+  public UserCoursesResult getPublicCourses(Long userId, int page, int size) {
+    validateUserExistsIncludingDeleted(userId);
+
+    return getCoursesResult(userId, page, size);
+  }
+
+  private UserCoursesResult getCoursesResult(Long userId, int page, int size) {
+    validatePageRequest(page, size);
+
+    Pageable pageable = PageRequest.of(
+        page,
+        size,
+        Sort.by(Sort.Direction.DESC, "createdAt", "id")
+    );
+    Slice<Course> courses = courseRepository.findByAuthorIdAndDeletedAtIsNull(userId, pageable);
+    Map<Long, String> thumbnailImageUrls = getCourseThumbnailImageUrls(courses.getContent());
+
+    List<CourseResult> courseResults = courses.getContent()
+        .stream()
+        .map(course -> new CourseResult(
+            course.getId(),
+            thumbnailImageUrls.get(course.getId())
+        ))
+        .toList();
+
+    return new UserCoursesResult(
+        courseResults,
+        courses.getNumber(),
+        courses.getSize(),
+        courses.hasNext()
+    );
+  }
+
+  private Map<Long, String> getCourseThumbnailImageUrls(List<Course> courses) {
+    List<Long> courseIds = courses.stream()
+        .map(Course::getId)
+        .toList();
+
+    if (courseIds.isEmpty()) {
+      return Map.of();
+    }
+
+    return courseImageRepository.findThumbnailImageUrlsByCourseIds(courseIds)
+        .stream()
+        .collect(Collectors.toMap(
+            CourseImageRepository.CourseImageUrlProjection::getCourseId,
+            CourseImageRepository.CourseImageUrlProjection::getImageUrl
+        ));
+  }
+
   private void validatePageRequest(int page, int size) {
     if (page < 0 || size < 1) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
+  }
+
+  private void validateSearchPageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_SEARCH_RESULT_SIZE) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
+  private String escapeLikeWildcards(String keyword) {
+    return keyword
+        .replace(LIKE_ESCAPE_CHAR, LIKE_ESCAPE_CHAR + LIKE_ESCAPE_CHAR)
+        .replace("%", LIKE_ESCAPE_CHAR + "%")
+        .replace("_", LIKE_ESCAPE_CHAR + "_");
   }
 
   private void validateUserExists(Long userId) {
