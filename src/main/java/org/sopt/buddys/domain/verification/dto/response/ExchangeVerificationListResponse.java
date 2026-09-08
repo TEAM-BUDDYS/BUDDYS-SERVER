@@ -1,7 +1,9 @@
 package org.sopt.buddys.domain.verification.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult;
@@ -20,6 +22,8 @@ public record ExchangeVerificationListResponse(
     @Schema(description = "다음 페이지 존재 여부", example = "false")
     boolean hasNext
 ) {
+
+  private static final ZoneId STORAGE_ZONE = ZoneId.of("Asia/Seoul");
 
   public ExchangeVerificationListResponse {
     content = List.copyOf(content);
@@ -46,8 +50,8 @@ public record ExchangeVerificationListResponse(
       @Schema(description = "신청자 닉네임", example = "지현")
       String nickname,
 
-      @Schema(description = "신청 일시", example = "2026-08-30T14:20:00")
-      LocalDateTime submittedAt,
+      @Schema(description = "신청 일시(UTC)", example = "2026-08-30T05:20:00Z")
+      OffsetDateTime submittedAt,
 
       @Schema(description = "처리 상태", example = "PENDING")
       ExchangeVerificationStatus status
@@ -58,7 +62,10 @@ public record ExchangeVerificationListResponse(
           result.verificationId(),
           result.userId(),
           result.nickname(),
-          result.submittedAt(),
+          result.submittedAt()
+              .atZone(STORAGE_ZONE)
+              .withZoneSameInstant(ZoneOffset.UTC)
+              .toOffsetDateTime(),
           result.status()
       );
     }
