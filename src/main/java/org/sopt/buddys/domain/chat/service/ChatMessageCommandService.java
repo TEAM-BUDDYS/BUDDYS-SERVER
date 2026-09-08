@@ -8,6 +8,7 @@ import org.sopt.buddys.domain.chat.entity.ChatRoomMemberId;
 import org.sopt.buddys.domain.chat.repository.ChatMessageRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageSendResult;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
@@ -24,6 +25,7 @@ public class ChatMessageCommandService {
   private final ChatMessageRepository chatMessageRepository;
   private final ChatRoomRepository chatRoomRepository;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
+  private final ChatUserBlockRepository chatUserBlockRepository;
   private final UserRepository userRepository;
 
   @Transactional
@@ -35,11 +37,20 @@ public class ChatMessageCommandService {
 
     User sender = getActiveUser(userId);
     ChatRoom chatRoom = getAccessibleChatRoom(userId, chatRoomId);
+    validateNotBlocked(userId, chatRoomId);
     ChatMessage message = chatMessageRepository.save(
         new ChatMessage(chatRoom, sender, content)
     );
 
     return new ChatMessageSendResult(message);
+  }
+
+  private void validateNotBlocked(Long userId, Long chatRoomId) {
+    chatRoomMemberRepository.findOtherMemberUserId(chatRoomId, userId)
+        .filter(partnerId -> chatUserBlockRepository.existsBlockBetween(userId, partnerId))
+        .ifPresent(partnerId -> {
+          throw new BaseException(ChatErrorCode.BLOCKED_CHAT_PARTNER);
+        });
   }
 
   private User getActiveUser(Long userId) {

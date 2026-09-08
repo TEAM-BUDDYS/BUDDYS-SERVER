@@ -7,5 +7,6 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "mail")
 public record MailProperties(
-    @NotBlank String sender
+    @NotBlank String sender,
+    @NotBlank String operationsRecipient
 ) {}

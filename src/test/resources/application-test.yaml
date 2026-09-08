@@ -41,6 +41,7 @@ cloud:
 
 mail:
   sender: no-reply@buddys.co.kr
+  operations-recipient: ops-test@buddys.co.kr
 
 verification:
   university-email:

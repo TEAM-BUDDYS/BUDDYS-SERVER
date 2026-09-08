@@ -62,6 +62,7 @@ cloud:
 
 mail:
   sender: ${MAIL_SENDER:no-reply@buddys.co.kr}
+  operations-recipient: ${MAIL_OPERATIONS_RECIPIENT:ops@buddys.co.kr}
 
 verification:
   university-email:
