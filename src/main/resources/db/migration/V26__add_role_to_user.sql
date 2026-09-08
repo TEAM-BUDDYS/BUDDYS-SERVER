@@ -1,5 +1,0 @@
-ALTER TABLE `user`
-    ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'USER';
-
-ALTER TABLE `user`
-    ADD CONSTRAINT chk_user_role CHECK (role IN ('USER', 'ADMIN'));

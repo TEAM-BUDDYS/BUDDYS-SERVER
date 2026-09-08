@@ -33,3 +33,9 @@ CREATE INDEX idx_exchange_verification_status_created_at
 
 CREATE INDEX idx_exchange_verification_user_created_at
     ON exchange_verification (user_id, created_at);
+
+ALTER TABLE `user`
+    ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'USER';
+
+ALTER TABLE `user`
+    ADD CONSTRAINT chk_user_role CHECK (role IN ('USER', 'ADMIN'));
