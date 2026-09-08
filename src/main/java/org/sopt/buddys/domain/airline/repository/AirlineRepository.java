@@ -13,6 +13,7 @@ public interface AirlineRepository extends JpaRepository<Airline, Long> {
       select a
       from Airline a
       where lower(a.name) like lower(concat('%', :keyword, '%')) escape '\\'
+         or lower(a.koreanName) like lower(concat('%', :keyword, '%')) escape '\\'
          or lower(a.code) like lower(concat('%', :keyword, '%')) escape '\\'
       order by a.name asc
       """)

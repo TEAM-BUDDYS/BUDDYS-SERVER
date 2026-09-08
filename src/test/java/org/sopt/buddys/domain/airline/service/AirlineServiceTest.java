@@ -175,6 +175,22 @@ class AirlineServiceTest {
     assertThat(secondPage.hasNext()).isFalse();
   }
 
+  @DisplayName("항공사 국문명에 키워드가 부분 일치(대소문자 무시)하면 검색된다")
+  @Test
+  void searchAirlines_matchesByKoreanNamePartially() {
+    // given
+    insertAirline("Korean Air", "대한항공", "KE");
+    insertAirline("Asiana Airlines", "아시아나항공", "OZ");
+
+    // when
+    Slice<Airline> result = airlineService.searchAirlines("대한", 0, 20);
+
+    // then
+    assertThat(result.getContent())
+        .extracting(Airline::getName)
+        .containsExactly("Korean Air");
+  }
+
   @DisplayName("키워드의 언더스코어(_)는 단일 문자 와일드카드가 아닌 일반 문자로 매칭된다")
   @Test
   void searchAirlines_escapesUnderscore_matchesLiterally() {
@@ -224,13 +240,18 @@ class AirlineServiceTest {
   }
 
   private void insertAirline(String name, String code) {
+    insertAirline(name, null, code);
+  }
+
+  private void insertAirline(String name, String koreanName, String code) {
     jdbcTemplate.update(connection -> {
           var preparedStatement = connection.prepareStatement(
-              "INSERT INTO airline (name, code) VALUES (?, ?)",
+              "INSERT INTO airline (name, korean_name, code) VALUES (?, ?, ?)",
               Statement.RETURN_GENERATED_KEYS
           );
           preparedStatement.setString(1, name);
-          preparedStatement.setString(2, code);
+          preparedStatement.setString(2, koreanName);
+          preparedStatement.setString(3, code);
           return preparedStatement;
         }
     );

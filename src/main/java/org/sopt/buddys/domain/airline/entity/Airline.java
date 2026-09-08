@@ -27,6 +27,9 @@ public class Airline {
   @Column(nullable = false, length = 100)
   private String name;
 
+  @Column(name = "korean_name", length = 100)
+  private String koreanName;
+
   @Column(nullable = false, length = 10)
   private String code;
 }

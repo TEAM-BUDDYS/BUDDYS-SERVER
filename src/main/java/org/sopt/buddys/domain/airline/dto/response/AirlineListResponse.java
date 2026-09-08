@@ -6,10 +6,20 @@ import org.sopt.buddys.domain.airline.entity.Airline;
 import org.springframework.data.domain.Slice;
 
 public record AirlineListResponse(
-    @Schema(description = "검색된 항공사 목록. keyword가 없으면 항상 빈 리스트입니다.") List<AirlineResponse> airlines,
-    @Schema(description = "현재 페이지 번호 (0부터 시작)", example = "0") int page,
-    @Schema(description = "페이지 크기", example = "20") int size,
-    @Schema(description = "다음 페이지 존재 여부", example = "false") boolean hasNext
+    @Schema(
+        description = "검색된 항공사 목록. keyword가 없으면 항상 빈 리스트입니다.",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
+    List<AirlineResponse> airlines,
+
+    @Schema(description = "현재 페이지 번호 (0부터 시작)", example = "0", requiredMode = Schema.RequiredMode.REQUIRED)
+    int page,
+
+    @Schema(description = "페이지 크기", example = "20", requiredMode = Schema.RequiredMode.REQUIRED)
+    int size,
+
+    @Schema(description = "다음 페이지 존재 여부", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
+    boolean hasNext
 ) {
 
   public AirlineListResponse {
