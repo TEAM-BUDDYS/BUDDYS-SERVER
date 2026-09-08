@@ -50,7 +50,7 @@ class ExchangeVerificationServiceTest {
     );
   }
 
-  @DisplayName("S3 업로드 정보가 일치하면 대기 상태의 인증 신청을 저장한다")
+  @DisplayName("대기 중인 신청이 없으면 새로운 인증 신청을 저장한다")
   @Test
   void submit_validDocument_savesPendingVerification() {
     // given
@@ -61,7 +61,10 @@ class ExchangeVerificationServiceTest {
     given(s3ObjectManager.findMetadata(DOCUMENT_KEY))
         .willReturn(Optional.of(new S3ObjectMetadata("application/pdf", FILE_SIZE)));
     given(userRepository.findByIdForProfileUpdate(USER_ID)).willReturn(Optional.of(user));
-    given(exchangeVerificationRepository.findFirstByUserIdOrderByIdDesc(USER_ID))
+    given(exchangeVerificationRepository.findByUserIdAndStatus(
+        USER_ID,
+        ExchangeVerificationStatus.PENDING
+    ))
         .willReturn(Optional.empty());
     given(exchangeVerificationRepository.save(any(ExchangeVerification.class))).willReturn(saved);
 
@@ -142,9 +145,10 @@ class ExchangeVerificationServiceTest {
     verifyNoInteractions(userRepository, exchangeVerificationRepository);
   }
 
-  @DisplayName("기존 인증 신청이 있으면 마지막 업로드 정보로 교체한다")
+  @DisplayName("대기 중인 인증 신청이 있으면 마지막 업로드 정보로 교체한다")
   @Test
   void submit_existingVerification_replacesDocument() {
+    User user = mock(User.class);
     ExchangeVerification existing = mock(ExchangeVerification.class);
     given(existing.getId()).willReturn(12L);
     given(existing.getStatus()).willReturn(ExchangeVerificationStatus.PENDING);
@@ -152,8 +156,11 @@ class ExchangeVerificationServiceTest {
     given(s3ObjectManager.findMetadata(DOCUMENT_KEY))
         .willReturn(Optional.of(new S3ObjectMetadata("application/pdf", FILE_SIZE)));
     given(userRepository.findByIdForProfileUpdate(USER_ID))
-        .willReturn(Optional.of(mock(User.class)));
-    given(exchangeVerificationRepository.findFirstByUserIdOrderByIdDesc(USER_ID))
+        .willReturn(Optional.of(user));
+    given(exchangeVerificationRepository.findByUserIdAndStatus(
+        USER_ID,
+        ExchangeVerificationStatus.PENDING
+    ))
         .willReturn(Optional.of(existing));
 
     ExchangeVerificationSubmitResult result = service.submit(

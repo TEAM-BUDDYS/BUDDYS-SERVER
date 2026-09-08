@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -49,7 +50,7 @@ class ExchangeVerificationAdminServiceTest {
     );
   }
 
-  @DisplayName("관리자는 전체 서류 인증 신청을 최신순 페이지로 조회한다")
+  @DisplayName("관리자는 모든 서류 인증 신청을 최신순 페이지로 조회한다")
   @Test
   void getVerifications_withoutStatus_returnsAll() {
     // given
@@ -60,7 +61,7 @@ class ExchangeVerificationAdminServiceTest {
     LocalDateTime submittedAt = LocalDateTime.of(2026, 8, 30, 14, 20);
     ExchangeVerification verification = verification(submittedAt, ExchangeVerificationStatus.PENDING);
     PageRequest pageable = PageRequest.of(0, 20);
-    given(exchangeVerificationRepository.findLatestByUser(pageable))
+    given(exchangeVerificationRepository.findAllWithUser(pageable))
         .willReturn(new SliceImpl<>(List.of(verification), pageable, false));
 
     // when
@@ -85,7 +86,7 @@ class ExchangeVerificationAdminServiceTest {
     given(userRepository.findByIdAndDeletedAtIsNull(ADMIN_USER_ID)).willReturn(Optional.of(admin));
 
     PageRequest pageable = PageRequest.of(1, 10);
-    given(exchangeVerificationRepository.findLatestByUserAndStatus(
+    given(exchangeVerificationRepository.findAllWithUserByStatus(
         ExchangeVerificationStatus.APPROVED,
         pageable
     )).willReturn(new SliceImpl<>(List.of(), pageable, false));
@@ -102,7 +103,7 @@ class ExchangeVerificationAdminServiceTest {
     assertThat(result.content()).isEmpty();
     assertThat(result.page()).isEqualTo(1);
     assertThat(result.size()).isEqualTo(10);
-    verify(exchangeVerificationRepository).findLatestByUserAndStatus(
+    verify(exchangeVerificationRepository).findAllWithUserByStatus(
         ExchangeVerificationStatus.APPROVED,
         pageable
     );
@@ -171,6 +172,76 @@ class ExchangeVerificationAdminServiceTest {
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(ExchangeVerificationErrorCode.VERIFICATION_NOT_FOUND));
     verifyNoInteractions(s3PresignedUrlManager);
+  }
+
+  @DisplayName("관리자는 대기 중인 서류 인증 신청을 승인한다")
+  @Test
+  void approveVerification_approvesVerificationAndUser() {
+    // given
+    User admin = admin();
+    ExchangeVerification verification = verification(
+        LocalDateTime.of(2026, 8, 30, 14, 20),
+        ExchangeVerificationStatus.PENDING
+    );
+    User applicant = verification.getUser();
+    given(verification.isPending()).willReturn(true);
+    given(exchangeVerificationRepository.findByIdWithUserForUpdate(10L))
+        .willReturn(Optional.of(verification));
+
+    // when
+    service.approveVerification(ADMIN_USER_ID, 10L);
+
+    // then
+    verify(verification).approve(admin);
+    verify(applicant).verifyExchange();
+  }
+
+  @DisplayName("관리자는 기존 사용자 인증 상태를 변경하지 않고 대기 중인 신청을 반려한다")
+  @Test
+  void rejectVerification_rejectsVerificationAndUser() {
+    // given
+    User admin = admin();
+    ExchangeVerification verification = verification(
+        LocalDateTime.of(2026, 8, 30, 14, 20),
+        ExchangeVerificationStatus.PENDING
+    );
+    given(verification.isPending()).willReturn(true);
+    given(exchangeVerificationRepository.findByIdWithUserForUpdate(10L))
+        .willReturn(Optional.of(verification));
+
+    // when
+    service.rejectVerification(ADMIN_USER_ID, 10L, "  서류가 확인되지 않습니다.  ");
+
+    // then
+    verify(verification).reject(admin, "서류가 확인되지 않습니다.");
+    verify(verification, never()).getUser();
+  }
+
+  @DisplayName("이미 처리된 서류 인증 신청은 다시 처리할 수 없다")
+  @Test
+  void approveVerification_alreadyReviewed_throwsException() {
+    // given
+    admin();
+    ExchangeVerification verification = verification(
+        LocalDateTime.of(2026, 8, 30, 14, 20),
+        ExchangeVerificationStatus.APPROVED
+    );
+    given(verification.isPending()).willReturn(false);
+    given(exchangeVerificationRepository.findByIdWithUserForUpdate(10L))
+        .willReturn(Optional.of(verification));
+
+    // when & then
+    assertThatThrownBy(() -> service.approveVerification(ADMIN_USER_ID, 10L))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(ExchangeVerificationErrorCode.VERIFICATION_ALREADY_REVIEWED));
+  }
+
+  private User admin() {
+    User admin = mock(User.class);
+    given(admin.isAdmin()).willReturn(true);
+    given(userRepository.findByIdAndDeletedAtIsNull(ADMIN_USER_ID)).willReturn(Optional.of(admin));
+    return admin;
   }
 
   private ExchangeVerification verification(

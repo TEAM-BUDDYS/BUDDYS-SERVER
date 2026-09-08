@@ -214,6 +214,10 @@ public class User extends BaseEntity {
     this.universityVerified = true;
   }
 
+  public void verifyExchange() {
+    this.exchangeVerified = true;
+  }
+
   public boolean isAdmin() {
     return role == UserRole.ADMIN;
   }

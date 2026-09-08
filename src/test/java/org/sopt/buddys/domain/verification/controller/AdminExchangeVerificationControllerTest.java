@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +20,7 @@ import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationLi
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult.ExchangeVerificationSummaryResult;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -112,6 +114,63 @@ class AdminExchangeVerificationControllerTest {
         .andExpect(jsonPath("$.data.rejectionReason").value("서류가 확인되지 않습니다."));
 
     verify(service).getVerification(ADMIN_USER_ID, 10L);
+  }
+
+  @DisplayName("서류 인증 신청을 승인한다")
+  @Test
+  void approveVerification_returnsSuccess() throws Exception {
+    // when & then
+    mockMvc.perform(patch(
+            "/api/v1/admin/verifications/exchange/{verificationId}/approve",
+            10L
+        ))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("GLB-S001"));
+
+    verify(service).approveVerification(ADMIN_USER_ID, 10L);
+  }
+
+  @DisplayName("반려 사유와 함께 서류 인증 신청을 반려한다")
+  @Test
+  void rejectVerification_returnsSuccess() throws Exception {
+    // when & then
+    mockMvc.perform(patch(
+            "/api/v1/admin/verifications/exchange/{verificationId}/reject",
+            10L
+        )
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "rejectionReason": "서류가 확인되지 않습니다."
+            }
+            """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("GLB-S001"));
+
+    verify(service).rejectVerification(
+        ADMIN_USER_ID,
+        10L,
+        "서류가 확인되지 않습니다."
+    );
+  }
+
+  @DisplayName("반려 사유가 공백이면 잘못된 요청을 반환한다")
+  @Test
+  void rejectVerification_blankReason_returnsBadRequest() throws Exception {
+    // when & then
+    mockMvc.perform(patch(
+            "/api/v1/admin/verifications/exchange/{verificationId}/reject",
+            10L
+        )
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {
+              "rejectionReason": " "
+            }
+            """))
+        .andExpect(status().isBadRequest());
   }
 
   private static class TestLoginUserArgumentResolver implements HandlerMethodArgumentResolver {

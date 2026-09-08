@@ -10,6 +10,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerification;
+import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.entity.SupportedExchangeDocumentType;
 import org.sopt.buddys.domain.verification.repository.ExchangeVerificationRepository;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationSubmitResult;
@@ -55,7 +56,7 @@ public class ExchangeVerificationService {
         .orElseThrow(() -> new BaseException(GlobalErrorCode.UNAUTHORIZED));
 
     Optional<ExchangeVerification> existingVerification = exchangeVerificationRepository
-        .findFirstByUserIdOrderByIdDesc(userId);
+        .findByUserIdAndStatus(userId, ExchangeVerificationStatus.PENDING);
 
     ExchangeVerification verification;
     if (existingVerification.isPresent()) {

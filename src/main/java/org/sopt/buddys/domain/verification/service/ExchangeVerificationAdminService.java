@@ -38,8 +38,8 @@ public class ExchangeVerificationAdminService {
 
     Pageable pageable = PageRequest.of(page, size);
     Slice<ExchangeVerification> verifications = status == null
-        ? exchangeVerificationRepository.findLatestByUser(pageable)
-        : exchangeVerificationRepository.findLatestByUserAndStatus(status, pageable);
+        ? exchangeVerificationRepository.findAllWithUser(pageable)
+        : exchangeVerificationRepository.findAllWithUserByStatus(status, pageable);
 
     return new ExchangeVerificationListResult(
         verifications.getContent().stream()
@@ -65,11 +65,45 @@ public class ExchangeVerificationAdminService {
     return ExchangeVerificationDetailResult.of(verification, documentUrl);
   }
 
-  private void validateAdmin(Long userId) {
+  @Transactional
+  public void approveVerification(Long adminUserId, Long verificationId) {
+    User reviewer = validateAdmin(adminUserId);
+    ExchangeVerification verification = findPendingVerificationForUpdate(verificationId);
+
+    verification.approve(reviewer);
+    verification.getUser().verifyExchange();
+  }
+
+  @Transactional
+  public void rejectVerification(
+      Long adminUserId,
+      Long verificationId,
+      String rejectionReason
+  ) {
+    User reviewer = validateAdmin(adminUserId);
+    ExchangeVerification verification = findPendingVerificationForUpdate(verificationId);
+
+    verification.reject(reviewer, rejectionReason.trim());
+  }
+
+  private ExchangeVerification findPendingVerificationForUpdate(Long verificationId) {
+    ExchangeVerification verification = exchangeVerificationRepository
+        .findByIdWithUserForUpdate(verificationId)
+        .orElseThrow(() -> new BaseException(
+            ExchangeVerificationErrorCode.VERIFICATION_NOT_FOUND
+        ));
+    if (!verification.isPending()) {
+      throw new BaseException(ExchangeVerificationErrorCode.VERIFICATION_ALREADY_REVIEWED);
+    }
+    return verification;
+  }
+
+  private User validateAdmin(Long userId) {
     User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BaseException(GlobalErrorCode.UNAUTHORIZED));
     if (!user.isAdmin()) {
       throw new BaseException(GlobalErrorCode.FORBIDDEN);
     }
+    return user;
   }
 }

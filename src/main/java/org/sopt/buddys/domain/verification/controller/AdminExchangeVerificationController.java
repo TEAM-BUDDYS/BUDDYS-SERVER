@@ -5,10 +5,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.verification.dto.request.ExchangeVerificationRejectRequest;
 import org.sopt.buddys.domain.verification.dto.response.ExchangeVerificationDetailResponse;
 import org.sopt.buddys.domain.verification.dto.response.ExchangeVerificationListResponse;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
@@ -21,7 +23,9 @@ import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -57,6 +61,56 @@ public class AdminExchangeVerificationController {
             exchangeVerificationAdminService.getVerification(adminUserId, verificationId)
         )
     );
+  }
+
+  @Operation(
+      summary = "서류 인증 신청 승인",
+      description = "관리자가 대기 중인 서류 인증 신청을 승인합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "승인 성공"),
+      @ApiResponse(responseCode = "403", description = "관리자 권한 없음"),
+      @ApiResponse(responseCode = "404", description = "인증 신청 없음"),
+      @ApiResponse(responseCode = "409", description = "이미 처리된 인증 신청")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @PatchMapping("/{verificationId}/approve")
+  public BaseResponse<Void> approveVerification(
+      @Parameter(hidden = true) @LoginUser Long adminUserId,
+      @Parameter(description = "서류 인증 신청 ID", example = "1")
+      @PathVariable @Positive Long verificationId
+  ) {
+    exchangeVerificationAdminService.approveVerification(adminUserId, verificationId);
+    return BaseResponse.success(GlobalSuccessCode.OK);
+  }
+
+  @Operation(
+      summary = "서류 인증 신청 반려",
+      description = "관리자가 대기 중인 서류 인증 신청을 사유와 함께 반려합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "반려 성공"),
+      @ApiResponse(responseCode = "400", description = "반려 사유 누락 또는 형식 오류"),
+      @ApiResponse(responseCode = "403", description = "관리자 권한 없음"),
+      @ApiResponse(responseCode = "404", description = "인증 신청 없음"),
+      @ApiResponse(responseCode = "409", description = "이미 처리된 인증 신청")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @PatchMapping("/{verificationId}/reject")
+  public BaseResponse<Void> rejectVerification(
+      @Parameter(hidden = true) @LoginUser Long adminUserId,
+      @Parameter(description = "서류 인증 신청 ID", example = "1")
+      @PathVariable @Positive Long verificationId,
+      @RequestBody @Valid ExchangeVerificationRejectRequest request
+  ) {
+    exchangeVerificationAdminService.rejectVerification(
+        adminUserId,
+        verificationId,
+        request.rejectionReason()
+    );
+    return BaseResponse.success(GlobalSuccessCode.OK);
   }
 
   @Operation(

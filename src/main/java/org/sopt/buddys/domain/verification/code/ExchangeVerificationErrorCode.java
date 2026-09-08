@@ -14,7 +14,8 @@ public enum ExchangeVerificationErrorCode implements ErrorCode {
   INVALID_DOCUMENT_KEY("EXCH-E003", HttpStatus.BAD_REQUEST, "유효하지 않은 서류 키입니다."),
   DOCUMENT_NOT_UPLOADED("EXCH-E004", HttpStatus.BAD_REQUEST, "업로드된 서류를 찾을 수 없습니다."),
   DOCUMENT_METADATA_MISMATCH("EXCH-E005", HttpStatus.BAD_REQUEST, "업로드된 서류 정보가 일치하지 않습니다."),
-  VERIFICATION_NOT_FOUND("EXCH-E006", HttpStatus.NOT_FOUND, "파견교 인증 신청을 찾을 수 없습니다.");
+  VERIFICATION_NOT_FOUND("EXCH-E006", HttpStatus.NOT_FOUND, "파견교 인증 신청을 찾을 수 없습니다."),
+  VERIFICATION_ALREADY_REVIEWED("EXCH-E007", HttpStatus.CONFLICT, "이미 처리된 파견교 인증 신청입니다.");
 
   private final String code;
   private final HttpStatus httpStatus;
