@@ -51,7 +51,7 @@ class ExchangeVerificationAdminServiceTest {
     LocalDateTime submittedAt = LocalDateTime.of(2026, 8, 30, 14, 20);
     ExchangeVerification verification = verification(submittedAt, ExchangeVerificationStatus.PENDING);
     PageRequest pageable = PageRequest.of(0, 20);
-    given(exchangeVerificationRepository.findAllByOrderByCreatedAtDescIdDesc(pageable))
+    given(exchangeVerificationRepository.findLatestByUser(pageable))
         .willReturn(new SliceImpl<>(List.of(verification), pageable, false));
 
     // when
@@ -76,7 +76,7 @@ class ExchangeVerificationAdminServiceTest {
     given(userRepository.findByIdAndDeletedAtIsNull(ADMIN_USER_ID)).willReturn(Optional.of(admin));
 
     PageRequest pageable = PageRequest.of(1, 10);
-    given(exchangeVerificationRepository.findAllByStatusOrderByCreatedAtDescIdDesc(
+    given(exchangeVerificationRepository.findLatestByUserAndStatus(
         ExchangeVerificationStatus.APPROVED,
         pageable
     )).willReturn(new SliceImpl<>(List.of(), pageable, false));
@@ -93,7 +93,7 @@ class ExchangeVerificationAdminServiceTest {
     assertThat(result.content()).isEmpty();
     assertThat(result.page()).isEqualTo(1);
     assertThat(result.size()).isEqualTo(10);
-    verify(exchangeVerificationRepository).findAllByStatusOrderByCreatedAtDescIdDesc(
+    verify(exchangeVerificationRepository).findLatestByUserAndStatus(
         ExchangeVerificationStatus.APPROVED,
         pageable
     );
@@ -126,7 +126,7 @@ class ExchangeVerificationAdminServiceTest {
     ExchangeVerification verification = mock(ExchangeVerification.class);
     given(verification.getId()).willReturn(10L);
     given(verification.getUser()).willReturn(applicant);
-    given(verification.getCreatedAt()).willReturn(submittedAt);
+    given(verification.getUpdatedAt()).willReturn(submittedAt);
     given(verification.getStatus()).willReturn(status);
     return verification;
   }

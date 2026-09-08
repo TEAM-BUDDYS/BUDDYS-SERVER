@@ -50,7 +50,7 @@ class ExchangeVerificationControllerTest {
   @Test
   void submit_returnsCreatedVerification() throws Exception {
     // given
-    String documentKey = "exchange-verifications/7/123e4567-e89b-12d3-a456-426614174000.pdf";
+    String documentKey = "exchange-verifications/7/document";
     when(exchangeVerificationService.submit(
         LOGIN_USER_ID,
         documentKey,

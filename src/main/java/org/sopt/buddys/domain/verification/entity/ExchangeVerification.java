@@ -82,6 +82,22 @@ public class ExchangeVerification extends BaseEntity {
     return status == ExchangeVerificationStatus.PENDING;
   }
 
+  public void replaceDocument(
+      String documentKey,
+      String originalFileName,
+      String contentType,
+      Long fileSize
+  ) {
+    this.documentKey = documentKey;
+    this.originalFileName = originalFileName;
+    this.contentType = contentType;
+    this.fileSize = fileSize;
+    this.status = ExchangeVerificationStatus.PENDING;
+    this.rejectionReason = null;
+    this.reviewedBy = null;
+    this.reviewedAt = null;
+  }
+
   public void approve(User reviewer) {
     validatePending();
     this.status = ExchangeVerificationStatus.APPROVED;

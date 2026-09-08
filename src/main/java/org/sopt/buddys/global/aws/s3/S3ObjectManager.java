@@ -4,6 +4,7 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -28,5 +29,12 @@ public class S3ObjectManager {
       }
       throw exception;
     }
+  }
+
+  public void delete(String key) {
+    s3Client.deleteObject(DeleteObjectRequest.builder()
+        .bucket(s3Properties.getBucket())
+        .key(key)
+        .build());
   }
 }

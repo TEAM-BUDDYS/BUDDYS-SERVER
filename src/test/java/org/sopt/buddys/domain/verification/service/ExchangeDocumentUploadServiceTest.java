@@ -36,7 +36,7 @@ class ExchangeDocumentUploadServiceTest {
   @InjectMocks
   private ExchangeDocumentUploadService exchangeDocumentUploadService;
 
-  @DisplayName("PDF, JPEG, PNG 서류는 사용자별 경로와 알맞은 확장자로 업로드 URL을 발급한다")
+  @DisplayName("PDF, JPEG, PNG 서류는 사용자별 UUID 경로와 알맞은 확장자로 업로드 URL을 발급한다")
   @ParameterizedTest
   @CsvSource({
       "application/pdf, \\.pdf",
@@ -71,6 +71,31 @@ class ExchangeDocumentUploadServiceTest {
         org.mockito.ArgumentMatchers.eq(VALID_FILE_SIZE)
     );
     assertThat(contentTypeCaptor.getValue()).isEqualTo(contentType);
+  }
+
+  @DisplayName("같은 사용자가 다시 요청해도 새로운 객체 키와 presigned URL을 발급한다")
+  @Test
+  void createUploadUrl_sameUser_generatesNewDocumentKeyEveryTime() {
+    // given
+    when(s3PresignedUrlManager.createPutUrl(anyString(), anyString(), anyLong()))
+        .thenReturn("first-upload-url", "second-upload-url");
+
+    // when
+    ExchangeDocumentUploadUrlResult first = exchangeDocumentUploadService.createUploadUrl(
+        USER_ID,
+        "application/pdf",
+        VALID_FILE_SIZE
+    );
+    ExchangeDocumentUploadUrlResult second = exchangeDocumentUploadService.createUploadUrl(
+        USER_ID,
+        "application/pdf",
+        VALID_FILE_SIZE
+    );
+
+    // then
+    assertThat(first.uploadUrl()).isEqualTo("first-upload-url");
+    assertThat(second.uploadUrl()).isEqualTo("second-upload-url");
+    assertThat(first.documentKey()).isNotEqualTo(second.documentKey());
   }
 
   @DisplayName("Content-Type은 소문자로 정규화한다")

@@ -29,6 +29,8 @@ class ExchangeVerificationServiceTest {
   private static final long USER_ID = 7L;
   private static final String DOCUMENT_KEY =
       "exchange-verifications/7/123e4567-e89b-12d3-a456-426614174000.pdf";
+  private static final String PREVIOUS_DOCUMENT_KEY =
+      "exchange-verifications/7/123e4567-e89b-12d3-a456-426614174001.pdf";
   private static final long FILE_SIZE = 823_044L;
 
   private ExchangeVerificationRepository exchangeVerificationRepository;
@@ -59,6 +61,8 @@ class ExchangeVerificationServiceTest {
     given(s3ObjectManager.findMetadata(DOCUMENT_KEY))
         .willReturn(Optional.of(new S3ObjectMetadata("application/pdf", FILE_SIZE)));
     given(userRepository.findByIdForProfileUpdate(USER_ID)).willReturn(Optional.of(user));
+    given(exchangeVerificationRepository.findFirstByUserIdOrderByIdDesc(USER_ID))
+        .willReturn(Optional.empty());
     given(exchangeVerificationRepository.save(any(ExchangeVerification.class))).willReturn(saved);
 
     // when
@@ -138,27 +142,36 @@ class ExchangeVerificationServiceTest {
     verifyNoInteractions(userRepository, exchangeVerificationRepository);
   }
 
-  @DisplayName("이미 대기 중인 인증 신청이 있으면 중복 신청을 거부한다")
+  @DisplayName("기존 인증 신청이 있으면 마지막 업로드 정보로 교체한다")
   @Test
-  void submit_existingPendingVerification_throwsConflict() {
+  void submit_existingVerification_replacesDocument() {
+    ExchangeVerification existing = mock(ExchangeVerification.class);
+    given(existing.getId()).willReturn(12L);
+    given(existing.getStatus()).willReturn(ExchangeVerificationStatus.PENDING);
+    given(existing.getDocumentKey()).willReturn(PREVIOUS_DOCUMENT_KEY);
     given(s3ObjectManager.findMetadata(DOCUMENT_KEY))
         .willReturn(Optional.of(new S3ObjectMetadata("application/pdf", FILE_SIZE)));
     given(userRepository.findByIdForProfileUpdate(USER_ID))
         .willReturn(Optional.of(mock(User.class)));
-    given(exchangeVerificationRepository.existsByUserIdAndStatus(
-        USER_ID,
-        ExchangeVerificationStatus.PENDING
-    )).willReturn(true);
+    given(exchangeVerificationRepository.findFirstByUserIdOrderByIdDesc(USER_ID))
+        .willReturn(Optional.of(existing));
 
-    assertThatThrownBy(() -> service.submit(
+    ExchangeVerificationSubmitResult result = service.submit(
         USER_ID,
         DOCUMENT_KEY,
         "document.pdf",
         "application/pdf",
         FILE_SIZE
-    )).isInstanceOfSatisfying(BaseException.class, exception ->
-        assertThat(exception.getErrorCode())
-            .isEqualTo(ExchangeVerificationErrorCode.PENDING_VERIFICATION_ALREADY_EXISTS)
     );
+
+    verify(existing).replaceDocument(
+        DOCUMENT_KEY,
+        "document.pdf",
+        "application/pdf",
+        FILE_SIZE
+    );
+    verify(s3ObjectManager).delete(PREVIOUS_DOCUMENT_KEY);
+    assertThat(result.verificationId()).isEqualTo(12L);
+    assertThat(result.status()).isEqualTo(ExchangeVerificationStatus.PENDING);
   }
 }

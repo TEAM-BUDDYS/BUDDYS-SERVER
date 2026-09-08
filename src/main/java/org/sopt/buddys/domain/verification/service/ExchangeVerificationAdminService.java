@@ -34,8 +34,8 @@ public class ExchangeVerificationAdminService {
 
     Pageable pageable = PageRequest.of(page, size);
     Slice<ExchangeVerification> verifications = status == null
-        ? exchangeVerificationRepository.findAllByOrderByCreatedAtDescIdDesc(pageable)
-        : exchangeVerificationRepository.findAllByStatusOrderByCreatedAtDescIdDesc(status, pageable);
+        ? exchangeVerificationRepository.findLatestByUser(pageable)
+        : exchangeVerificationRepository.findLatestByUserAndStatus(status, pageable);
 
     return new ExchangeVerificationListResult(
         verifications.getContent().stream()

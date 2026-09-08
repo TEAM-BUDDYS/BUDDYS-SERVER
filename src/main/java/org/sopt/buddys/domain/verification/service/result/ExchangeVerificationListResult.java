@@ -29,7 +29,7 @@ public record ExchangeVerificationListResult(
           verification.getId(),
           verification.getUser().getId(),
           verification.getUser().getNickname(),
-          verification.getCreatedAt(),
+          verification.getUpdatedAt(),
           verification.getStatus()
       );
     }

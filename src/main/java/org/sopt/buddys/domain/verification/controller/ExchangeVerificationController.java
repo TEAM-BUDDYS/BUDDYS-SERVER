@@ -45,7 +45,9 @@ public class ExchangeVerificationController {
           - 지원하는 Content-Type: application/pdf, image/jpeg, image/png
           - 최대 파일 크기는 10MB입니다.
           - S3 PUT 요청에는 발급 요청과 동일한 Content-Type을 사용해야 합니다.
+          - 요청할 때마다 새로운 객체 키와 presigned URL이 발급됩니다.
           - 업로드 완료 후 documentKey를 파견교 인증 신청 API에 전달해야 합니다.
+          - 새 신청이 정상 접수되면 기존에 접수된 서류 객체는 S3에서 삭제됩니다.
           """
   )
   @ApiResponses({
@@ -76,8 +78,7 @@ public class ExchangeVerificationController {
   )
   @ApiResponses({
       @ApiResponse(responseCode = "201", description = "신청 접수 성공"),
-      @ApiResponse(responseCode = "400", description = "서류가 없거나 업로드 정보가 일치하지 않음"),
-      @ApiResponse(responseCode = "409", description = "대기 중인 신청 또는 이미 제출된 서류")
+      @ApiResponse(responseCode = "400", description = "서류가 없거나 업로드 정보가 일치하지 않음")
   })
   @InvalidRequestResponse
   @CommonErrorResponses

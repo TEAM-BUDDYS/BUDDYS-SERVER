@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.verification.service;
 
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,6 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerification;
-import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.entity.SupportedExchangeDocumentType;
 import org.sopt.buddys.domain.verification.repository.ExchangeVerificationRepository;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationSubmitResult;
@@ -19,6 +19,8 @@ import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -52,26 +54,29 @@ public class ExchangeVerificationService {
     User user = userRepository.findByIdForProfileUpdate(userId)
         .orElseThrow(() -> new BaseException(GlobalErrorCode.UNAUTHORIZED));
 
-    if (exchangeVerificationRepository.existsByUserIdAndStatus(
-        userId, ExchangeVerificationStatus.PENDING
-    )) {
-      throw new BaseException(
-          ExchangeVerificationErrorCode.PENDING_VERIFICATION_ALREADY_EXISTS
-      );
-    }
-    if (exchangeVerificationRepository.existsByDocumentKey(documentKey)) {
-      throw new BaseException(ExchangeVerificationErrorCode.DOCUMENT_ALREADY_SUBMITTED);
-    }
+    Optional<ExchangeVerification> existingVerification = exchangeVerificationRepository
+        .findFirstByUserIdOrderByIdDesc(userId);
 
-    ExchangeVerification verification = exchangeVerificationRepository.save(
-        new ExchangeVerification(
-            user,
-            documentKey,
-            originalFileName,
-            documentType.getContentType(),
-            fileSize
-        )
-    );
+    ExchangeVerification verification;
+    if (existingVerification.isPresent()) {
+      verification = existingVerification.get();
+      String previousDocumentKey = verification.getDocumentKey();
+      verification.replaceDocument(
+          documentKey,
+          originalFileName,
+          documentType.getContentType(),
+          fileSize
+      );
+      deletePreviousDocumentAfterCommit(previousDocumentKey, documentKey);
+    } else {
+      verification = exchangeVerificationRepository.save(new ExchangeVerification(
+          user,
+          documentKey,
+          originalFileName,
+          documentType.getContentType(),
+          fileSize
+      ));
+    }
 
     log.info(
         "[ExchangeVerification] submitted verificationId={}, userId={}, documentKey={}",
@@ -118,6 +123,32 @@ public class ExchangeVerificationService {
         : metadata.contentType().toLowerCase(Locale.ROOT);
     if (!uploadedContentType.equals(contentType) || metadata.contentLength() != fileSize) {
       throw new BaseException(ExchangeVerificationErrorCode.DOCUMENT_METADATA_MISMATCH);
+    }
+  }
+
+  private void deletePreviousDocumentAfterCommit(String previousKey, String newKey) {
+    if (previousKey == null || previousKey.equals(newKey)) {
+      return;
+    }
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      deletePreviousDocument(previousKey);
+      return;
+    }
+
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override
+      public void afterCommit() {
+        deletePreviousDocument(previousKey);
+      }
+    });
+  }
+
+  private void deletePreviousDocument(String key) {
+    try {
+      s3ObjectManager.delete(key);
+      log.info("[ExchangeVerification] previous document deleted documentKey={}", key);
+    } catch (RuntimeException exception) {
+      log.error("[ExchangeVerification] failed to delete previous document documentKey={}", key, exception);
     }
   }
 }
