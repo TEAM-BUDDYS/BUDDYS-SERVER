@@ -436,7 +436,6 @@ class UserServiceTest {
         baseUserBuilder(authorId).build(),
         "파리 미술관 코스",
         null,
-        thumbnailImageUrl,
         LocalDate.of(2026, 9, 1),
         LocalDate.of(2026, 9, 5)
     );
