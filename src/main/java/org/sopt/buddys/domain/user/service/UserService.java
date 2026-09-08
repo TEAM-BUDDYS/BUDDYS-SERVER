@@ -7,11 +7,13 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
+import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.domain.user.event.UserWithdrawnEvent;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
@@ -22,6 +24,7 @@ import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagResult;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -42,8 +45,25 @@ public class UserService {
   private final UserTagRepository userTagRepository;
   private final PostRepository postRepository;
   private final PostImageRepository postImageRepository;
+  private final RefreshTokenRepository refreshTokenRepository;
+  private final ApplicationEventPublisher eventPublisher;
   private final CourseRepository courseRepository;
   private final CourseImageRepository courseImageRepository;
+
+  @Transactional
+  public void withdraw(Long userId) {
+    User user = userRepository.findByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+    if (user.getDeletedAt() != null) {
+      return;
+    }
+
+    user.withdraw();
+    userRepository.saveAndFlush(user);
+    userTagRepository.deleteByUserId(userId);
+    refreshTokenRepository.deleteByUserId(userId);
+    eventPublisher.publishEvent(new UserWithdrawnEvent(userId));
+  }
 
   public boolean isOnboardingCompleted(User user) {
     return isOnboardingCompleted(user, userTagRepository.countByUserId(user.getId()));
@@ -75,7 +95,7 @@ public class UserService {
 
   @Transactional
   public boolean updateNotificationSetting(Long userId, boolean notificationEnabled) {
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+    User user = userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     user.updateNotificationEnabled(notificationEnabled);

@@ -78,7 +78,7 @@ public class UserOnboardingServiceTest {
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
     OnboardingCommand request = createValidRequest();
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(user));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
@@ -99,7 +99,7 @@ public class UserOnboardingServiceTest {
   @Test
   void completeOnboarding_userNotFound_throwsException() {
     // given
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.empty());
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.empty());
 
     // when, then
     assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, createValidRequest()))
@@ -113,7 +113,7 @@ public class UserOnboardingServiceTest {
   @Test
   void completeOnboarding_alreadyOnboarded_throwsException() {
     // given
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(true);
 
     // when, then
@@ -123,11 +123,28 @@ public class UserOnboardingServiceTest {
         );
   }
 
+  @DisplayName("탈퇴 회원 표시명으로 시작하는 닉네임은 사용할 수 없다")
+  @Test
+  void completeOnboarding_reservedNickname_throwsException() {
+    // given
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    OnboardingCommand request = createRequestWithNickname(" 탈퇴한 사용자123");
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.RESERVED_NICKNAME)
+        );
+    then(cityRepository).shouldHaveNoInteractions();
+    then(tagRepository).shouldHaveNoInteractions();
+  }
+
   @DisplayName("관심 도시가 존재하지 않으면 LOC-E002 예외가 발생한다")
   @Test
   void completeOnboarding_interestCityNotFound_throwsException() {
     // given
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.empty());
 
@@ -145,7 +162,7 @@ public class UserOnboardingServiceTest {
     Country otherCountry = mockCountry(999L);
     City interestCity = mockCity(otherCountry);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
 
@@ -164,7 +181,7 @@ public class UserOnboardingServiceTest {
     City interestCity = mockCity(interestCountry);
     Long exchangeCountryId = 999L;
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(countryRepository.findById(exchangeCountryId)).willReturn(Optional.empty());
@@ -191,7 +208,7 @@ public class UserOnboardingServiceTest {
     Long exchangeCountryId = 35L;
     Country exchangeCountry = mock(Country.class);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(countryRepository.findById(exchangeCountryId)).willReturn(Optional.of(exchangeCountry));
@@ -216,7 +233,7 @@ public class UserOnboardingServiceTest {
     Country interestCountry = mockCountry(COUNTRY_ID);
     City interestCity = mockCity(interestCountry);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
 
@@ -242,7 +259,7 @@ public class UserOnboardingServiceTest {
     City interestCity = mockCity(interestCountry);
     Tag activityTag = mockTag(1L, TagType.ACTIVITY);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag));
@@ -265,7 +282,7 @@ public class UserOnboardingServiceTest {
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(wrongTypeTag, interestTag, travelStyleTag));
@@ -287,7 +304,7 @@ public class UserOnboardingServiceTest {
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
@@ -316,7 +333,7 @@ public class UserOnboardingServiceTest {
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
@@ -345,7 +362,7 @@ public class UserOnboardingServiceTest {
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
@@ -372,7 +389,7 @@ public class UserOnboardingServiceTest {
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
@@ -396,7 +413,7 @@ public class UserOnboardingServiceTest {
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
@@ -424,7 +441,7 @@ public class UserOnboardingServiceTest {
     Tag interestTag = mockTag(2L, TagType.INTEREST);
     Tag travelStyleTag = mockTag(3L, TagType.TRAVEL_STYLE);
 
-    given(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
     given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
     given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
     given(tagRepository.findAllById(any())).willReturn(List.of(activityTag, interestTag, travelStyleTag));
@@ -467,6 +484,10 @@ public class UserOnboardingServiceTest {
   }
 
   private OnboardingCommand createValidRequest() {
+    return createRequestWithNickname("해령");
+  }
+
+  private OnboardingCommand createRequestWithNickname(String nickname) {
     return new OnboardingCommand(
         COUNTRY_ID,
         CITY_ID,
@@ -477,7 +498,7 @@ public class UserOnboardingServiceTest {
         List.of(1L),
         List.of(2L),
         List.of(3L),
-        "해령",
+        nickname,
         Gender.FEMALE,
         LocalDate.of(2000, 4, 2),
         "같이 여행 다녀요!",

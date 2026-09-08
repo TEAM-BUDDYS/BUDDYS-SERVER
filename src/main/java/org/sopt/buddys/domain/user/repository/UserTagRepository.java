@@ -28,6 +28,10 @@ public interface UserTagRepository extends JpaRepository<UserTag, UserTagId> {
 
   long countByUserId(Long userId);
 
+  @Modifying
+  @Query("delete from UserTag ut where ut.user.id = :userId")
+  void deleteByUserId(@Param("userId") Long userId);
+
   @Query("""
       select ut
       from UserTag ut

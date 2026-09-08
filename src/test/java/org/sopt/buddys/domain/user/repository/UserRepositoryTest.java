@@ -7,6 +7,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.auth.entity.RefreshToken;
+import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
@@ -34,6 +37,9 @@ public class UserRepositoryTest {
 
   @Autowired
   private UserRepository userRepository;
+
+  @Autowired
+  private RefreshTokenRepository refreshTokenRepository;
 
   @AfterEach
   void tearDown() {
@@ -195,6 +201,68 @@ public class UserRepositoryTest {
     User user = User.ofKakao(providerId, new KakaoUserInfo(Long.parseLong(providerId), account));
     ReflectionTestUtils.setField(user, "nickname", nickname);
     return user;
+  }
+
+  @DisplayName("회원 상태 변경 후 리프레시 토큰을 삭제해도 soft delete 변경 사항이 저장된다")
+  @Test
+  void withdraw_thenDeleteRefreshToken_persistsSoftDelete() {
+    // given
+    User user = userRepository.save(User.ofKakao("12345", createKakaoUserInfo()));
+    refreshTokenRepository.save(RefreshToken.of(user.getId(), "refresh-token", 60_000L));
+
+    // when
+    user.withdraw();
+    refreshTokenRepository.deleteByUserId(user.getId());
+
+    // then
+    User withdrawnUser = userRepository.findById(user.getId()).orElseThrow();
+    assertThat(withdrawnUser.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
+    assertThat(withdrawnUser.getDeletedAt()).isNotNull();
+    assertThat(refreshTokenRepository.findById(user.getId())).isEmpty();
+  }
+
+  @DisplayName("탈퇴 회원을 익명화하면 동일한 소셜 계정으로 신규 회원을 생성할 수 있다")
+  @Test
+  void anonymizeWithdrawnUser_allowsSignupWithSameSocialAccount() {
+    // given
+    User withdrawnUser = userRepository.saveAndFlush(
+        User.ofKakao("12345", createKakaoUserInfo())
+    );
+
+    // when
+    withdrawnUser.withdraw();
+    userRepository.saveAndFlush(withdrawnUser);
+    User newUser = userRepository.saveAndFlush(
+        User.ofKakao("12345", createKakaoUserInfo())
+    );
+
+    // then
+    assertThat(newUser.getId()).isNotEqualTo(withdrawnUser.getId());
+    assertThat(newUser.getProviderId()).isEqualTo("12345");
+    assertThat(newUser.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
+  }
+
+  @DisplayName("탈퇴 표시용 닉네임을 다른 회원이 사용 중이어도 탈퇴할 수 있다")
+  @Test
+  void withdraw_displayNicknameAlreadyExists_usesUniqueInternalNickname() {
+    // given
+    User user = userRepository.saveAndFlush(User.ofKakao("12345", createKakaoUserInfo()));
+    User nicknameOwner = User.builder()
+        .provider(AuthProvider.GOOGLE)
+        .providerId("google-user-id")
+        .email("other@gmail.com")
+        .nickname("탈퇴한 사용자_" + user.getId())
+        .build();
+    userRepository.saveAndFlush(nicknameOwner);
+
+    // when
+    user.withdraw();
+    userRepository.saveAndFlush(user);
+
+    // then
+    assertThat(user.getNickname()).isNotEqualTo(nicknameOwner.getNickname());
+    assertThat(user.getDisplayNickname()).isEqualTo("탈퇴한 사용자");
+    assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
   }
 
   private KakaoUserInfo createKakaoUserInfo() {

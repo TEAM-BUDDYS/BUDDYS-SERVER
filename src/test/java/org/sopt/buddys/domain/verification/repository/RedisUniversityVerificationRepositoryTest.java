@@ -22,6 +22,7 @@ import org.testcontainers.utility.DockerImageName;
 class RedisUniversityVerificationRepositoryTest {
 
   private static final String KEY_PREFIX = "verification:university:user:";
+  private static final String ATTEMPTS_KEY_SUFFIX = ":attempts";
   private static final long USER_ID = 1L;
   private static final long UNIVERSITY_ID = 10L;
   private static final String EMAIL = "student@university.ac.kr";
@@ -170,6 +171,25 @@ class RedisUniversityVerificationRepositoryTest {
   }
 
   private String attemptsKey(long userId) {
-    return key(userId) + ":attempts";
+    return key(userId) + ATTEMPTS_KEY_SUFFIX;
+  }
+
+  @DisplayName("회원 탈퇴 시 인증 정보와 실패 횟수를 모두 삭제한다")
+  @Test
+  void deleteByUserId_deletesVerificationAndAttempts() {
+    // given
+    UniversityVerification verification = UniversityVerification.issue(USER_ID, UNIVERSITY_ID, EMAIL);
+    repository.save(verification, TTL);
+    repository.verifyCode(USER_ID, "WRONG1", MAX_ATTEMPTS);
+
+    assertThat(redisTemplate.hasKey(key(USER_ID))).isTrue();
+    assertThat(redisTemplate.hasKey(attemptsKey(USER_ID))).isTrue();
+
+    // when
+    repository.deleteByUserId(USER_ID);
+
+    // then
+    assertThat(redisTemplate.hasKey(key(USER_ID))).isFalse();
+    assertThat(redisTemplate.hasKey(attemptsKey(USER_ID))).isFalse();
   }
 }

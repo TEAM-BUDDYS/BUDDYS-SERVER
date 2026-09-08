@@ -43,6 +43,8 @@ import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 )
 public class User extends BaseEntity {
 
+  public static final String WITHDRAWN_DISPLAY_NICKNAME = "탈퇴한 사용자";
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -207,5 +209,32 @@ public class User extends BaseEntity {
   public void verifyUniversity(University university) {
     this.university = university;
     this.universityVerified = true;
+  }
+
+  public void withdraw() {
+    String anonymizedId = UUID.randomUUID().toString().replace("-", "");
+
+    this.email = "withdrawn-" + anonymizedId + "@deleted.invalid";
+    this.providerId = "withdrawn:" + anonymizedId;
+    this.nickname = "탈퇴한 사용자_" + anonymizedId;
+    this.profileImageUrl = null;
+    this.introduction = null;
+    this.birthDate = null;
+    this.gender = null;
+    this.notificationEnabled = false;
+    this.universityVerified = false;
+    this.exchangeVerified = false;
+    this.interestCountry = null;
+    this.interestCity = null;
+    this.exchangeCountry = null;
+    this.exchangeUniversity = null;
+    this.exchangeStartDate = null;
+    this.exchangeEndDate = null;
+    this.accountStatus = AccountStatus.WITHDRAWN;
+    this.deletedAt = LocalDateTime.now();
+  }
+
+  public String getDisplayNickname() {
+    return deletedAt == null ? nickname : WITHDRAWN_DISPLAY_NICKNAME;
   }
 }

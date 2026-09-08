@@ -15,6 +15,8 @@ import org.sopt.buddys.domain.magazine.repository.MagazineRepository;
 import org.sopt.buddys.domain.magazine.service.result.MagazineBookmarkResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult.MagazineSummaryResult;
+import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +34,7 @@ public class MagazineService {
 
   private final MagazineRepository magazineRepository;
   private final MagazineBookmarkRepository magazineBookmarkRepository;
+  private final UserRepository userRepository;
 
   public MagazineListResult getMagazines(Long userId, Integer year, Integer month, int page, int size) {
     YearMonth yearMonth = resolveYearMonth(year, month);
@@ -60,6 +63,8 @@ public class MagazineService {
   @Transactional
   public MagazineBookmarkResult bookmarkMagazine(Long userId, Long magazineId) {
     validateMagazineExists(magazineId);
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     magazineBookmarkRepository.insertOrKeep(userId, magazineId);
     return new MagazineBookmarkResult(magazineId, true);

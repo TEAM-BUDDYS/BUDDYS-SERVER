@@ -123,6 +123,9 @@ public class CourseService {
 
   @Transactional
   public Course updateCourse(Long userId, Long courseId, UpdateCourseCommand command) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
     if (!course.getAuthor().getId().equals(userId)) {
@@ -186,6 +189,9 @@ public class CourseService {
 
   @Transactional
   public void deleteCourse(Long userId, Long courseId) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
     if (!course.getAuthor().getId().equals(userId)) {

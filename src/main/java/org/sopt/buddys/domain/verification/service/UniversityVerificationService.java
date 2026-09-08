@@ -29,21 +29,14 @@ public class UniversityVerificationService {
   private final UserRepository userRepository;
   private final UniversityVerificationProperties universityVerificationProperties;
   private final UniversityVerificationMailSender mailSender;
+  private final UniversityVerificationIssueService issueService;
 
   public void sendVerification(Long userId, String email) {
-    userRepository.findByIdAndDeletedAtIsNull(userId)
-        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
-
-    University university = resolveUniversityByEmail(email);
-
-    UniversityVerification verification = UniversityVerification.issue(userId, university.getId(), email);
-    universityVerificationRepository.save(
-        verification,
-        universityVerificationProperties.codeExpiration()
-    );
+    var issued = issueService.issue(userId, email);
+    UniversityVerification verification = issued.verification();
 
     try {
-      mailSender.send(email, university.getName(), verification.code());
+      mailSender.send(email, issued.universityName(), verification.code());
     } catch (RuntimeException e) {
       deleteAfterMailFailure(verification, e);
       throw e;
@@ -65,19 +58,13 @@ public class UniversityVerificationService {
     }
     UniversityVerification verification = result.verification();
 
-    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+    User user = userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
     University university = universityRepository.findById(verification.universityId())
         .orElseThrow(() -> new BaseException(LocationErrorCode.UNIVERSITY_NOT_FOUND));
 
     user.verifyUniversity(university);
     deleteAfterCommit(verification);
-  }
-
-  private University resolveUniversityByEmail(String email) {
-    String emailDomain = email.substring(email.indexOf('@') + 1);
-    return universityRepository.findFirstByDomainIgnoreCase(emailDomain)
-        .orElseThrow(() -> new BaseException(LocationErrorCode.UNIVERSITY_NOT_FOUND));
   }
 
   private void deleteAfterMailFailure(UniversityVerification verification, RuntimeException cause) {

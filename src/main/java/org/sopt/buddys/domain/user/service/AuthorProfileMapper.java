@@ -8,8 +8,6 @@ import org.sopt.buddys.domain.user.service.result.AuthorProfile;
 
 public final class AuthorProfileMapper {
 
-  public static final String WITHDRAWN_USER_NICKNAME = "탈퇴한 사용자";
-
   private AuthorProfileMapper() {
   }
 
@@ -27,7 +25,7 @@ public final class AuthorProfileMapper {
   }
 
   public static String maskedNickname(User user) {
-    return user.getDeletedAt() != null ? WITHDRAWN_USER_NICKNAME : user.getNickname();
+    return user.getDisplayNickname();
   }
 
   public static String maskedProfileImageUrl(User user) {

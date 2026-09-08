@@ -257,6 +257,37 @@ class PostControllerTest {
         .isEqualTo(PostStatus.COMPLETED);
   }
 
+  @DisplayName("탈퇴 전 발급된 토큰으로도 게시글 수정·모집 상태 변경·삭제는 거부된다")
+  @Test
+  void withdrawnAuthor_existingTokenCannotModifyOrDeletePost() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    String token = bearerToken(author.getId());
+    author.withdraw();
+    userRepository.saveAndFlush(author);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"title\":\"변경 시도\"}"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("USER-E001"));
+    mockMvc.perform(patch("/api/v1/posts/{postId}/status", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"status\":\"COMPLETED\"}"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("USER-E001"));
+    mockMvc.perform(delete("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, token))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("USER-E001"));
+    Post unchanged = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(unchanged.getDeletedAt()).isNull();
+    assertThat(unchanged.getTitle()).isEqualTo(post.getTitle());
+    assertThat(unchanged.getStatus()).isEqualTo(post.getStatus());
+  }
+
   @DisplayName("작성자는 모집 상태를 모집 중으로 변경할 수 있다")
   @Test
   void updatePostStatus_authorUpdatesToRecruiting() throws Exception {

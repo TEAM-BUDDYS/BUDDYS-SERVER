@@ -17,7 +17,8 @@ public enum UserErrorCode implements ErrorCode {
   TAG_NOT_FOUND("USER-E006", HttpStatus.NOT_FOUND, "존재하지 않는 태그가 포함되어 있습니다."),
   EXCHANGE_INFO_INCOMPLETE("USER-E007", HttpStatus.BAD_REQUEST, "교환학생 국가, 대학교, 기간은 모두 입력하거나 모두 비워야 합니다."),
   INVALID_TAG_SELECTION_COUNT("USER-E008", HttpStatus.BAD_REQUEST, "활동과 관심사 태그는 각각 1~3개, 여행 스타일 태그는 1~5개 선택해야 합니다."),
-  DUPLICATE_TAG("USER-E009", HttpStatus.BAD_REQUEST, "중복된 태그가 포함되어 있습니다.");
+  DUPLICATE_TAG("USER-E009", HttpStatus.BAD_REQUEST, "중복된 태그가 포함되어 있습니다."),
+  RESERVED_NICKNAME("USER-E010", HttpStatus.BAD_REQUEST, "사용할 수 없는 닉네임입니다.");
 
   private final String code;
   private final HttpStatus httpStatus;

@@ -507,7 +507,8 @@ class PostServiceTest {
   @DisplayName("존재하지 않는 게시글 모집 상태 변경 시 예외가 발생한다")
   @Test
   void updatePostStatus_postNotFound_throwsException() {
-    assertThatThrownBy(() -> postService.updatePostStatus(1L, 999L, PostStatus.COMPLETED))
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    assertThatThrownBy(() -> postService.updatePostStatus(author.getId(), 999L, PostStatus.COMPLETED))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(PostErrorCode.POST_NOT_FOUND)
         );
@@ -536,7 +537,8 @@ class PostServiceTest {
   @DisplayName("모집 상태가 null이면 예외가 발생한다")
   @Test
   void updatePostStatus_nullStatus_throwsInvalidRequest() {
-    assertThatThrownBy(() -> postService.updatePostStatus(1L, 1L, null))
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    assertThatThrownBy(() -> postService.updatePostStatus(author.getId(), 1L, null))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
         );

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,13 +22,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
+import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.Gender;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.event.UserWithdrawnEvent;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
 import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
@@ -36,6 +40,7 @@ import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagResult;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -66,6 +71,67 @@ class UserServiceTest {
 
   @Mock
   private CourseImageRepository courseImageRepository;
+
+  @Mock
+  private RefreshTokenRepository refreshTokenRepository;
+
+  @Mock
+  private ApplicationEventPublisher eventPublisher;
+
+  @DisplayName("회원 탈퇴 시 사용자를 soft delete하고 리프레시 토큰을 폐기한다")
+  @Test
+  void withdraw_activeUser_softDeletesAndRevokesRefreshToken() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId, false, false);
+    given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+
+    // when
+    userService.withdraw(userId);
+
+    // then
+    assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
+    assertThat(user.getDeletedAt()).isNotNull();
+    then(userRepository).should().saveAndFlush(user);
+    then(userTagRepository).should().deleteByUserId(userId);
+    then(refreshTokenRepository).should().deleteByUserId(userId);
+    then(eventPublisher).should().publishEvent(any(UserWithdrawnEvent.class));
+  }
+
+  @DisplayName("존재하지 않는 회원은 탈퇴할 수 없다")
+  @Test
+  void withdraw_unknownUser_throwsUserNotFound() {
+    // given
+    Long userId = 1L;
+    given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> userService.withdraw(userId))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(org.sopt.buddys.domain.user.code.UserErrorCode.USER_NOT_FOUND));
+    then(refreshTokenRepository).shouldHaveNoInteractions();
+    then(eventPublisher).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("이미 탈퇴한 회원의 중복 요청은 추가 작업 없이 성공한다")
+  @Test
+  void withdraw_alreadyWithdrawnUser_doesNothing() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId, false, false);
+    user.withdraw();
+    given(userRepository.findByIdForUpdate(userId)).willReturn(Optional.of(user));
+
+    // when
+    userService.withdraw(userId);
+
+    // then
+    then(userRepository).should(never()).saveAndFlush(any());
+    then(userTagRepository).shouldHaveNoInteractions();
+    then(refreshTokenRepository).shouldHaveNoInteractions();
+    then(eventPublisher).shouldHaveNoInteractions();
+  }
 
   @DisplayName("프로필 태그는 카테고리와 무관하게 displayOrder 순서대로 반환한다")
   @Test
@@ -152,7 +218,7 @@ class UserServiceTest {
   void getCourses_returnsCourses() {
     // given
     Long userId = 1L;
-    Course course = createCourse(userId, 10L, "https://example.com/thumbnail.jpg");
+    Course course = createCourse(userId, 10L);
     PageRequest pageable = PageRequest.of(0, 12);
 
     given(userRepository.existsByIdAndDeletedAtIsNull(userId)).willReturn(true);
@@ -185,7 +251,7 @@ class UserServiceTest {
   void getPublicCourses_deletedUser_returnsCourses() {
     // given
     Long userId = 1L;
-    Course course = createCourse(userId, 10L, null);
+    Course course = createCourse(userId, 10L);
     PageRequest pageable = PageRequest.of(0, 12);
 
     given(userRepository.existsById(userId)).willReturn(true);
@@ -310,7 +376,7 @@ class UserServiceTest {
         .notificationEnabled(true)
         .build();
 
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.of(user));
 
     // when
     boolean result = userService.updateNotificationSetting(userId, false);
@@ -325,7 +391,7 @@ class UserServiceTest {
   void updateNotificationSetting_userNotFound_throwsException() {
     // given
     Long userId = 1L;
-    given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.empty());
 
     // when & then
     assertThatThrownBy(() -> userService.updateNotificationSetting(userId, false))
@@ -431,12 +497,11 @@ class UserServiceTest {
         .build();
   }
 
-  private Course createCourse(Long authorId, Long courseId, String thumbnailImageUrl) {
+  private Course createCourse(Long authorId, Long courseId) {
     Course course = new Course(
         baseUserBuilder(authorId).build(),
         "파리 미술관 코스",
         null,
-        thumbnailImageUrl,
         LocalDate.of(2026, 9, 1),
         LocalDate.of(2026, 9, 5)
     );
