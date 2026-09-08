@@ -64,7 +64,7 @@ class WithdrawalBookmarkRetentionTest {
     LocalDate date = LocalDate.of(2026, 9, 1);
     Post post = new Post(withdrawing, country, city, "제목", "내용", date, date,
         CompanionType.FULL_TRIP, RecruitmentCountType.ONE);
-    Course course = new Course(withdrawing, "코스", "내용", null, date, date);
+    Course course = new Course(withdrawing, "코스", "내용", date, date);
     Magazine magazine = new Magazine("매거진", "요약", "https://example.com/image",
         "https://example.com", date);
     entityManager.persist(post);
