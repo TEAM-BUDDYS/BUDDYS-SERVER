@@ -9,6 +9,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ExchangeVerificationRepository extends JpaRepository<ExchangeVerification, Long> {
 
+  boolean existsByDocumentKey(String documentKey);
+
+  boolean existsByUserIdAndStatus(Long userId, ExchangeVerificationStatus status);
+
   @EntityGraph(attributePaths = "user")
   Slice<ExchangeVerification> findAllByOrderByCreatedAtDescIdDesc(Pageable pageable);
 
