@@ -1,0 +1,61 @@
+package org.sopt.buddys.domain.verification.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.verification.dto.response.ExchangeVerificationListResponse;
+import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
+import org.sopt.buddys.domain.verification.service.ExchangeVerificationAdminService;
+import org.sopt.buddys.global.common.code.GlobalSuccessCode;
+import org.sopt.buddys.global.response.BaseResponse;
+import org.sopt.buddys.global.security.annotation.LoginUser;
+import org.sopt.buddys.global.swagger.CommonErrorResponses;
+import org.sopt.buddys.global.swagger.InvalidRequestResponse;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@Validated
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/admin/verifications/exchange")
+@Tag(name = "Admin Verification", description = "관리자 서류 인증 API")
+public class AdminExchangeVerificationController {
+
+  private final ExchangeVerificationAdminService exchangeVerificationAdminService;
+
+  @Operation(
+      summary = "서류 인증 신청 목록 조회",
+      description = "관리자가 전체 신청 또는 처리 상태별 신청 목록을 최신순으로 조회합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "403", description = "관리자 권한 없음")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @GetMapping
+  public BaseResponse<ExchangeVerificationListResponse> getVerifications(
+      @Parameter(hidden = true) @LoginUser Long adminUserId,
+      @Parameter(description = "처리 상태. 생략하면 전체를 조회합니다.", example = "PENDING")
+      @RequestParam(required = false) ExchangeVerificationStatus status,
+      @Parameter(description = "페이지 번호. 0부터 시작합니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        ExchangeVerificationListResponse.from(
+            exchangeVerificationAdminService.getVerifications(adminUserId, status, page, size)
+        )
+    );
+  }
+}
