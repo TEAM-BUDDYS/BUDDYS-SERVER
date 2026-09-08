@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.service.ExchangeVerificationAdminService;
+import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationDetailResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult.ExchangeVerificationSummaryResult;
 import org.sopt.buddys.global.security.annotation.LoginUser;
@@ -76,6 +77,41 @@ class AdminExchangeVerificationControllerTest {
         .andExpect(jsonPath("$.data.hasNext").value(false));
 
     verify(service).getVerifications(ADMIN_USER_ID, ExchangeVerificationStatus.PENDING, 0, 20);
+  }
+
+  @DisplayName("서류 인증 신청 상세 정보를 반환한다")
+  @Test
+  void getVerification_returnsDetail() throws Exception {
+    // given
+    LocalDateTime submittedAt = LocalDateTime.of(2026, 8, 30, 14, 20);
+    when(service.getVerification(ADMIN_USER_ID, 10L))
+        .thenReturn(new ExchangeVerificationDetailResult(
+            10L,
+            2L,
+            "지현",
+            submittedAt,
+            ExchangeVerificationStatus.REJECTED,
+            "교환학생 확인서.pdf",
+            "https://example.com/presigned-document",
+            "서류가 확인되지 않습니다."
+        ));
+
+    // when & then
+    mockMvc.perform(get("/api/v1/admin/verifications/exchange/{verificationId}", 10L))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.code").value("GLB-S001"))
+        .andExpect(jsonPath("$.data.verificationId").value(10))
+        .andExpect(jsonPath("$.data.userId").value(2))
+        .andExpect(jsonPath("$.data.nickname").value("지현"))
+        .andExpect(jsonPath("$.data.submittedAt").value("2026-08-30T05:20:00Z"))
+        .andExpect(jsonPath("$.data.status").value("REJECTED"))
+        .andExpect(jsonPath("$.data.originalFileName").value("교환학생 확인서.pdf"))
+        .andExpect(jsonPath("$.data.documentUrl")
+            .value("https://example.com/presigned-document"))
+        .andExpect(jsonPath("$.data.rejectionReason").value("서류가 확인되지 않습니다."));
+
+    verify(service).getVerification(ADMIN_USER_ID, 10L);
   }
 
   private static class TestLoginUserArgumentResolver implements HandlerMethodArgumentResolver {

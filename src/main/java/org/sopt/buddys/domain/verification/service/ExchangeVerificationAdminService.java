@@ -3,11 +3,14 @@ package org.sopt.buddys.domain.verification.service;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerification;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.repository.ExchangeVerificationRepository;
+import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationDetailResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult.ExchangeVerificationSummaryResult;
+import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +25,7 @@ public class ExchangeVerificationAdminService {
 
   private final ExchangeVerificationRepository exchangeVerificationRepository;
   private final UserRepository userRepository;
+  private final S3PresignedUrlManager s3PresignedUrlManager;
 
   @Transactional(readOnly = true)
   public ExchangeVerificationListResult getVerifications(
@@ -45,6 +49,20 @@ public class ExchangeVerificationAdminService {
         verifications.getSize(),
         verifications.hasNext()
     );
+  }
+
+  @Transactional(readOnly = true)
+  public ExchangeVerificationDetailResult getVerification(Long adminUserId, Long verificationId) {
+    validateAdmin(adminUserId);
+
+    ExchangeVerification verification = exchangeVerificationRepository
+        .findByIdWithUser(verificationId)
+        .orElseThrow(() -> new BaseException(
+            ExchangeVerificationErrorCode.VERIFICATION_NOT_FOUND
+        ));
+    String documentUrl = s3PresignedUrlManager.createGetUrl(verification.getDocumentKey());
+
+    return ExchangeVerificationDetailResult.of(verification, documentUrl);
   }
 
   private void validateAdmin(Long userId) {

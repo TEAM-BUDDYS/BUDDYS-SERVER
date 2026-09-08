@@ -4,9 +4,12 @@ import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Utilities;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetUrlRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -38,6 +41,22 @@ public class S3PresignedUrlManager {
         PutObjectPresignRequest.builder()
             .signatureDuration(PRESIGNED_URL_EXPIRATION)
             .putObjectRequest(objectRequest)
+            .build()
+    );
+
+    return presigned.url().toString();
+  }
+
+  public String createGetUrl(String key) {
+    GetObjectRequest objectRequest = GetObjectRequest.builder()
+        .bucket(s3Properties.getBucket())
+        .key(key)
+        .build();
+
+    PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(
+        GetObjectPresignRequest.builder()
+            .signatureDuration(PRESIGNED_URL_EXPIRATION)
+            .getObjectRequest(objectRequest)
             .build()
     );
 

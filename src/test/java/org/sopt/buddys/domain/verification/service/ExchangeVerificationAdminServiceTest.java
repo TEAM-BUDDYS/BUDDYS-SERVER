@@ -15,10 +15,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerification;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.repository.ExchangeVerificationRepository;
+import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationDetailResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult;
+import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
@@ -31,13 +34,19 @@ class ExchangeVerificationAdminServiceTest {
 
   private ExchangeVerificationRepository exchangeVerificationRepository;
   private UserRepository userRepository;
+  private S3PresignedUrlManager s3PresignedUrlManager;
   private ExchangeVerificationAdminService service;
 
   @BeforeEach
   void setUp() {
     exchangeVerificationRepository = mock(ExchangeVerificationRepository.class);
     userRepository = mock(UserRepository.class);
-    service = new ExchangeVerificationAdminService(exchangeVerificationRepository, userRepository);
+    s3PresignedUrlManager = mock(S3PresignedUrlManager.class);
+    service = new ExchangeVerificationAdminService(
+        exchangeVerificationRepository,
+        userRepository,
+        s3PresignedUrlManager
+    );
   }
 
   @DisplayName("관리자는 전체 서류 인증 신청을 최신순 페이지로 조회한다")
@@ -113,6 +122,55 @@ class ExchangeVerificationAdminServiceTest {
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(GlobalErrorCode.FORBIDDEN));
     verifyNoInteractions(exchangeVerificationRepository);
+  }
+
+  @DisplayName("관리자는 서류 인증 신청 상세 정보와 서류 열람 URL을 조회한다")
+  @Test
+  void getVerification_returnsDetail() {
+    // given
+    User admin = mock(User.class);
+    given(admin.isAdmin()).willReturn(true);
+    given(userRepository.findByIdAndDeletedAtIsNull(ADMIN_USER_ID)).willReturn(Optional.of(admin));
+
+    LocalDateTime submittedAt = LocalDateTime.of(2026, 8, 30, 14, 20);
+    ExchangeVerification verification = verification(submittedAt, ExchangeVerificationStatus.REJECTED);
+    given(verification.getDocumentKey()).willReturn("exchange-verifications/2/document.pdf");
+    given(verification.getOriginalFileName()).willReturn("교환학생 확인서.pdf");
+    given(verification.getRejectionReason()).willReturn("서류가 확인되지 않습니다.");
+    given(exchangeVerificationRepository.findByIdWithUser(10L))
+        .willReturn(Optional.of(verification));
+    given(s3PresignedUrlManager.createGetUrl("exchange-verifications/2/document.pdf"))
+        .willReturn("https://example.com/presigned-document");
+
+    // when
+    ExchangeVerificationDetailResult result = service.getVerification(ADMIN_USER_ID, 10L);
+
+    // then
+    assertThat(result.verificationId()).isEqualTo(10L);
+    assertThat(result.userId()).isEqualTo(APPLICANT_USER_ID);
+    assertThat(result.nickname()).isEqualTo("지현");
+    assertThat(result.submittedAt()).isEqualTo(submittedAt);
+    assertThat(result.status()).isEqualTo(ExchangeVerificationStatus.REJECTED);
+    assertThat(result.originalFileName()).isEqualTo("교환학생 확인서.pdf");
+    assertThat(result.documentUrl()).isEqualTo("https://example.com/presigned-document");
+    assertThat(result.rejectionReason()).isEqualTo("서류가 확인되지 않습니다.");
+  }
+
+  @DisplayName("존재하지 않는 서류 인증 신청을 상세 조회하면 예외가 발생한다")
+  @Test
+  void getVerification_notFound_throwsException() {
+    // given
+    User admin = mock(User.class);
+    given(admin.isAdmin()).willReturn(true);
+    given(userRepository.findByIdAndDeletedAtIsNull(ADMIN_USER_ID)).willReturn(Optional.of(admin));
+    given(exchangeVerificationRepository.findByIdWithUser(999L)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> service.getVerification(ADMIN_USER_ID, 999L))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(ExchangeVerificationErrorCode.VERIFICATION_NOT_FOUND));
+    verifyNoInteractions(s3PresignedUrlManager);
   }
 
   private ExchangeVerification verification(

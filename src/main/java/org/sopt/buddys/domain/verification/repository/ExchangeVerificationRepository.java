@@ -15,6 +15,10 @@ public interface ExchangeVerificationRepository extends JpaRepository<ExchangeVe
   Optional<ExchangeVerification> findFirstByUserIdOrderByIdDesc(Long userId);
 
   @EntityGraph(attributePaths = "user")
+  @Query("select verification from ExchangeVerification verification where verification.id = :id")
+  Optional<ExchangeVerification> findByIdWithUser(@Param("id") Long id);
+
+  @EntityGraph(attributePaths = "user")
   @Query("""
       select verification
       from ExchangeVerification verification
