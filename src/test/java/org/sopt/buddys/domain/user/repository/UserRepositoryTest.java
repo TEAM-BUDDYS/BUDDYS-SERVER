@@ -1,11 +1,12 @@
 package org.sopt.buddys.domain.user.repository;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
@@ -13,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -59,6 +62,50 @@ public class UserRepositoryTest {
 
     // then
     assertThat(result).isEmpty();
+  }
+
+  @DisplayName("닉네임 검색에서 퍼센트 기호는 LIKE wildcard가 아닌 문자 그대로 조회된다")
+  @Test
+  void searchActiveUsersByNickname_percentIsTreatedAsLiteral() {
+    User viewer = saveUser("viewer@test.com", "viewer", "viewer");
+    User literalMatch = saveUser("percent@test.com", "percent", "Buddy%Match");
+    saveUser("wildcard@test.com", "wildcard", "BuddyWildcardMatch");
+
+    Slice<User> result = userRepository.searchActiveUsersByNickname(
+        "%",
+        viewer.getId(),
+        AccountStatus.ACTIVE,
+        PageRequest.of(0, 5)
+    );
+
+    assertThat(result.getContent()).extracting(User::getId).containsExactly(literalMatch.getId());
+  }
+
+  @DisplayName("닉네임 검색에서 밑줄 기호는 LIKE wildcard가 아닌 문자 그대로 조회된다")
+  @Test
+  void searchActiveUsersByNickname_underscoreIsTreatedAsLiteral() {
+    User viewer = saveUser("viewer@test.com", "viewer", "viewer");
+    User literalMatch = saveUser("underscore@test.com", "underscore", "Buddy_Match");
+    saveUser("wildcard@test.com", "wildcard", "BuddyXMatch");
+
+    Slice<User> result = userRepository.searchActiveUsersByNickname(
+        "_",
+        viewer.getId(),
+        AccountStatus.ACTIVE,
+        PageRequest.of(0, 5)
+    );
+
+    assertThat(result.getContent()).extracting(User::getId).containsExactly(literalMatch.getId());
+  }
+
+  private User saveUser(String email, String providerId, String nickname) {
+    return userRepository.saveAndFlush(User.builder()
+        .email(email)
+        .provider(AuthProvider.KAKAO)
+        .providerId(providerId)
+        .nickname(nickname)
+        .accountStatus(AccountStatus.ACTIVE)
+        .build());
   }
 
   private KakaoUserInfo createKakaoUserInfo() {

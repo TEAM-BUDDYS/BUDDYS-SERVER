@@ -257,6 +257,7 @@ class SearchControllerTest extends IntegrationTestSupport {
     assertBadRequest(viewer, "   ", null, null);
     assertBadRequest(viewer, "Paris", "-1", null);
     assertBadRequest(viewer, "Paris", null, "0");
+    assertBadRequest(viewer, "Paris", null, "101");
   }
 
   @DisplayName("인증되지 않은 사용자는 통합 검색을 사용할 수 없다")
