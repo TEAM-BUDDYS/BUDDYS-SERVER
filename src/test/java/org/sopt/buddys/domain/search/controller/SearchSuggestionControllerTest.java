@@ -124,6 +124,21 @@ class SearchSuggestionControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.suggestions[0].keyword").value("SameCity"));
   }
 
+  @DisplayName("도시 후보 제한 전에 실제 반환할 한글명 기준으로 정렬한다")
+  @Test
+  void getSuggestions_ordersCitiesByMatchedKoreanNameBeforeLimit() throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    Long countryId = insertCountry("Testland", "TL");
+    insertCity(countryId, "Zulu", "가나");
+    insertCity(countryId, "Alpha", "가다");
+
+    mockMvc.perform(suggestionRequest(viewer, "가").param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.suggestions.length()").value(1))
+        .andExpect(jsonPath("$.data.suggestions[0].type").value("CITY"))
+        .andExpect(jsonPath("$.data.suggestions[0].keyword").value("가나"));
+  }
+
   @DisplayName("자동완성은 완전 일치, 접두 일치, 중간 포함 순으로 정렬한다")
   @Test
   void getSuggestions_ordersExactPrefixAndContains() throws Exception {

@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Stream;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.location.repository.CityRepository;
@@ -31,8 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class SearchSuggestionService {
 
-  private static final int MAX_SUGGESTION_SIZE = 20;
-
   private final CountryRepository countryRepository;
   private final CityRepository cityRepository;
   private final PlaceRepository placeRepository;
@@ -41,7 +39,6 @@ public class SearchSuggestionService {
   private final PostRepository postRepository;
 
   public SearchSuggestionResult getSuggestions(Long userId, String keyword, int size) {
-    validateRequest(keyword, size);
     SearchPattern pattern = SearchPattern.from(keyword);
     PageRequest limit = PageRequest.of(0, size);
     List<SuggestionResult> candidates = new ArrayList<>();
@@ -91,13 +88,9 @@ public class SearchSuggestionService {
   }
 
   private String toMatchedCityKeyword(CitySuggestionProjection city, String keyword) {
-    return Stream.of(city.getName(), city.getKoreanName())
-        .filter(candidate -> candidate != null && normalize(candidate).contains(keyword))
-        .min(Comparator
-            .comparingInt((String candidate) -> relevance(candidate, keyword))
-            .thenComparing(SearchSuggestionService::normalize)
-            .thenComparing(Comparator.naturalOrder()))
-        .orElseThrow();
+    return Optional.ofNullable(city.getMatchedName())
+        .filter(candidate -> normalize(candidate).contains(keyword))
+        .orElseThrow(() -> new BaseException(GlobalErrorCode.INTERNAL_SERVER_ERROR));
   }
 
   private void addCandidates(
@@ -129,12 +122,6 @@ public class SearchSuggestionService {
 
   private static String normalize(String value) {
     return value.toLowerCase(Locale.ROOT);
-  }
-
-  private void validateRequest(String keyword, int size) {
-    if (keyword == null || keyword.isBlank() || size < 1 || size > MAX_SUGGESTION_SIZE) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
-    }
   }
 
   private record SuggestionKey(SearchSuggestionType type, String normalizedKeyword) {
