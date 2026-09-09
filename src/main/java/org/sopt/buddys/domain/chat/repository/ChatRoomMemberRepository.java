@@ -35,6 +35,17 @@ public interface ChatRoomMemberRepository
   );
 
   @Query("""
+      select participantMember.user.id
+      from ChatRoomMember participantMember
+      where participantMember.chatRoom.id = :chatRoomId
+        and participantMember.user.id <> :userId
+      """)
+  Optional<Long> findOtherMemberUserId(
+      @Param("chatRoomId") Long chatRoomId,
+      @Param("userId") Long userId
+  );
+
+  @Query("""
       select myMember.lastReadMessageId
       from ChatRoomMember myMember
       where myMember.chatRoom.id = :chatRoomId
