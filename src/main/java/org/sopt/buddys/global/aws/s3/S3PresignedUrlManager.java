@@ -4,9 +4,12 @@ import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Utilities;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetUrlRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
@@ -21,6 +24,13 @@ public class S3PresignedUrlManager {
   private final S3Properties s3Properties;
 
   public S3PresignedUploadResult createUploadUrl(String key, String contentType, long fileSize) {
+    return new S3PresignedUploadResult(
+        createPutUrl(key, contentType, fileSize),
+        buildPublicUrl(key)
+    );
+  }
+
+  public String createPutUrl(String key, String contentType, long fileSize) {
     PutObjectRequest objectRequest = PutObjectRequest.builder()
         .bucket(s3Properties.getBucket())
         .key(key)
@@ -34,7 +44,23 @@ public class S3PresignedUrlManager {
             .build()
     );
 
-    return new S3PresignedUploadResult(presigned.url().toString(), buildPublicUrl(key));
+    return presigned.url().toString();
+  }
+
+  public String createGetUrl(String key) {
+    GetObjectRequest objectRequest = GetObjectRequest.builder()
+        .bucket(s3Properties.getBucket())
+        .key(key)
+        .build();
+
+    PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(
+        GetObjectPresignRequest.builder()
+            .signatureDuration(PRESIGNED_URL_EXPIRATION)
+            .getObjectRequest(objectRequest)
+            .build()
+    );
+
+    return presigned.url().toString();
   }
 
   private String buildPublicUrl(String key) {
