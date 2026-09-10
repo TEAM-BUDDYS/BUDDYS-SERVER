@@ -19,12 +19,14 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerification;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
+import org.sopt.buddys.domain.verification.event.ExchangeVerificationReviewedEvent;
 import org.sopt.buddys.domain.verification.repository.ExchangeVerificationRepository;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationDetailResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult;
 import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.SliceImpl;
 
@@ -36,6 +38,7 @@ class ExchangeVerificationAdminServiceTest {
   private ExchangeVerificationRepository exchangeVerificationRepository;
   private UserRepository userRepository;
   private S3PresignedUrlManager s3PresignedUrlManager;
+  private ApplicationEventPublisher eventPublisher;
   private ExchangeVerificationAdminService service;
 
   @BeforeEach
@@ -43,10 +46,12 @@ class ExchangeVerificationAdminServiceTest {
     exchangeVerificationRepository = mock(ExchangeVerificationRepository.class);
     userRepository = mock(UserRepository.class);
     s3PresignedUrlManager = mock(S3PresignedUrlManager.class);
+    eventPublisher = mock(ApplicationEventPublisher.class);
     service = new ExchangeVerificationAdminService(
         exchangeVerificationRepository,
         userRepository,
-        s3PresignedUrlManager
+        s3PresignedUrlManager,
+        eventPublisher
     );
   }
 
@@ -185,6 +190,7 @@ class ExchangeVerificationAdminServiceTest {
     );
     User applicant = verification.getUser();
     given(verification.isPending()).willReturn(true);
+    given(verification.getStatus()).willReturn(ExchangeVerificationStatus.APPROVED);
     given(exchangeVerificationRepository.findByIdWithUserForUpdate(10L))
         .willReturn(Optional.of(verification));
 
@@ -194,6 +200,11 @@ class ExchangeVerificationAdminServiceTest {
     // then
     verify(verification).approve(admin);
     verify(applicant).verifyExchange();
+    verify(eventPublisher).publishEvent(new ExchangeVerificationReviewedEvent(
+        10L,
+        "applicant@example.com",
+        ExchangeVerificationStatus.APPROVED
+    ));
   }
 
   @DisplayName("관리자는 기존 사용자 인증 상태를 변경하지 않고 대기 중인 신청을 반려한다")
@@ -205,7 +216,9 @@ class ExchangeVerificationAdminServiceTest {
         LocalDateTime.of(2026, 8, 30, 14, 20),
         ExchangeVerificationStatus.PENDING
     );
+    User applicant = verification.getUser();
     given(verification.isPending()).willReturn(true);
+    given(verification.getStatus()).willReturn(ExchangeVerificationStatus.REJECTED);
     given(exchangeVerificationRepository.findByIdWithUserForUpdate(10L))
         .willReturn(Optional.of(verification));
 
@@ -214,7 +227,12 @@ class ExchangeVerificationAdminServiceTest {
 
     // then
     verify(verification).reject(admin, "서류가 확인되지 않습니다.");
-    verify(verification, never()).getUser();
+    verify(applicant, never()).verifyExchange();
+    verify(eventPublisher).publishEvent(new ExchangeVerificationReviewedEvent(
+        10L,
+        "applicant@example.com",
+        ExchangeVerificationStatus.REJECTED
+    ));
   }
 
   @DisplayName("이미 처리된 서류 인증 신청은 다시 처리할 수 없다")
@@ -251,6 +269,7 @@ class ExchangeVerificationAdminServiceTest {
     User applicant = mock(User.class);
     given(applicant.getId()).willReturn(APPLICANT_USER_ID);
     given(applicant.getNickname()).willReturn("지현");
+    given(applicant.getEmail()).willReturn("applicant@example.com");
 
     ExchangeVerification verification = mock(ExchangeVerification.class);
     given(verification.getId()).willReturn(10L);

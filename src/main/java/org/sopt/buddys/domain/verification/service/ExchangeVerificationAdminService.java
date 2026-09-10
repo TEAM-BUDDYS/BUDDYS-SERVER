@@ -6,6 +6,7 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerification;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
+import org.sopt.buddys.domain.verification.event.ExchangeVerificationReviewedEvent;
 import org.sopt.buddys.domain.verification.repository.ExchangeVerificationRepository;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationDetailResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult;
@@ -13,6 +14,7 @@ import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationLi
 import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -26,6 +28,7 @@ public class ExchangeVerificationAdminService {
   private final ExchangeVerificationRepository exchangeVerificationRepository;
   private final UserRepository userRepository;
   private final S3PresignedUrlManager s3PresignedUrlManager;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional(readOnly = true)
   public ExchangeVerificationListResult getVerifications(
@@ -72,6 +75,8 @@ public class ExchangeVerificationAdminService {
 
     verification.approve(reviewer);
     verification.getUser().verifyExchange();
+
+    publishReviewedEvent(verification);
   }
 
   @Transactional
@@ -84,6 +89,16 @@ public class ExchangeVerificationAdminService {
     ExchangeVerification verification = findPendingVerificationForUpdate(verificationId);
 
     verification.reject(reviewer, rejectionReason.trim());
+
+    publishReviewedEvent(verification);
+  }
+
+  private void publishReviewedEvent(ExchangeVerification verification) {
+    eventPublisher.publishEvent(new ExchangeVerificationReviewedEvent(
+        verification.getId(),
+        verification.getUser().getEmail(),
+        verification.getStatus()
+    ));
   }
 
   private ExchangeVerification findPendingVerificationForUpdate(Long verificationId) {
