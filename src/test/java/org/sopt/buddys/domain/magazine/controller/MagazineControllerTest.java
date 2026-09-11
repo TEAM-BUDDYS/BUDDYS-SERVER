@@ -23,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.magazine.entity.Magazine;
 import org.sopt.buddys.domain.magazine.entity.MagazineBookmark;
+import org.sopt.buddys.domain.magazine.entity.MagazineCategory;
 import org.sopt.buddys.domain.magazine.repository.MagazineBookmarkRepository;
 import org.sopt.buddys.domain.magazine.repository.MagazineRepository;
 import org.sopt.buddys.domain.magazine.service.MagazineService;
@@ -499,7 +500,8 @@ class MagazineControllerTest {
         "요약 문구",
         "https://example.com/magazines/thumbnail.png",
         "https://www.instagram.com/p/ABC123/",
-        publishedAt
+        publishedAt,
+        MagazineCategory.SUPPORT
     );
   }
 
