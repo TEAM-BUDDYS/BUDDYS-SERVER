@@ -4,8 +4,6 @@ import java.util.List;
 import org.sopt.buddys.domain.magazine.entity.Magazine;
 
 public record MagazineListResult(
-    int year,
-    int month,
     long totalCount,
     int page,
     int size,

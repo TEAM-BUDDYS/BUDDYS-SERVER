@@ -9,12 +9,6 @@ import org.sopt.buddys.domain.magazine.service.result.MagazineListResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult.MagazineSummaryResult;
 
 public record MagazineListResponse(
-    @Schema(description = "조회 연도", example = "2026", requiredMode = RequiredMode.REQUIRED)
-    int year,
-
-    @Schema(description = "조회 월", example = "8", requiredMode = RequiredMode.REQUIRED)
-    int month,
-
     @Schema(description = "조회 조건에 해당하는 전체 매거진 수", example = "2", requiredMode = RequiredMode.REQUIRED)
     long totalCount,
 
@@ -37,8 +31,6 @@ public record MagazineListResponse(
 
   public static MagazineListResponse from(MagazineListResult result) {
     return new MagazineListResponse(
-        result.year(),
-        result.month(),
         result.totalCount(),
         result.page(),
         result.size(),
