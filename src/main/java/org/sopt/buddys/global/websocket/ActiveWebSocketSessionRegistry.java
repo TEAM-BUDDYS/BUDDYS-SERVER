@@ -43,20 +43,19 @@ public class ActiveWebSocketSessionRegistry {
   }
 
   public void disconnectUser(Long userId) {
-    Set<WebSocketSession> sessionsToClose = removeUserSessions(userId);
+    Set<WebSocketSession> sessionsToClose = findUserSessions(userId);
     sessionsToClose.forEach(this::closeSession);
   }
 
-  private synchronized Set<WebSocketSession> removeUserSessions(Long userId) {
-    Set<String> sessionIds = userSessions.remove(userId);
+  private synchronized Set<WebSocketSession> findUserSessions(Long userId) {
+    Set<String> sessionIds = userSessions.get(userId);
     if (sessionIds == null || sessionIds.isEmpty()) {
       return Set.of();
     }
 
     Set<WebSocketSession> sessionsToClose = new HashSet<>();
     for (String sessionId : sessionIds) {
-      sessionUsers.remove(sessionId);
-      WebSocketSession session = sessions.remove(sessionId);
+      WebSocketSession session = sessions.get(sessionId);
       if (session != null) {
         sessionsToClose.add(session);
       }
@@ -77,11 +76,13 @@ public class ActiveWebSocketSessionRegistry {
 
   private void closeSession(WebSocketSession session) {
     if (!session.isOpen()) {
+      unregister(session.getId());
       return;
     }
 
     try {
       session.close(CloseStatus.POLICY_VIOLATION);
+      unregister(session.getId());
     } catch (IOException e) {
       log.warn("[WebSocket] 탈퇴 사용자 세션 종료 실패 sessionId={}", session.getId(), e);
     }

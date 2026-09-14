@@ -3,7 +3,9 @@ package org.sopt.buddys.global.websocket;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
 import java.io.IOException;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +36,30 @@ class ActiveWebSocketSessionRegistryTest {
     // then
     then(firstSession).should().close(CloseStatus.POLICY_VIOLATION);
     then(secondSession).should().close(CloseStatus.POLICY_VIOLATION);
+
+    sessionRegistry.disconnectUser(userId);
+    then(firstSession).should(times(1)).close(CloseStatus.POLICY_VIOLATION);
+    then(secondSession).should(times(1)).close(CloseStatus.POLICY_VIOLATION);
+  }
+
+  @DisplayName("WebSocket 세션 종료에 실패하면 매핑을 유지해 다음 정리에서 다시 종료한다")
+  @Test
+  void disconnectUser_closeFails_retriesOnNextCleanup() throws IOException {
+    // given
+    Long userId = 1L;
+    WebSocketSession session = session("session-1");
+    sessionRegistry.register(session);
+    sessionRegistry.bindUser(session.getId(), userId);
+    doThrow(new IOException("close failed"))
+        .doNothing()
+        .when(session).close(CloseStatus.POLICY_VIOLATION);
+
+    // when
+    sessionRegistry.disconnectUser(userId);
+    sessionRegistry.disconnectUser(userId);
+
+    // then
+    then(session).should(times(2)).close(CloseStatus.POLICY_VIOLATION);
   }
 
   @DisplayName("이미 해제된 WebSocket 세션은 사용자 탈퇴 시 다시 종료하지 않는다")
