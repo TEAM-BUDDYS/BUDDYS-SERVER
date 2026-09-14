@@ -223,6 +223,26 @@ class AirlineServiceTest {
         .containsExactly("에어%1");
   }
 
+  @DisplayName("항공사명이 동일하면 코드 오름차순으로 정렬되어 페이지 경계에서 누락/중복이 없다")
+  @Test
+  void searchAirlines_sameName_ordersByCodeAscAndPaginatesWithoutDuplication() {
+    // given
+    insertAirline("스카이항공", "SK2");
+    insertAirline("스카이항공", "SK1");
+    insertAirline("스카이항공", "SK3");
+
+    // when
+    Slice<Airline> firstPage = airlineService.searchAirlines("스카이", 0, 1);
+    Slice<Airline> secondPage = airlineService.searchAirlines("스카이", 1, 1);
+    Slice<Airline> thirdPage = airlineService.searchAirlines("스카이", 2, 1);
+
+    // then
+    assertThat(firstPage.getContent()).extracting(Airline::getCode).containsExactly("SK1");
+    assertThat(secondPage.getContent()).extracting(Airline::getCode).containsExactly("SK2");
+    assertThat(thirdPage.getContent()).extracting(Airline::getCode).containsExactly("SK3");
+    assertThat(thirdPage.hasNext()).isFalse();
+  }
+
   @DisplayName("키워드의 백슬래시(\\)는 이스케이프 문자가 아닌 일반 문자로 매칭된다")
   @Test
   void searchAirlines_escapesBackslash_matchesLiterally() {

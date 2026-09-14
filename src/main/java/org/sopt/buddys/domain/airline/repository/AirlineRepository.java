@@ -15,7 +15,7 @@ public interface AirlineRepository extends JpaRepository<Airline, Long> {
       where lower(a.name) like lower(concat('%', :keyword, '%')) escape '\\'
          or lower(a.koreanName) like lower(concat('%', :keyword, '%')) escape '\\'
          or lower(a.code) like lower(concat('%', :keyword, '%')) escape '\\'
-      order by a.name asc
+      order by a.name asc, a.code asc
       """)
   Slice<Airline> search(@Param("keyword") String keyword, Pageable pageable);
 }
