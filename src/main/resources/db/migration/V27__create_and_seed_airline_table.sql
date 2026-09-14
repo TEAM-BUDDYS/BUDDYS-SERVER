@@ -1,3 +1,14 @@
+-- Seed airline reference data sourced from the OpenFlights airline database
+-- (https://github.com/jpatokal/openflights, data/airlines.dat), licensed under
+-- the Open Database License (ODbL) v1.0 (https://opendatacommons.org/licenses/odbl/1-0/).
+-- Individual contents may additionally be subject to the Database Contents License
+-- (DbCL) or, for Wikipedia-sourced entries, the GFDL.
+-- Filtered to airlines marked Active='Y' with a non-empty IATA code.
+-- A small number of IATA codes are reused across multiple (often defunct) airlines
+-- in the source data; duplicates were resolved by preferring the non-cargo/
+-- non-domestic/non-express/non-regional entry, with a few manual overrides.
+-- As a derivative of an ODbL-licensed database, this filtered/deduplicated dataset
+-- is distributed under the same ODbL v1.0 terms (share-alike) when redistributed.
 CREATE TABLE airline
 (
     id          BIGINT       AUTO_INCREMENT PRIMARY KEY,
