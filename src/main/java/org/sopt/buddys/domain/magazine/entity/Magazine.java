@@ -40,7 +40,7 @@ public class Magazine extends BaseEntity {
   private LocalDate publishedAt;
 
   @Enumerated(EnumType.STRING)
-  @Column(length = 30)
+  @Column(nullable = false, length = 30)
   private MagazineCategory category;
 
   public Magazine(
