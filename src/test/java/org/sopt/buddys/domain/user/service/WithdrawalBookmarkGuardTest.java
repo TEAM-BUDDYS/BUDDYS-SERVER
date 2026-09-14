@@ -62,10 +62,11 @@ class WithdrawalBookmarkGuardTest {
     verifyNoInteractions(magazineBookmarkRepository);
   }
 
-  @DisplayName("사용자 조회 후 탈퇴가 완료되면 코스 저장을 거부한다")
+  @DisplayName("탈퇴했거나 존재하지 않는 사용자는 코스를 저장할 수 없다")
   @Test
-  void courseBookmark_userWithdrawnAfterOuterRead_rejectsInsert() {
+  void courseBookmark_inactiveUser_rejectsInsert() {
     CourseBookmark bookmark = courseBookmark();
+    given(userRepository.findActiveByIdForUpdate(1L)).willReturn(Optional.empty());
 
     assertUserNotFound(() -> courseBookmarkTransactionService.create(bookmark));
 
