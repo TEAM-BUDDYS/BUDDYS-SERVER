@@ -2,12 +2,14 @@ package org.sopt.buddys.domain.user.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.auth.code.AuthErrorCode;
+import org.sopt.buddys.domain.location.entity.University;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
 import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
@@ -28,6 +30,7 @@ public class UserTest {
         .introduction("자기소개")
         .birthDate(LocalDate.of(2000, 1, 1))
         .gender(Gender.FEMALE)
+        .university(mock(University.class))
         .universityVerified(true)
         .exchangeVerified(true)
         .build();
@@ -47,6 +50,7 @@ public class UserTest {
     assertThat(user.getBirthDate()).isNull();
     assertThat(user.getGender()).isNull();
     assertThat(user.isNotificationEnabled()).isFalse();
+    assertThat(user.getUniversity()).isNull();
     assertThat(user.isUniversityVerified()).isFalse();
     assertThat(user.isExchangeVerified()).isFalse();
     assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);

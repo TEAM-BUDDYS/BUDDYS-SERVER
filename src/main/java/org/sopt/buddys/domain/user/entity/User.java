@@ -222,6 +222,7 @@ public class User extends BaseEntity {
     this.birthDate = null;
     this.gender = null;
     this.notificationEnabled = false;
+    this.university = null;
     this.universityVerified = false;
     this.exchangeVerified = false;
     this.interestCountry = null;

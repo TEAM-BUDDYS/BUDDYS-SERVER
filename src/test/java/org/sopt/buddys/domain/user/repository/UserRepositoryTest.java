@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.user.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.auth.entity.RefreshToken;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.buddys.domain.location.entity.University;
 import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -40,6 +42,9 @@ public class UserRepositoryTest {
 
   @Autowired
   private RefreshTokenRepository refreshTokenRepository;
+
+  @Autowired
+  private EntityManager entityManager;
 
   @AfterEach
   void tearDown() {
@@ -207,17 +212,31 @@ public class UserRepositoryTest {
   @Test
   void withdraw_thenDeleteRefreshToken_persistsSoftDelete() {
     // given
-    User user = userRepository.save(User.ofKakao("12345", createKakaoUserInfo()));
+    entityManager.createNativeQuery(
+        "INSERT INTO country (id, name, iso_code) VALUES (999001, '탈퇴 테스트 국가', 'ZZ')"
+    ).executeUpdate();
+    entityManager.createNativeQuery(
+        "INSERT INTO university (id, country_id, name, domain) "
+            + "VALUES (999001, 999001, '탈퇴 테스트 학교', 'withdrawal.test')"
+    ).executeUpdate();
+    University university = entityManager.find(University.class, 999001L);
+    User user = User.ofKakao("12345", createKakaoUserInfo());
+    user.verifyUniversity(university);
+    user = userRepository.saveAndFlush(user);
     refreshTokenRepository.save(RefreshToken.of(user.getId(), "refresh-token", 60_000L));
 
     // when
     user.withdraw();
+    userRepository.saveAndFlush(user);
     refreshTokenRepository.deleteByUserId(user.getId());
+    entityManager.clear();
 
     // then
     User withdrawnUser = userRepository.findById(user.getId()).orElseThrow();
     assertThat(withdrawnUser.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
     assertThat(withdrawnUser.getDeletedAt()).isNotNull();
+    assertThat(withdrawnUser.getUniversity()).isNull();
+    assertThat(withdrawnUser.isUniversityVerified()).isFalse();
     assertThat(refreshTokenRepository.findById(user.getId())).isEmpty();
   }
 
