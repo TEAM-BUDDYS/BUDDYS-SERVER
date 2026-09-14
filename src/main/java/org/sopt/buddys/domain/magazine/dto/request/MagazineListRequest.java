@@ -42,7 +42,7 @@ public record MagazineListRequest(
     if (keyword == null) {
       return null;
     }
-    String normalizedKeyword = keyword.trim();
+    String normalizedKeyword = keyword.strip();
     return normalizedKeyword.isEmpty() ? null : normalizedKeyword;
   }
 
