@@ -113,7 +113,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                     value = """
                         {
                           "success": false,
-                          "code": "USER-E008",
+                          "code": "USER-E010",
                           "message": "사용할 수 없는 닉네임입니다.",
                           "data": null
                         }
