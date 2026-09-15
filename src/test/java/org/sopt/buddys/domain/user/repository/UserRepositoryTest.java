@@ -76,6 +76,50 @@ public class UserRepositoryTest {
     assertThat(result).isEmpty();
   }
 
+  @DisplayName("닉네임 검색에서 퍼센트 기호는 LIKE wildcard가 아닌 문자 그대로 조회된다")
+  @Test
+  void searchActiveUsersByNickname_percentIsTreatedAsLiteral() {
+    User viewer = saveUser("viewer@test.com", "viewer", "viewer");
+    User literalMatch = saveUser("percent@test.com", "percent", "Buddy%Match");
+    saveUser("wildcard@test.com", "wildcard", "BuddyWildcardMatch");
+
+    Slice<User> result = userRepository.searchActiveUsersByNickname(
+        "%",
+        viewer.getId(),
+        AccountStatus.ACTIVE,
+        PageRequest.of(0, 5)
+    );
+
+    assertThat(result.getContent()).extracting(User::getId).containsExactly(literalMatch.getId());
+  }
+
+  @DisplayName("닉네임 검색에서 밑줄 기호는 LIKE wildcard가 아닌 문자 그대로 조회된다")
+  @Test
+  void searchActiveUsersByNickname_underscoreIsTreatedAsLiteral() {
+    User viewer = saveUser("viewer@test.com", "viewer", "viewer");
+    User literalMatch = saveUser("underscore@test.com", "underscore", "Buddy_Match");
+    saveUser("wildcard@test.com", "wildcard", "BuddyXMatch");
+
+    Slice<User> result = userRepository.searchActiveUsersByNickname(
+        "_",
+        viewer.getId(),
+        AccountStatus.ACTIVE,
+        PageRequest.of(0, 5)
+    );
+
+    assertThat(result.getContent()).extracting(User::getId).containsExactly(literalMatch.getId());
+  }
+
+  private User saveUser(String email, String providerId, String nickname) {
+    return userRepository.saveAndFlush(User.builder()
+        .email(email)
+        .provider(AuthProvider.KAKAO)
+        .providerId(providerId)
+        .nickname(nickname)
+        .accountStatus(AccountStatus.ACTIVE)
+        .build());
+  }
+
   @DisplayName("닉네임에 키워드가 부분 일치(대소문자 무시)하는 사용자를 검색한다")
   @Test
   void searchByNicknameContaining_partialMatchIgnoreCase() {

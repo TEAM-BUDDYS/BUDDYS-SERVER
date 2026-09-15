@@ -12,7 +12,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
   Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
