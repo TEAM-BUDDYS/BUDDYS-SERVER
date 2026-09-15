@@ -3,21 +3,18 @@ package org.sopt.buddys.domain.post.service.result;
 import java.util.List;
 import org.sopt.buddys.domain.post.entity.Post;
 
-public record PostListResult(
-    List<PostSummaryResult> content,
-    int page,
-    int size,
-    boolean hasNext
+public record ClosingSoonPostResult(
+    List<ClosingSoonPostSummaryResult> content
 ) {
 
-  public PostListResult {
+  public ClosingSoonPostResult {
     content = List.copyOf(content);
   }
 
-  public record PostSummaryResult(
+  public record ClosingSoonPostSummaryResult(
       Post post,
       String thumbnailImageUrl,
-      boolean isBookmarked
+      boolean saved
   ) {
   }
 }
