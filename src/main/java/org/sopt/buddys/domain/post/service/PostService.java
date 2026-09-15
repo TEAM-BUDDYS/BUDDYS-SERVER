@@ -122,6 +122,9 @@ public class PostService {
 
   @Transactional
   public Post updatePostStatus(Long userId, Long postId, PostStatus status) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     if (status == null) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
@@ -141,6 +144,9 @@ public class PostService {
 
   @Transactional
   public Post updatePost(Long userId, Long postId, UpdatePostCommand command) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     validateUpdateRequest(command);
 
     Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
@@ -196,6 +202,9 @@ public class PostService {
 
   @Transactional
   public Post deletePost(Long userId, Long postId) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
     if (!post.getAuthor().getId().equals(userId)) {
@@ -213,7 +222,7 @@ public class PostService {
   public PostBookmarkResult bookmarkPost(Long userId, Long postId) {
     postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-    userRepository.findByIdAndDeletedAtIsNull(userId)
+    userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     postBookmarkRepository.insertOrKeep(userId, postId);
