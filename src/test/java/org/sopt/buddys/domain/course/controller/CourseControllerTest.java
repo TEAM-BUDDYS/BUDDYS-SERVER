@@ -30,6 +30,100 @@ class CourseControllerTest extends IntegrationTestSupport {
   @Autowired
   private UserRepository userRepository;
 
+  @DisplayName("내가 작성한 코스 목록을 프로필에서 조회한다")
+  @Test
+  void getMyCourses_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    createCourseViaApi(author, countryId, cityId, tagId, "파리 코스");
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(get("/api/v1/users/me/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses.length()").value(1))
+        .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
+        .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
+            .value("https://example.com/day1.jpg"))
+        .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.size").value(18))
+        .andExpect(jsonPath("$.data.hasNext").value(false));
+  }
+
+  @DisplayName("타 유저가 작성한 코스 목록을 프로필에서 조회한다")
+  @Test
+  void getUserCourses_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    createCourseViaApi(author, countryId, cityId, tagId, "파리 코스");
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(get("/api/v1/users/{userId}/courses", author.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses.length()").value(1))
+        .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
+        .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
+            .value("https://example.com/day1.jpg"))
+        .andExpect(jsonPath("$.data.size").value(18));
+  }
+
+  @DisplayName("일차가 역순으로 등록되어도 가장 이른 일차의 첫 사진을 프로필 썸네일로 반환한다")
+  @Test
+  void getMyCourses_returnsFirstImageOfEarliestDay() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [
+                    {
+                      "dayNumber": 2,
+                      "imageUrls": ["https://example.com/day2-first.jpg"]
+                    },
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": [
+                        "https://example.com/day1-first.jpg",
+                        "https://example.com/day1-second.jpg"
+                      ]
+                    }
+                  ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isCreated());
+
+    // when, then
+    mockMvc.perform(get("/api/v1/users/me/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
+            .value("https://example.com/day1-first.jpg"));
+  }
+
   @DisplayName("코스 목록을 국가로 필터링하여 조회한다")
   @Test
   void getCourses_filteredByCountry_returnsOk() throws Exception {
@@ -55,7 +149,7 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.content[0].title").value("파리 코스"))
         .andExpect(jsonPath("$.data.content[0].countries").value("프랑스"))
         .andExpect(jsonPath("$.data.content[0].cities").value("파리"))
-        .andExpect(jsonPath("$.data.content[0].images[0]").value("https://example.com/thumbnail.jpg"))
+        .andExpect(jsonPath("$.data.content[0].images[0]").value("https://example.com/day1.jpg"))
         .andExpect(jsonPath("$.data.content[0].isBookmarked").value(false))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.hasNext").value(false));
@@ -70,6 +164,44 @@ class CourseControllerTest extends IntegrationTestSupport {
     // when, then
     mockMvc.perform(get("/api/v1/courses")
             .queryParam("countryId", "-1")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("코스 목록을 태그로 필터링하여 조회한다")
+  @Test
+  void getCourses_filteredByTag_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long walkingTagId = insertTag("도보여행", "ACTIVITY");
+    Long foodTagId = insertTag("맛집탐방", "ACTIVITY");
+
+    createCourseViaApi(author, countryId, cityId, walkingTagId, "도보 코스");
+    createCourseViaApi(author, countryId, cityId, foodTagId, "맛집 코스");
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses")
+            .queryParam("tagId", String.valueOf(walkingTagId))
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.content.length()").value(1))
+        .andExpect(jsonPath("$.data.content[0].title").value("도보 코스"));
+  }
+
+  @DisplayName("코스 목록 조회 시 tagId가 0 이하이면 실패한다")
+  @Test
+  void getCourses_nonPositiveTagId_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+
+    // when, then
+    mockMvc.perform(get("/api/v1/courses")
+            .queryParam("tagId", "-1")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
@@ -144,17 +276,17 @@ class CourseControllerTest extends IntegrationTestSupport {
                           "memo": "예약 필수",
                           "cost": 22000
                         }
+                      ],
+                      "flights": [
+                        {
+                          "airline": "대한항공",
+                          "flightNumber": "KE901",
+                          "departureAirport": "ICN",
+                          "departureAt": "2026-09-01T13:00:00",
+                          "arrivalAirport": "CDG",
+                          "arrivalAt": "2026-09-01T18:30:00"
+                        }
                       ]
-                    }
-                  ],
-                  "flights": [
-                    {
-                      "airline": "대한항공",
-                      "flightNumber": "KE901",
-                      "departureAirport": "ICN",
-                      "departureAt": "2026-09-01T13:00:00",
-                      "arrivalAirport": "CDG",
-                      "arrivalAt": "2026-09-01T18:30:00"
                     }
                   ]
                 }
@@ -313,8 +445,13 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ],
-                  "flights": [ null ]
+                  "days": [
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": ["https://example.com/day1.jpg"],
+                      "flights": [ null ]
+                    }
+                  ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isBadRequest())
@@ -499,7 +636,6 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "cityIds": [%d],
                   "title": "파리 5일 코스",
                   "content": "루브르부터...",
-                  "thumbnailImageUrl": "https://example.com/thumbnail.jpg",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
@@ -520,7 +656,6 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.code").value("COURSE-S001"))
         .andExpect(jsonPath("$.data.courseId").value(courseId))
         .andExpect(jsonPath("$.data.title").value("파리 5일 코스"))
-        .andExpect(jsonPath("$.data.thumbnailImageUrl").value("https://example.com/thumbnail.jpg"))
         .andExpect(jsonPath("$.data.isMine").value(true))
         .andExpect(jsonPath("$.data.isBookmarked").value(false))
         .andExpect(jsonPath("$.data.commentCount").value(0))
@@ -712,7 +847,6 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "countryIds": [%d],
                   "cityIds": [%d],
                   "title": "%s",
-                  "thumbnailImageUrl": "https://example.com/thumbnail.jpg",
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],

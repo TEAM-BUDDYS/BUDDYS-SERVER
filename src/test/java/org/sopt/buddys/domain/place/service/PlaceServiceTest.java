@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.place.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -19,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
+import org.sopt.buddys.domain.place.client.dto.GoogleAddressComponent;
 import org.sopt.buddys.domain.place.client.dto.GoogleDisplayName;
 import org.sopt.buddys.domain.place.client.dto.GoogleLatLng;
 import org.sopt.buddys.domain.place.client.dto.GooglePhoto;
@@ -110,6 +112,7 @@ class PlaceServiceTest {
         "japanese_restaurant",
         List.of("japanese_restaurant", "restaurant", "food", "point_of_interest"),
         "서울",
+        null,
         new GoogleLatLng(37.5, 127.0),
         List.of()
     );
@@ -177,6 +180,7 @@ class PlaceServiceTest {
         "cafe",
         List.of("cafe"),
         "서울",
+        null,
         new GoogleLatLng(37.5, 127.0),
         List.of(new GooglePhoto("places/place-with-photo/photos/photo-1"))
     );
@@ -197,6 +201,80 @@ class PlaceServiceTest {
         .filteredOn(item -> item.placeId().equals("place-without-photo"))
         .extracting(PlaceSearchResult.PlaceSearchItemResult::photoUrl)
         .containsExactly((String) null);
+  }
+
+  @DisplayName("검색 결과에 place_id와 장소명이 담긴 구글맵 딥링크를 함께 내려준다")
+  @Test
+  void search_includesGoogleMapsUrl() {
+    // given
+    GooglePlace place = new GooglePlace(
+        "ChIJN1t_tDeuEmsRUsoyG83frY4",
+        new GoogleDisplayName("루브르 박물관", "ko"),
+        "art_gallery",
+        List.of("art_gallery"),
+        "Rue de Rivoli, 75001 Paris",
+        List.of(
+            new GoogleAddressComponent("프랑스", "FR", List.of("country", "political")),
+            new GoogleAddressComponent("파리", "파리", List.of("locality", "political"))
+        ),
+        new GoogleLatLng(48.8606, 2.3376),
+        List.of()
+    );
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
+        .willReturn(new GooglePlacesSearchResponse(List.of(place), null));
+    given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
+
+    // when
+    PlaceSearchResult result = placeService.search(1L, "루브르", null, null, null, null);
+
+    // then
+    assertThat(result.places())
+        .extracting(PlaceSearchResult.PlaceSearchItemResult::googleMapsUrl)
+        .containsExactly(
+            "https://www.google.com/maps/search/?api=1"
+                + "&query=%EB%A3%A8%EB%B8%8C%EB%A5%B4+%EB%B0%95%EB%AC%BC%EA%B4%80"
+                + "&query_place_id=ChIJN1t_tDeuEmsRUsoyG83frY4");
+  }
+
+  @DisplayName("addressComponents에서 국가/도시를 뽑아준다. locality가 없으면 상위 행정구역으로 대체하고, 없으면 null")
+  @Test
+  void search_extractsCountryAndCityFromAddressComponents() {
+    // given
+    GooglePlace withLocality = new GooglePlace(
+        "place-locality", new GoogleDisplayName("장소1", "ko"), "cafe", List.of("cafe"), "주소1",
+        List.of(
+            new GoogleAddressComponent("프랑스", "FR", List.of("country", "political")),
+            new GoogleAddressComponent("파리", "파리", List.of("locality", "political"))
+        ),
+        new GoogleLatLng(48.86, 2.33), List.of());
+    GooglePlace withoutLocality = new GooglePlace(
+        "place-admin", new GoogleDisplayName("장소2", "ko"), "cafe", List.of("cafe"), "주소2",
+        List.of(
+            new GoogleAddressComponent("미국", "US", List.of("country", "political")),
+            new GoogleAddressComponent("캘리포니아", "CA", List.of("administrative_area_level_1", "political"))
+        ),
+        new GoogleLatLng(37.0, -120.0), List.of());
+    GooglePlace noComponents = new GooglePlace(
+        "place-none", new GoogleDisplayName("장소3", "ko"), "cafe", List.of("cafe"), "주소3",
+        null, new GoogleLatLng(0.0, 0.0), List.of());
+    given(googlePlacesClient.searchText(anyString(), any(), any(), any()))
+        .willReturn(new GooglePlacesSearchResponse(
+            List.of(withLocality, withoutLocality, noComponents), null));
+    given(placeBookmarkRepository.findBookmarkedGooglePlaceIds(any(), any())).willReturn(List.of());
+
+    // when
+    PlaceSearchResult result = placeService.search(1L, "카페", null, null, null, null);
+
+    // then
+    assertThat(result.places())
+        .extracting(
+            PlaceSearchResult.PlaceSearchItemResult::placeId,
+            PlaceSearchResult.PlaceSearchItemResult::country,
+            PlaceSearchResult.PlaceSearchItemResult::city)
+        .containsExactly(
+            tuple("place-locality", "프랑스", "파리"),
+            tuple("place-admin", "미국", "캘리포니아"),
+            tuple("place-none", null, null));
   }
 
   @DisplayName("구글의 nextPageToken을 그대로 전달한다")
@@ -433,6 +511,7 @@ class PlaceServiceTest {
         primaryType,
         List.of(primaryType),
         "서울",
+        null,
         new GoogleLatLng(37.5, 127.0),
         List.of()
     );

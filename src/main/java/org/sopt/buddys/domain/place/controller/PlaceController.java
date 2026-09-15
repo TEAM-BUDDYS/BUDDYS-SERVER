@@ -14,8 +14,17 @@ import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.place.code.PlaceSuccessCode;
+import org.sopt.buddys.domain.place.controller.swagger.BookmarkPlaceSwagger;
+import org.sopt.buddys.domain.place.controller.swagger.CancelPlaceBookmarkSwagger;
+import org.sopt.buddys.domain.place.controller.swagger.GetBookmarkedPlaceMarkersSwagger;
+import org.sopt.buddys.domain.place.controller.swagger.GetBookmarkedPlacesSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.GooglePlacesUnavailableResponse;
+import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceListResponse;
+import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceMarkersResponse;
+import org.sopt.buddys.domain.place.dto.response.PlaceBookmarkResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceSearchResponse;
+import org.sopt.buddys.domain.place.service.PlaceBookmarkService;
 import org.sopt.buddys.domain.place.service.PlaceService;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -25,11 +34,15 @@ import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @RestController
 @Validated
@@ -39,6 +52,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlaceController {
 
   private final PlaceService placeService;
+  private final PlaceBookmarkService placeBookmarkService;
 
   @Operation(summary = "장소 검색", description = "구글 Places API를 통해 장소를 검색합니다. lat/lng를 함께 주면 해당 좌표 주변 결과를 우선합니다.")
   @ApiResponses({
@@ -205,6 +219,71 @@ public class PlaceController {
   ) {
     return BaseResponse.success(GlobalSuccessCode.OK,
         PlaceSearchResponse.from(placeService.nearby(userId, lat, lng, radius, category))
+    );
+  }
+
+  @BookmarkPlaceSwagger
+  @PostMapping("/{placeId}/bookmark")
+  public ResponseEntity<BaseResponse<PlaceBookmarkResponse>> bookmarkPlace(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "구글 place_id", example = "ChIJN1t_tDeuEmsRUsoyG83frY4")
+      @PathVariable
+      @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "placeId 형식이 올바르지 않습니다.")
+      String placeId
+  ) {
+    placeBookmarkService.bookmark(userId, placeId);
+    return ResponseEntity
+        .status(PlaceSuccessCode.PLACE_BOOKMARKED.getHttpStatus())
+        .body(BaseResponse.success(PlaceSuccessCode.PLACE_BOOKMARKED, PlaceBookmarkResponse.of(true)));
+  }
+
+  @CancelPlaceBookmarkSwagger
+  @DeleteMapping("/{placeId}/bookmark")
+  public BaseResponse<PlaceBookmarkResponse> cancelPlaceBookmark(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "구글 place_id", example = "ChIJN1t_tDeuEmsRUsoyG83frY4")
+      @PathVariable
+      @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "placeId 형식이 올바르지 않습니다.")
+      String placeId
+  ) {
+    placeBookmarkService.cancelBookmark(userId, placeId);
+    return BaseResponse.success(PlaceSuccessCode.PLACE_BOOKMARK_CANCELED, PlaceBookmarkResponse.of(false));
+  }
+
+  @GetBookmarkedPlacesSwagger
+  @GetMapping("/bookmarks")
+  public BaseResponse<BookmarkedPlaceListResponse> getBookmarkedPlaces(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+  ) {
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        BookmarkedPlaceListResponse.from(placeBookmarkService.getBookmarkedPlaces(userId, page, size))
+    );
+  }
+
+  @GetBookmarkedPlaceMarkersSwagger
+  @GetMapping("/bookmarks/markers")
+  public BaseResponse<BookmarkedPlaceMarkersResponse> getBookmarkedPlaceMarkers(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "지도 영역 남서(south-west) 모서리 위도", example = "48.84")
+      @RequestParam BigDecimal swLat,
+      @Parameter(description = "지도 영역 남서(south-west) 모서리 경도", example = "2.32")
+      @RequestParam BigDecimal swLng,
+      @Parameter(description = "지도 영역 북동(north-east) 모서리 위도", example = "48.88")
+      @RequestParam BigDecimal neLat,
+      @Parameter(description = "지도 영역 북동(north-east) 모서리 경도", example = "2.36")
+      @RequestParam BigDecimal neLng
+  ) {
+    return BaseResponse.success(GlobalSuccessCode.OK,
+        BookmarkedPlaceMarkersResponse.from(
+            placeBookmarkService.getBookmarkedPlaceMarkers(userId, swLat, swLng, neLat, neLng))
     );
   }
 

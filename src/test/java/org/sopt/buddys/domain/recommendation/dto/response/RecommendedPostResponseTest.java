@@ -14,7 +14,7 @@ import org.sopt.buddys.domain.user.entity.User;
 
 class RecommendedPostResponseTest {
 
-  @DisplayName("추천 게시글 응답에 작성자 프로필 이미지, 국가, 조회수를 포함한다")
+  @DisplayName("추천 게시글 응답에 작성자 정보, 국가, 조회수를 포함한다")
   @Test
   void from_includesAuthorProfileCountryAndViewCount() {
     // given
@@ -22,6 +22,8 @@ class RecommendedPostResponseTest {
     Country country = mock(Country.class);
     Post post = mock(Post.class);
 
+    given(author.getId()).willReturn(100L);
+    given(author.getNickname()).willReturn("가윤");
     given(author.getProfileImageUrl()).willReturn("https://example.com/profile.png");
     given(country.getId()).willReturn(1L);
     given(country.getName()).willReturn("France");
@@ -45,7 +47,9 @@ class RecommendedPostResponseTest {
     RecommendedPostResponse response = RecommendedPostResponse.from(result);
 
     // then
-    assertThat(response.authorProfileImageUrl()).isEqualTo("https://example.com/profile.png");
+    assertThat(response.author().userId()).isEqualTo(100L);
+    assertThat(response.author().nickname()).isEqualTo("가윤");
+    assertThat(response.author().profileImageUrl()).isEqualTo("https://example.com/profile.png");
     assertThat(response.country().countryId()).isEqualTo(1L);
     assertThat(response.country().name()).isEqualTo("France");
     assertThat(response.viewCount()).isEqualTo(25L);

@@ -12,6 +12,7 @@ import org.sopt.buddys.domain.course.entity.QCourseCity;
 import org.sopt.buddys.domain.course.entity.QCourseCountry;
 import org.sopt.buddys.domain.course.entity.QCourseDay;
 import org.sopt.buddys.domain.course.entity.QCoursePlace;
+import org.sopt.buddys.domain.course.entity.QCourseTag;
 import org.sopt.buddys.domain.course.service.command.CourseSearchCondition;
 import org.sopt.buddys.domain.place.entity.QPlace;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +27,7 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
   private static final QCourseDay courseDay = QCourseDay.courseDay;
   private static final QCoursePlace coursePlace = QCoursePlace.coursePlace;
   private static final QPlace place = QPlace.place;
+  private static final QCourseTag courseTag = QCourseTag.courseTag;
 
   private final JPAQueryFactory queryFactory;
 
@@ -37,7 +39,11 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
   public Slice<Course> searchCourses(CourseSearchCondition condition, Pageable pageable) {
     List<Course> courses = queryFactory
         .selectFrom(course)
-        .where(course.deletedAt.isNull(), countryEquals(condition.countryId()))
+        .where(
+            course.deletedAt.isNull(),
+            countryEquals(condition.countryId()),
+            tagEquals(condition.tagId())
+        )
         .orderBy(course.createdAt.desc(), course.id.desc())
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + 1L)
@@ -104,6 +110,18 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
             .select(courseCountry.course.id)
             .from(courseCountry)
             .where(courseCountry.country.id.eq(countryId))
+    );
+  }
+
+  private BooleanExpression tagEquals(Long tagId) {
+    if (tagId == null) {
+      return null;
+    }
+    return course.id.in(
+        JPAExpressions
+            .select(courseTag.course.id)
+            .from(courseTag)
+            .where(courseTag.tag.id.eq(tagId))
     );
   }
 }

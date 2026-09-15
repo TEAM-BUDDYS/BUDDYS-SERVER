@@ -18,6 +18,8 @@ public interface UniversityVerificationRepository {
    */
   void deleteIfMatches(UniversityVerification verification);
 
+  void deleteByUserId(Long userId);
+
   record VerificationResult(Status status, UniversityVerification verification) {
 
     public static VerificationResult matched(UniversityVerification verification) {
