@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.user.repository;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
@@ -12,7 +13,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
   Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
@@ -24,7 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
       where u.id = :userId
         and u.deletedAt is null
       """)
-  Optional<User> findByIdForProfileUpdate(@Param("userId") Long userId);
+  Optional<User> findActiveByIdForUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u.notificationEnabled
@@ -33,6 +34,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
         and u.deletedAt is null
       """)
   Optional<Boolean> findNotificationEnabledById(@Param("userId") Long userId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select u from User u where u.id = :userId")
+  Optional<User> findByIdForUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u
@@ -73,6 +78,30 @@ public interface UserRepository extends JpaRepository<User, Long> {
   Slice<User> searchByNicknameContaining(
       @Param("keyword") String keyword,
       @Param("excludeUserId") Long excludeUserId,
+      Pageable pageable
+  );
+
+  @Query("""
+      select u.nickname
+      from User u
+      where lower(u.nickname) like :containsPattern escape '!'
+        and u.id <> :excludeUserId
+        and u.accountStatus = :accountStatus
+        and u.deletedAt is null
+      order by case
+          when lower(u.nickname) = :exactKeyword then 0
+          when lower(u.nickname) like :prefixPattern escape '!' then 1
+          else 2
+        end,
+        lower(u.nickname) asc,
+        u.id asc
+      """)
+  List<String> findSuggestionNicknames(
+      @Param("exactKeyword") String exactKeyword,
+      @Param("prefixPattern") String prefixPattern,
+      @Param("containsPattern") String containsPattern,
+      @Param("excludeUserId") Long excludeUserId,
+      @Param("accountStatus") AccountStatus accountStatus,
       Pageable pageable
   );
 }

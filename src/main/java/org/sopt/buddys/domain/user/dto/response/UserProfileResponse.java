@@ -41,7 +41,7 @@ public record UserProfileResponse(
     User user = result.user();
     return new UserProfileResponse(
         user.getId(),
-        user.getNickname(),
+        user.getDisplayNickname(),
         user.getProfileImageUrl(),
         user.getIntroduction(),
         VerificationBadge.from(user),

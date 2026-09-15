@@ -123,7 +123,7 @@ public class RecommendationService {
         })
         .sorted(Comparator.comparingDouble(RecommendedUserResult::totalSimilarity).reversed()
             .thenComparing(Comparator.comparingDouble(RecommendedUserResult::activitySimilarity).reversed())
-            .thenComparing(result -> result.user().getNickname())
+            .thenComparing(result -> result.user().getDisplayNickname())
             .thenComparing(result -> result.user().getId()))
         .limit(size)
         .toList();

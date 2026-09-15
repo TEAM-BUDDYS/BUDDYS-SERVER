@@ -574,6 +574,7 @@ class CourseServiceTest {
   @Test
   void updateCourse_courseNotFound_throwsException() {
     // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Long countryId = insertCountry("프랑스", "FR");
     Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
     Long tagId = insertTag("도보여행", "ACTIVITY");
@@ -581,7 +582,7 @@ class CourseServiceTest {
         countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId);
 
     // when, then
-    assertThatThrownBy(() -> courseService.updateCourse(1L, 999_999L, updateCommand))
+    assertThatThrownBy(() -> courseService.updateCourse(author.getId(), 999_999L, updateCommand))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
         );
@@ -764,8 +765,9 @@ class CourseServiceTest {
   @DisplayName("존재하지 않는 코스를 삭제하면 예외가 발생한다")
   @Test
   void deleteCourse_courseNotFound_throwsException() {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     // when, then
-    assertThatThrownBy(() -> courseService.deleteCourse(1L, 999_999L))
+    assertThatThrownBy(() -> courseService.deleteCourse(author.getId(), 999_999L))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COURSE_NOT_FOUND)
         );

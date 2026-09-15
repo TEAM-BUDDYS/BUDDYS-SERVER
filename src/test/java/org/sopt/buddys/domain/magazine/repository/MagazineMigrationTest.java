@@ -16,14 +16,14 @@ import org.testcontainers.containers.MySQLContainer;
 
 class MagazineMigrationTest {
 
-  @DisplayName("V28은 기존 매거진 카테고리를 보정하고 컬럼을 NOT NULL로 변경한다")
+  @DisplayName("V30은 기존 매거진 카테고리를 보정하고 컬럼을 NOT NULL로 변경한다")
   @Test
-  void migrateV28_backfillsCategoryAndMakesColumnNotNull() throws Exception {
+  void migrateV30_backfillsCategoryAndMakesColumnNotNull() throws Exception {
     try (MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")) {
       mysql.start();
       Flyway.configure()
           .dataSource(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword())
-          .target(MigrationVersion.fromVersion("27"))
+          .target(MigrationVersion.fromVersion("29"))
           .load()
           .migrate();
 

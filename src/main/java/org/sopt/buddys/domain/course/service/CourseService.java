@@ -123,6 +123,9 @@ public class CourseService {
 
   @Transactional
   public Course updateCourse(Long userId, Long courseId, UpdateCourseCommand command) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
     if (!course.getAuthor().getId().equals(userId)) {
@@ -166,6 +169,12 @@ public class CourseService {
     return toCourseListResult(userId, courses);
   }
 
+  public CourseListResult searchCourses(Long userId, String keyword, int page, int size) {
+    validatePageRequest(page, size);
+    Slice<Course> courses = courseRepository.searchCoursesByKeyword(keyword, PageRequest.of(page, size));
+    return toCourseListResult(userId, courses);
+  }
+
   public CourseListResult getBookmarkedCourses(Long userId, int page, int size) {
     validatePageRequest(page, size);
     Slice<Course> courses = courseBookmarkRepository.findBookmarkedCoursesByUserId(userId, PageRequest.of(page, size));
@@ -186,6 +195,9 @@ public class CourseService {
 
   @Transactional
   public void deleteCourse(Long userId, Long courseId) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     Course course = courseRepository.findByIdAndDeletedAtIsNull(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
     if (!course.getAuthor().getId().equals(userId)) {

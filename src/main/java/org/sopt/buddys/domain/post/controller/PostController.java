@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.post.code.PostSuccessCode;
@@ -15,6 +17,7 @@ import org.sopt.buddys.domain.post.dto.request.CreatePostRequest;
 import org.sopt.buddys.domain.post.dto.request.PostListRequest;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostStatusRequest;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostRequest;
+import org.sopt.buddys.domain.post.dto.response.ClosingSoonPostResponse;
 import org.sopt.buddys.domain.post.dto.response.PostListResponse;
 import org.sopt.buddys.domain.post.dto.response.PostBookmarkResponse;
 import org.sopt.buddys.domain.post.dto.response.PostBookmarkSuccessResponse;
@@ -44,7 +47,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @RestController
 @Validated
@@ -72,6 +78,52 @@ public class PostController {
         PostSuccessCode.POST_LIST_FOUND,
         PostListResponse.from(
             postService.getPosts(userId, request.toCondition(), request.pageOrDefault(), request.sizeOrDefault()))
+    );
+  }
+
+  @Operation(
+      summary = "마감 임박 동행 게시물 조회",
+      description = "동행 시작일이 오늘이고 모집 상태가 RECRUITING인 활성 게시물을 "
+          + "생성일 기준 오래된 순(createdAt ASC)으로 최대 4개 조회합니다. "
+          + "인증이 필요하며 조회 결과가 없어도 빈 목록과 함께 200 응답을 반환합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "마감 임박 게시글 조회 성공. 결과가 없으면 빈 목록 반환")
+  })
+  @CommonErrorResponses
+  @GetMapping("/closing-soon")
+  public BaseResponse<ClosingSoonPostResponse> getClosingSoonPosts(
+      @Parameter(hidden = true)
+      @LoginUser Long userId
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        ClosingSoonPostResponse.from(postService.getClosingSoonPosts(userId))
+    );
+  }
+
+  @Operation(
+      summary = "저장한 게시글 목록 조회",
+      description = "로그인한 사용자가 저장한 게시글 목록을 최신 저장순으로 조회합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "401", description = "인증 필요")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @GetMapping("/bookmarks")
+  public BaseResponse<PostListResponse> getBookmarkedPosts(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+  ) {
+    return BaseResponse.success(
+        PostSuccessCode.POST_BOOKMARK_LIST_FOUND,
+        PostListResponse.from(postService.getBookmarkedPosts(userId, page, size))
     );
   }
 
@@ -121,7 +173,7 @@ public class PostController {
       @ApiResponse(responseCode = "200", description = "변경 성공"),
       @ApiResponse(responseCode = "401", description = "인증 필요"),
       @ApiResponse(responseCode = "403", description = "게시글 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
+      @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없거나 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @InvalidRequestResponse
   @CommonErrorResponses
@@ -147,7 +199,7 @@ public class PostController {
           content = @Content(schema = @Schema(implementation = UpdatePostSuccessResponse.class))
       ),
       @ApiResponse(responseCode = "403", description = "게시글 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "국가, 도시, 태그 또는 게시글을 찾을 수 없음")
+      @ApiResponse(responseCode = "404", description = "국가, 도시, 태그 또는 게시글을 찾을 수 없거나 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @InvalidRequestResponse
   @CommonErrorResponses
@@ -177,7 +229,7 @@ public class PostController {
           content = @Content(schema = @Schema(implementation = DeletePostSuccessResponse.class))
       ),
       @ApiResponse(responseCode = "403", description = "게시글 작성자가 아님"),
-      @ApiResponse(responseCode = "404", description = "게시글이 존재하지 않거나 이미 삭제됨")
+      @ApiResponse(responseCode = "404", description = "게시글이 존재하지 않거나 이미 삭제됨, 또는 사용자가 없거나 탈퇴함(USER-E001)")
   })
   @InvalidRequestResponse
   @CommonErrorResponses

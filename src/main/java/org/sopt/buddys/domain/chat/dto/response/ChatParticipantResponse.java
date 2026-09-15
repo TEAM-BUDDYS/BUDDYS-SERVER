@@ -25,7 +25,7 @@ public record ChatParticipantResponse(
   public static ChatParticipantResponse from(User participant) {
     return new ChatParticipantResponse(
         participant.getId(),
-        participant.getNickname(),
+        participant.getDisplayNickname(),
         participant.getProfileImageUrl()
     );
   }
