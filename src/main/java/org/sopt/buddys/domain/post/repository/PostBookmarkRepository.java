@@ -1,6 +1,8 @@
 package org.sopt.buddys.domain.post.repository;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Collection;
 import java.util.Set;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostBookmark;
@@ -13,6 +15,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PostBookmarkRepository extends JpaRepository<PostBookmark, PostBookmarkId> {
+
+  @Query("""
+      select pb.id.postId
+      from PostBookmark pb
+      where pb.id.userId = :userId
+        and pb.id.postId in :postIds
+      """)
+  List<Long> findBookmarkedPostIds(
+      @Param("userId") Long userId,
+      @Param("postIds") Collection<Long> postIds
+  );
 
   @Query("""
       select pb.post

@@ -20,7 +20,10 @@ public record PlaceSearchResult(
       Double latitude,
       Double longitude,
       boolean bookmarked,
-      String photoUrl
+      String photoUrl,
+      String googleMapsUrl,
+      String country,
+      String city
   ) {
   }
 }
