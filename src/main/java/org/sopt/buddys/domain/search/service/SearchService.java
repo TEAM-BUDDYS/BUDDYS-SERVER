@@ -1,7 +1,5 @@
 package org.sopt.buddys.domain.search.service;
 
-import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
-
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.service.CourseService;
@@ -13,8 +11,6 @@ import org.sopt.buddys.domain.search.service.result.UserSearchResult.UserSummary
 import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
-import org.sopt.buddys.global.common.code.GlobalErrorCode;
-import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -30,15 +26,12 @@ public class SearchService {
   private final PostService postService;
 
   public SearchResult search(Long userId, String keyword, int page, int size) {
-    validateRequest(keyword, page, size);
-    String normalizedKeyword = keyword.trim();
-
     return new SearchResult(
-        courseService.searchCourses(userId, normalizedKeyword, page, size),
-        searchUsers(userId, normalizedKeyword, page, size),
+        courseService.searchCourses(userId, keyword, page, size),
+        searchUsers(userId, keyword, page, size),
         postService.getPosts(
             userId,
-            new PostSearchCondition(normalizedKeyword, null, null, null, null, null, null, null),
+            new PostSearchCondition(keyword, null, null, null, null, null, null, null),
             page,
             size
         )
@@ -61,11 +54,5 @@ public class SearchService {
         .toList();
 
     return new UserSearchResult(content, users.getNumber(), users.getSize(), users.hasNext());
-  }
-
-  private void validateRequest(String keyword, int page, int size) {
-    if (keyword == null || keyword.isBlank() || page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
-    }
   }
 }

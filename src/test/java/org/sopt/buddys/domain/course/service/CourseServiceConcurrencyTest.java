@@ -146,14 +146,12 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
       CountDownLatch startLatch
   ) throws InterruptedException {
     CreateCourseCommand command = new CreateCourseCommand(
-        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"),
             List.of(new CoursePlaceCommand(
-                googlePlaceId, "콜로세움", "TOURISM", null, null, (short) 0, null, null)))),
-        null
-    );
+                googlePlaceId, "콜로세움", "TOURISM", null, null, (short) 0, null, null)), null)));
     readyLatch.countDown();
     assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();
     return courseService.createCourse(authorId, command);
@@ -212,12 +210,10 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
       CountDownLatch startLatch
   ) throws InterruptedException {
     UpdateCourseCommand command = new UpdateCourseCommand(
-        countryIds, List.of(cityId), "수정된 코스", null, null,
+        countryIds, List.of(cityId), "수정된 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
-        null
-    );
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
     readyLatch.countDown();
     assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();
     courseService.updateCourse(authorId, courseId, command);
@@ -228,12 +224,10 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
       Long countryId, Long cityId, LocalDate startDate, LocalDate endDate, Long tagId
   ) {
     return new CreateCourseCommand(
-        List.of(countryId), List.of(cityId), "파리 코스", null, null,
+        List.of(countryId), List.of(cityId), "파리 코스", null,
         startDate, endDate,
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null)),
-        null
-    );
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
   }
 
   private User createUser(String email, String providerId, String nickname) {

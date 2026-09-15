@@ -13,7 +13,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
   Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 
   Optional<User> findByIdAndDeletedAtIsNull(Long id);
@@ -25,7 +25,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
       where u.id = :userId
         and u.deletedAt is null
       """)
-  Optional<User> findByIdForProfileUpdate(@Param("userId") Long userId);
+  Optional<User> findActiveByIdForUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u.notificationEnabled
@@ -34,6 +34,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
         and u.deletedAt is null
       """)
   Optional<Boolean> findNotificationEnabledById(@Param("userId") Long userId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select u from User u where u.id = :userId")
+  Optional<User> findByIdForUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u
@@ -66,16 +70,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
   @Query("""
       select u
       from User u
-      where lower(u.nickname) like lower(concat('%', :keyword, '%'))
+      where u.deletedAt is null
         and u.id <> :excludeUserId
-        and u.accountStatus = :accountStatus
-        and u.deletedAt is null
-      order by u.createdAt desc, u.id desc
+        and lower(u.nickname) like lower(concat('%', :keyword, '%')) escape '\\'
+      order by u.nickname asc
       """)
-  Slice<User> searchActiveUsersByNickname(
+  Slice<User> searchByNicknameContaining(
       @Param("keyword") String keyword,
       @Param("excludeUserId") Long excludeUserId,
-      @Param("accountStatus") AccountStatus accountStatus,
       Pageable pageable
   );
 

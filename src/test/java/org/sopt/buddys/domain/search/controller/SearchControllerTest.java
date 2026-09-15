@@ -96,13 +96,13 @@ class SearchControllerTest extends IntegrationTestSupport {
     User author = saveUser("author@test.com", "author", "작성자", AccountStatus.ACTIVE);
     Location textLocation = saveLocation("France", "FR", "Paris", "파리");
     Course textAndPlaceCourse = saveCourse(
-        author, textLocation, "Shared PARIS Art Journey", "A Shared special Story", null);
+        author, textLocation, "Shared PARIS Art Journey", "A Shared special Story");
     savePlace(textAndPlaceCourse, "Shared Match Museum", "place-match");
     Location countryLocation = saveLocation("Matchland", "ML", "CountryCity", "국가도시");
-    Course countryCourse = saveCourse(author, countryLocation, "국가 검색 코스", "내용", null);
+    Course countryCourse = saveCourse(author, countryLocation, "국가 검색 코스", "내용");
     Location cityLocation = saveLocation("Cityland", "CL", "MatchCity", "매치시");
-    Course cityCourse = saveCourse(author, cityLocation, "도시 검색 코스", "내용", null);
-    Course deletedCourse = saveCourse(author, textLocation, "Another Art", "Story", null);
+    Course cityCourse = saveCourse(author, cityLocation, "도시 검색 코스", "내용");
+    Course deletedCourse = saveCourse(author, textLocation, "Another Art", "Story");
     savePlace(deletedCourse, "Match Museum Annex", "place-deleted");
     deletedCourse.delete();
     courseRepository.saveAndFlush(deletedCourse);
@@ -123,7 +123,7 @@ class SearchControllerTest extends IntegrationTestSupport {
     User author = saveUser("author@test.com", "author", "작성자", AccountStatus.ACTIVE);
     Location location = saveLocation("France", "FR", "Paris", "파리");
     for (int index = 0; index < 6; index++) {
-      saveCourse(author, location, "Page course " + index, "content", null);
+      saveCourse(author, location, "Page course " + index, "content");
     }
 
     mockMvc.perform(get("/api/v1/search")
@@ -200,8 +200,7 @@ class SearchControllerTest extends IntegrationTestSupport {
     User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
     User author = saveUser("author@test.com", "author", "ParisUser", AccountStatus.ACTIVE);
     Location location = saveLocation("France", "FR", "Paris", "파리");
-    Course course = saveCourse(
-        author, location, "Paris course", "course content", "https://example.com/thumb.jpg");
+    Course course = saveCourse(author, location, "Paris course", "course content");
     CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now()));
     courseImageRepository.saveAndFlush(new CourseImage(day, "https://example.com/day.jpg", (short) 0));
     courseBookmarkRepository.saveAndFlush(new CourseBookmark(viewer, course));
@@ -217,7 +216,7 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.message").value("검색에 성공했습니다."))
         .andExpect(jsonPath("$.data.courses.content[0].courseId").value(course.getId()))
         .andExpect(jsonPath("$.data.courses.content[0].isBookmarked").value(true))
-        .andExpect(jsonPath("$.data.courses.content[0].images.length()").value(2))
+        .andExpect(jsonPath("$.data.courses.content[0].images.length()").value(1))
         .andExpect(jsonPath("$.data.courses.content[0].countries").value("France"))
         .andExpect(jsonPath("$.data.courses.content[0].cities").value("파리"))
         .andExpect(jsonPath("$.data.users.content[0].userId").value(author.getId()))
@@ -257,6 +256,7 @@ class SearchControllerTest extends IntegrationTestSupport {
     assertBadRequest(viewer, "   ", null, null);
     assertBadRequest(viewer, "Paris", "-1", null);
     assertBadRequest(viewer, "Paris", null, "0");
+    assertBadRequest(viewer, "Paris", null, "101");
   }
 
   @DisplayName("인증되지 않은 사용자는 통합 검색을 사용할 수 없다")
@@ -348,14 +348,12 @@ class SearchControllerTest extends IntegrationTestSupport {
       User author,
       Location location,
       String title,
-      String content,
-      String thumbnailImageUrl
+      String content
   ) {
     Course course = courseRepository.saveAndFlush(new Course(
         author,
         title,
         content,
-        thumbnailImageUrl,
         LocalDate.now(),
         LocalDate.now().plusDays(1)
     ));

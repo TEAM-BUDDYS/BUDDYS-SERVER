@@ -7,7 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ImageDomain {
   POST("posts"),
-  PROFILE("profiles");
+  PROFILE("profiles"),
+  COURSE("courses");
 
   private final String folder;
 }

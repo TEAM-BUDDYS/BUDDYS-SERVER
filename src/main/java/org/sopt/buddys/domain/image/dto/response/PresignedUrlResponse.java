@@ -11,7 +11,7 @@ public record PresignedUrlResponse(
     String uploadUrl,
 
     @Schema(
-        description = "업로드 완료 후 게시글/프로필 등록 시 사용할 최종 이미지 URL",
+        description = "업로드 완료 후 게시글/프로필/코스 등록 시 사용할 최종 이미지 URL",
         example = "https://buddys-assets.s3.ap-northeast-2.amazonaws.com/posts/3f1e....jpg"
     )
     String imageUrl

@@ -317,7 +317,6 @@ class SearchSuggestionControllerTest extends IntegrationTestSupport {
         author,
         title,
         content,
-        null,
         LocalDate.now(),
         LocalDate.now().plusDays(1)
     ));

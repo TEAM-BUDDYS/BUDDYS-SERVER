@@ -26,10 +26,6 @@ public record CreateCourseRequest(
     @Schema(description = "코스 소개", example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.")
     String content,
 
-    @Schema(description = "대표 사진 URL (날짜에 종속되지 않는 코스 전체 대표 이미지 1장)", example = "https://example.com/thumbnail.jpg")
-    @Size(max = 512)
-    String thumbnailImageUrl,
-
     @Schema(description = "출발일", example = "2026-09-01")
     @NotNull
     LocalDate startDate,
@@ -50,10 +46,6 @@ public record CreateCourseRequest(
     @Schema(description = "일자별 코스 목록 (최대 30일)")
     @NotEmpty
     @Size(max = 30)
-    List<@NotNull @Valid CourseDayRequest> days,
-
-    @Schema(description = "항공편 목록 (최대 5개)")
-    @Size(max = 5)
-    List<@NotNull @Valid CourseFlightRequest> flights
+    List<@NotNull @Valid CourseDayRequest> days
 ) {
 }

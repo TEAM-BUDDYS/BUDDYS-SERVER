@@ -37,9 +37,6 @@ public class Course extends BaseEntity {
   @Column(columnDefinition = "TEXT")
   private String content;
 
-  @Column(name = "thumbnail_image_url", length = 512)
-  private String thumbnailImageUrl;
-
   @Column(name = "start_date", nullable = false)
   private LocalDate startDate;
 
@@ -59,14 +56,12 @@ public class Course extends BaseEntity {
       User author,
       String title,
       String content,
-      String thumbnailImageUrl,
       LocalDate startDate,
       LocalDate endDate
   ) {
     this.author = author;
     this.title = title;
     this.content = content;
-    this.thumbnailImageUrl = thumbnailImageUrl;
     this.startDate = startDate;
     this.endDate = endDate;
     this.viewCount = 0L;
@@ -80,13 +75,11 @@ public class Course extends BaseEntity {
   public void update(
       String title,
       String content,
-      String thumbnailImageUrl,
       LocalDate startDate,
       LocalDate endDate
   ) {
     this.title = title;
     this.content = content;
-    this.thumbnailImageUrl = thumbnailImageUrl;
     this.startDate = startDate;
     this.endDate = endDate;
   }
