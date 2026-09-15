@@ -75,15 +75,12 @@ public class ActiveWebSocketSessionRegistry {
   }
 
   private void closeSession(WebSocketSession session) {
-    if (!session.isOpen()) {
-      unregister(session.getId());
-      return;
-    }
-
     try {
-      session.close(CloseStatus.POLICY_VIOLATION);
+      if (session.isOpen()) {
+        session.close(CloseStatus.POLICY_VIOLATION);
+      }
       unregister(session.getId());
-    } catch (IOException e) {
+    } catch (IOException | RuntimeException e) {
       log.warn("[WebSocket] 탈퇴 사용자 세션 종료 실패 sessionId={}", session.getId(), e);
     }
   }
