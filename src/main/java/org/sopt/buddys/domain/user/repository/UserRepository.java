@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.user.repository;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
+import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
@@ -77,6 +78,30 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
   Slice<User> searchByNicknameContaining(
       @Param("keyword") String keyword,
       @Param("excludeUserId") Long excludeUserId,
+      Pageable pageable
+  );
+
+  @Query("""
+      select u.nickname
+      from User u
+      where lower(u.nickname) like :containsPattern escape '!'
+        and u.id <> :excludeUserId
+        and u.accountStatus = :accountStatus
+        and u.deletedAt is null
+      order by case
+          when lower(u.nickname) = :exactKeyword then 0
+          when lower(u.nickname) like :prefixPattern escape '!' then 1
+          else 2
+        end,
+        lower(u.nickname) asc,
+        u.id asc
+      """)
+  List<String> findSuggestionNicknames(
+      @Param("exactKeyword") String exactKeyword,
+      @Param("prefixPattern") String prefixPattern,
+      @Param("containsPattern") String containsPattern,
+      @Param("excludeUserId") Long excludeUserId,
+      @Param("accountStatus") AccountStatus accountStatus,
       Pageable pageable
   );
 }
