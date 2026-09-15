@@ -13,15 +13,22 @@ import org.sopt.buddys.domain.magazine.entity.Magazine;
 import org.sopt.buddys.domain.magazine.repository.MagazineBookmarkRepository;
 import org.sopt.buddys.domain.magazine.repository.MagazineRepository;
 import org.sopt.buddys.domain.magazine.service.result.MagazineBookmarkResult;
+import org.sopt.buddys.domain.magazine.service.result.BookmarkedMagazineListResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult.MagazineSummaryResult;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
+import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +39,7 @@ public class MagazineService {
 
   private final MagazineRepository magazineRepository;
   private final MagazineBookmarkRepository magazineBookmarkRepository;
+  private final UserRepository userRepository;
 
   public MagazineListResult getMagazines(Long userId, Integer year, Integer month, int page, int size) {
     YearMonth yearMonth = resolveYearMonth(year, month);
@@ -57,9 +65,30 @@ public class MagazineService {
     );
   }
 
+  public BookmarkedMagazineListResult getBookmarkedMagazines(Long userId, int page, int size) {
+    validatePageRequest(page, size);
+    Pageable pageable = PageRequest.of(page, size);
+    Slice<Magazine> magazines = magazineBookmarkRepository.findBookmarkedMagazinesByUserId(userId, pageable);
+
+    return new BookmarkedMagazineListResult(
+        magazines.getContent(),
+        magazines.getNumber(),
+        magazines.getSize(),
+        magazines.hasNext()
+    );
+  }
+
+  private void validatePageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
   @Transactional
   public MagazineBookmarkResult bookmarkMagazine(Long userId, Long magazineId) {
     validateMagazineExists(magazineId);
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     magazineBookmarkRepository.insertOrKeep(userId, magazineId);
     return new MagazineBookmarkResult(magazineId, true);

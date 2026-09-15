@@ -24,7 +24,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
       where u.id = :userId
         and u.deletedAt is null
       """)
-  Optional<User> findByIdForProfileUpdate(@Param("userId") Long userId);
+  Optional<User> findActiveByIdForUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u.notificationEnabled
@@ -33,6 +33,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
         and u.deletedAt is null
       """)
   Optional<Boolean> findNotificationEnabledById(@Param("userId") Long userId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select u from User u where u.id = :userId")
+  Optional<User> findByIdForUpdate(@Param("userId") Long userId);
 
   @Query("""
       select u
