@@ -3,7 +3,7 @@ package org.sopt.buddys.domain.chat.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomResult;
-import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
+import org.sopt.buddys.global.common.TimeConverter;
 
 public record ChatRoomResponse(
     @Schema(description = "채팅방 ID", example = "1")
@@ -19,7 +19,7 @@ public record ChatRoomResponse(
   public static ChatRoomResponse from(ChatRoomResult result) {
     return new ChatRoomResponse(
         result.chatRoom().getId(),
-        ChatTimeConverter.toCommonTime(result.chatRoom().getCreatedAt()),
+        TimeConverter.toCommonTime(result.chatRoom().getCreatedAt()),
         ChatParticipantResponse.from(result.participant())
     );
   }

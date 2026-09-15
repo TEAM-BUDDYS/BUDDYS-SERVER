@@ -2,10 +2,9 @@ package org.sopt.buddys.domain.verification.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationDetailResult;
+import org.sopt.buddys.global.common.TimeConverter;
 
 public record ExchangeVerificationDetailResponse(
     @Schema(description = "서류 인증 신청 ID", example = "1")
@@ -33,18 +32,12 @@ public record ExchangeVerificationDetailResponse(
         example = "서류가 확인되지 않습니다.")
     String rejectionReason
 ) {
-
-  private static final ZoneId STORAGE_ZONE = ZoneId.of("Asia/Seoul");
-
   public static ExchangeVerificationDetailResponse from(ExchangeVerificationDetailResult result) {
     return new ExchangeVerificationDetailResponse(
         result.verificationId(),
         result.userId(),
         result.nickname(),
-        result.submittedAt()
-            .atZone(STORAGE_ZONE)
-            .withZoneSameInstant(ZoneOffset.UTC)
-            .toOffsetDateTime(),
+        TimeConverter.toCommonTime(result.submittedAt()),
         result.status(),
         result.originalFileName(),
         result.documentUrl(),

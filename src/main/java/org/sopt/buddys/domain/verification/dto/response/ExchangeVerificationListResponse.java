@@ -2,12 +2,11 @@ package org.sopt.buddys.domain.verification.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import org.sopt.buddys.domain.verification.entity.ExchangeVerificationStatus;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult;
 import org.sopt.buddys.domain.verification.service.result.ExchangeVerificationListResult.ExchangeVerificationSummaryResult;
+import org.sopt.buddys.global.common.TimeConverter;
 
 public record ExchangeVerificationListResponse(
     @Schema(description = "서류 인증 신청 목록")
@@ -22,9 +21,6 @@ public record ExchangeVerificationListResponse(
     @Schema(description = "다음 페이지 존재 여부", example = "false")
     boolean hasNext
 ) {
-
-  private static final ZoneId STORAGE_ZONE = ZoneId.of("Asia/Seoul");
-
   public ExchangeVerificationListResponse {
     content = List.copyOf(content);
   }
@@ -62,10 +58,7 @@ public record ExchangeVerificationListResponse(
           result.verificationId(),
           result.userId(),
           result.nickname(),
-          result.submittedAt()
-              .atZone(STORAGE_ZONE)
-              .withZoneSameInstant(ZoneOffset.UTC)
-              .toOffsetDateTime(),
+          TimeConverter.toCommonTime(result.submittedAt()),
           result.status()
       );
     }

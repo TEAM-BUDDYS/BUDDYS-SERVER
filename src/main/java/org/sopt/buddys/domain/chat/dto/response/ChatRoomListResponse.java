@@ -5,7 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult.ChatRoomListItemResult;
-import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
+import org.sopt.buddys.global.common.TimeConverter;
 
 public record ChatRoomListResponse(
     @Schema(description = "채팅방 목록")
@@ -74,7 +74,7 @@ public record ChatRoomListResponse(
               result.participantProfileImageUrl()
           ),
           result.lastMessage(),
-          ChatTimeConverter.toCommonTime(result.lastMessageSentAt()),
+          TimeConverter.toCommonTime(result.lastMessageSentAt()),
           result.unreadMessageCount()
       );
     }
