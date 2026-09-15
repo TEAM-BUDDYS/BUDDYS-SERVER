@@ -12,6 +12,7 @@ import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.magazine.entity.Magazine;
 import org.sopt.buddys.domain.magazine.entity.MagazineBookmark;
+import org.sopt.buddys.domain.magazine.entity.MagazineCategory;
 import org.sopt.buddys.domain.place.entity.Place;
 import org.sopt.buddys.domain.place.entity.PlaceBookmark;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
@@ -66,7 +67,7 @@ class WithdrawalBookmarkRetentionTest {
         CompanionType.FULL_TRIP, RecruitmentCountType.ONE);
     Course course = new Course(withdrawing, "코스", "내용", date, date);
     Magazine magazine = new Magazine("매거진", "요약", "https://example.com/image",
-        "https://example.com", date);
+        "https://example.com", date, MagazineCategory.SUPPORT);
     entityManager.persist(post);
     entityManager.persist(course);
     entityManager.persist(magazine);

@@ -49,8 +49,9 @@ public class MagazineController {
 
   @Operation(
       summary = "매거진 목록 조회",
-      description = "연도와 월을 기준으로 발행된 매거진 목록을 조회합니다. "
-          + "year, month를 모두 생략하면 Asia/Seoul 기준 현재 연월을 적용합니다."
+      description = "필수 카테고리와 선택 검색어로 매거진 목록을 조회합니다. "
+          + "검색어는 제목과 요약에 부분 일치로 적용합니다. "
+          + "LATEST는 발행일 최신순, BOOKMARK는 전체 사용자의 저장 수가 많은 순으로 정렬합니다."
   )
   @ApiResponses({
       @ApiResponse(
@@ -72,8 +73,9 @@ public class MagazineController {
         MagazineSuccessCode.MAGAZINE_LIST_FOUND,
         MagazineListResponse.from(magazineService.getMagazines(
             userId,
-            request.year(),
-            request.month(),
+            request.category(),
+            request.normalizedKeyword(),
+            request.sortOrDefault(),
             request.pageOrDefault(),
             request.sizeOrDefault()
         ))
