@@ -143,6 +143,21 @@ class PostControllerTest {
         .andExpect(jsonPath("$.data.hasNext").value(false));
   }
 
+  @DisplayName("일반 동행 게시글 목록에서 로그인 사용자가 저장한 게시글은 isBookmarked가 true다")
+  @Test
+  void getPosts_bookmarkedPost_returnsIsBookmarkedTrue() throws Exception {
+    User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
+    User other = userRepository.save(createUser("other@test.com", "provider-other", "다른 사용자"));
+    Post post = createPost(other);
+    postBookmarkRepository.saveAndFlush(new PostBookmark(viewer, post));
+
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.content[0].postId").value(post.getId()))
+        .andExpect(jsonPath("$.data.content[0].isBookmarked").value(true));
+  }
+
   @DisplayName("로그인하지 않은 사용자는 동행 게시글 목록을 조회할 수 없다")
   @Test
   void getPosts_unauthenticatedUser_returnsUnauthorized() throws Exception {
