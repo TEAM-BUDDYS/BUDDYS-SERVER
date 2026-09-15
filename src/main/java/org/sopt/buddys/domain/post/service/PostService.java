@@ -563,18 +563,6 @@ public class PostService {
   }
 
   private Set<Long> getBookmarkedPostIds(Long userId, List<Post> posts) {
-    List<Long> postIds = posts.stream()
-        .map(Post::getId)
-        .toList();
-
-    if (postIds.isEmpty()) {
-      return Set.of();
-    }
-
-    return Set.copyOf(postBookmarkRepository.findBookmarkedPostIds(userId, postIds));
-  }
-
-  private Set<Long> getBookmarkedPostIds(Long userId, List<Post> posts) {
     List<Long> postIds = posts.stream().map(Post::getId).toList();
     if (postIds.isEmpty()) {
       return Set.of();
