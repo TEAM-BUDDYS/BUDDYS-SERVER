@@ -52,7 +52,7 @@ public class ExchangeVerificationService {
     );
     validateUploadedObject(documentKey, documentType.getContentType(), fileSize);
 
-    User user = userRepository.findByIdForProfileUpdate(userId)
+    User user = userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(GlobalErrorCode.UNAUTHORIZED));
 
     Optional<ExchangeVerification> existingVerification = exchangeVerificationRepository

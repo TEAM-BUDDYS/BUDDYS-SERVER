@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.service.result.ExchangeDocumentUploadUrlResult;
 import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
+import org.sopt.buddys.global.aws.s3.S3PresignedPostResult;
 import org.sopt.buddys.global.exception.BaseException;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,8 +50,8 @@ class ExchangeDocumentUploadServiceTest {
       String expectedExtension
   ) {
     // given
-    when(s3PresignedUrlManager.createPutUrl(anyString(), anyString(), anyLong()))
-        .thenReturn("upload-url");
+    when(s3PresignedUrlManager.createPostUpload(anyString(), anyString(), anyLong()))
+        .thenReturn(new S3PresignedPostResult("upload-url", Map.of("policy", "signed-policy")));
 
     // when
     ExchangeDocumentUploadUrlResult result = exchangeDocumentUploadService.createUploadUrl(
@@ -60,12 +62,13 @@ class ExchangeDocumentUploadServiceTest {
 
     // then
     assertThat(result.uploadUrl()).isEqualTo("upload-url");
+    assertThat(result.fields()).containsEntry("policy", "signed-policy");
     assertThat(result.documentKey()).matches(
         "^exchange-verifications/" + USER_ID + "/[0-9a-fA-F-]{36}" + expectedExtension + "$"
     );
 
     ArgumentCaptor<String> contentTypeCaptor = ArgumentCaptor.forClass(String.class);
-    verify(s3PresignedUrlManager).createPutUrl(
+    verify(s3PresignedUrlManager).createPostUpload(
         org.mockito.ArgumentMatchers.eq(result.documentKey()),
         contentTypeCaptor.capture(),
         org.mockito.ArgumentMatchers.eq(VALID_FILE_SIZE)
@@ -77,8 +80,11 @@ class ExchangeDocumentUploadServiceTest {
   @Test
   void createUploadUrl_sameUser_generatesNewDocumentKeyEveryTime() {
     // given
-    when(s3PresignedUrlManager.createPutUrl(anyString(), anyString(), anyLong()))
-        .thenReturn("first-upload-url", "second-upload-url");
+    when(s3PresignedUrlManager.createPostUpload(anyString(), anyString(), anyLong()))
+        .thenReturn(
+            new S3PresignedPostResult("first-upload-url", Map.of("policy", "first")),
+            new S3PresignedPostResult("second-upload-url", Map.of("policy", "second"))
+        );
 
     // when
     ExchangeDocumentUploadUrlResult first = exchangeDocumentUploadService.createUploadUrl(
@@ -102,14 +108,14 @@ class ExchangeDocumentUploadServiceTest {
   @Test
   void createUploadUrl_mixedCaseContentType_normalizesContentType() {
     // given
-    when(s3PresignedUrlManager.createPutUrl(anyString(), anyString(), anyLong()))
-        .thenReturn("upload-url");
+    when(s3PresignedUrlManager.createPostUpload(anyString(), anyString(), anyLong()))
+        .thenReturn(new S3PresignedPostResult("upload-url", Map.of()));
 
     // when
     exchangeDocumentUploadService.createUploadUrl(USER_ID, "Application/PDF", VALID_FILE_SIZE);
 
     // then
-    verify(s3PresignedUrlManager).createPutUrl(
+    verify(s3PresignedUrlManager).createPostUpload(
         anyString(),
         org.mockito.ArgumentMatchers.eq("application/pdf"),
         org.mockito.ArgumentMatchers.eq(VALID_FILE_SIZE)
@@ -128,7 +134,7 @@ class ExchangeDocumentUploadServiceTest {
                 .isEqualTo(ExchangeVerificationErrorCode.UNSUPPORTED_DOCUMENT_TYPE)
         );
 
-    verify(s3PresignedUrlManager, never()).createPutUrl(anyString(), anyString(), anyLong());
+    verify(s3PresignedUrlManager, never()).createPostUpload(anyString(), anyString(), anyLong());
   }
 
   @DisplayName("허용 범위를 벗어난 파일 크기는 거부한다")
@@ -144,20 +150,20 @@ class ExchangeDocumentUploadServiceTest {
                 .isEqualTo(ExchangeVerificationErrorCode.DOCUMENT_FILE_TOO_LARGE)
         );
 
-    verify(s3PresignedUrlManager, never()).createPutUrl(anyString(), anyString(), anyLong());
+    verify(s3PresignedUrlManager, never()).createPostUpload(anyString(), anyString(), anyLong());
   }
 
   @DisplayName("최대 크기인 10MB 파일은 허용한다")
   @Test
   void createUploadUrl_maxFileSize_succeeds() {
     // given
-    when(s3PresignedUrlManager.createPutUrl(anyString(), anyString(), anyLong()))
-        .thenReturn("upload-url");
+    when(s3PresignedUrlManager.createPostUpload(anyString(), anyString(), anyLong()))
+        .thenReturn(new S3PresignedPostResult("upload-url", Map.of()));
 
     // when
     exchangeDocumentUploadService.createUploadUrl(USER_ID, "application/pdf", MAX_FILE_SIZE);
 
     // then
-    verify(s3PresignedUrlManager).createPutUrl(anyString(), anyString(), anyLong());
+    verify(s3PresignedUrlManager).createPostUpload(anyString(), anyString(), anyLong());
   }
 }

@@ -39,12 +39,14 @@ public class ExchangeVerificationController {
   @Operation(
       summary = "파견교 인증 서류 업로드 URL 발급",
       description = """
-          클라이언트가 파견교 인증 서류를 S3에 직접 PUT할 수 있는 presigned URL을 발급합니다.
+          클라이언트가 파견교 인증 서류를 S3에 직접 multipart/form-data POST할 수 있는 서명된 정책을 발급합니다.
 
           - presigned URL의 유효 시간은 발급 후 5분입니다.
           - 지원하는 Content-Type: application/pdf, image/jpeg, image/png
           - 최대 파일 크기는 10MB입니다.
-          - S3 PUT 요청에는 발급 요청과 동일한 Content-Type을 사용해야 합니다.
+          - 응답의 fields를 폼에 모두 넣고 file 필드를 마지막에 추가한 뒤 uploadUrl로 POST합니다.
+          - S3는 정책의 content-length-range를 검사해 요청한 fileSize 초과 업로드를 거부합니다.
+          - PUT URL을 사용하는 기존 클라이언트는 POST 폼 업로드로 변경해야 합니다.
           - 요청할 때마다 새로운 객체 키와 presigned URL이 발급됩니다.
           - 업로드 완료 후 documentKey를 파견교 인증 신청 API에 전달해야 합니다.
           - 새 신청이 정상 접수되면 기존에 접수된 서류 객체는 S3에서 삭제됩니다.

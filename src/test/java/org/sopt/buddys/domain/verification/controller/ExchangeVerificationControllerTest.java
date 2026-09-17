@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -97,7 +98,9 @@ class ExchangeVerificationControllerTest {
         LOGIN_USER_ID,
         "application/pdf",
         823_044L
-    )).thenReturn(new ExchangeDocumentUploadUrlResult("https://upload-url", documentKey));
+    )).thenReturn(new ExchangeDocumentUploadUrlResult(
+        "https://upload-url", Map.of("key", documentKey), documentKey
+    ));
 
     // when & then
     mockMvc.perform(post("/api/v1/verifications/exchange/upload-url")
@@ -112,6 +115,7 @@ class ExchangeVerificationControllerTest {
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.code").value("GLB-S001"))
         .andExpect(jsonPath("$.data.uploadUrl").value("https://upload-url"))
+        .andExpect(jsonPath("$.data.fields.key").value(documentKey))
         .andExpect(jsonPath("$.data.documentKey").value(documentKey));
 
     verify(exchangeDocumentUploadService).createUploadUrl(

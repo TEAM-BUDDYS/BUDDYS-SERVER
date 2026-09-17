@@ -34,11 +34,13 @@ public class ImageController {
   @Operation(
       summary = "이미지 업로드용 presigned URL 발급",
       description = """
-          클라이언트가 S3에 직접 PUT할 수 있는 presigned URL을 발급합니다.
+          클라이언트가 S3에 직접 multipart/form-data POST할 수 있는 서명된 정책을 발급합니다.
 
           - presigned URL의 유효 시간은 발급 후 5분입니다.
           - 지원하는 Content-Type: image/jpeg, image/png, image/webp
-          - 응답의 uploadUrl로 이미지 바이너리를 PUT 요청하면 업로드가 완료되며,
+          - 응답의 fields를 폼에 모두 넣고 file 필드를 마지막에 추가한 뒤 uploadUrl로 POST합니다.
+          - S3는 정책의 content-length-range를 검사해 요청한 fileSize 초과 업로드를 거부합니다.
+          - PUT URL을 사용하는 기존 클라이언트는 POST 폼 업로드로 변경해야 합니다.
             imageUrl은 업로드 완료 후 게시글/프로필/코스 등록 시 사용하는 최종 이미지 URL입니다.
           """
   )

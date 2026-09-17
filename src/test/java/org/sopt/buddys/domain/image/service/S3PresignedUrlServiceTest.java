@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.sopt.buddys.domain.image.dto.response.PresignedUrlResponse;
 import org.sopt.buddys.domain.image.entity.ImageDomain;
 import org.sopt.buddys.global.aws.s3.S3PresignedUploadResult;
 import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
@@ -49,7 +51,7 @@ class S3PresignedUrlServiceTest {
   ) {
     // given
     when(s3PresignedUrlManager.createUploadUrl(anyString(), anyString(), anyLong()))
-        .thenReturn(new S3PresignedUploadResult("upload-url", "image-url"));
+        .thenReturn(new S3PresignedUploadResult("upload-url", Map.of("key", "posts/test.jpg"), "image-url"));
 
     // when
     S3PresignedUploadResult result =
@@ -57,6 +59,9 @@ class S3PresignedUrlServiceTest {
 
     // then
     assertThat(result.uploadUrl()).isEqualTo("upload-url");
+    assertThat(result.fields()).containsEntry("key", "posts/test.jpg");
+    assertThat(PresignedUrlResponse.from(result).fields())
+        .containsEntry("key", "posts/test.jpg");
     assertThat(result.imageUrl()).isEqualTo("image-url");
 
     ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
@@ -76,7 +81,7 @@ class S3PresignedUrlServiceTest {
   void createUploadUrl_profileDomain_usesProfilesFolder() {
     // given
     when(s3PresignedUrlManager.createUploadUrl(anyString(), anyString(), anyLong()))
-        .thenReturn(new S3PresignedUploadResult("upload-url", "image-url"));
+        .thenReturn(new S3PresignedUploadResult("upload-url", Map.of(), "image-url"));
 
     // when
     s3PresignedUrlService.createUploadUrl(1L, ImageDomain.PROFILE, "image/png", VALID_FILE_SIZE);
@@ -92,7 +97,7 @@ class S3PresignedUrlServiceTest {
   void createUploadUrl_courseDomain_usesCoursesFolder() {
     // given
     when(s3PresignedUrlManager.createUploadUrl(anyString(), anyString(), anyLong()))
-        .thenReturn(new S3PresignedUploadResult("upload-url", "image-url"));
+        .thenReturn(new S3PresignedUploadResult("upload-url", Map.of(), "image-url"));
 
     // when
     s3PresignedUrlService.createUploadUrl(1L, ImageDomain.COURSE, "image/jpeg", VALID_FILE_SIZE);
@@ -108,7 +113,7 @@ class S3PresignedUrlServiceTest {
   void createUploadUrl_mixedCaseContentType_normalizesToLowerCase() {
     // given
     when(s3PresignedUrlManager.createUploadUrl(anyString(), anyString(), anyLong()))
-        .thenReturn(new S3PresignedUploadResult("upload-url", "image-url"));
+        .thenReturn(new S3PresignedUploadResult("upload-url", Map.of(), "image-url"));
 
     // when
     s3PresignedUrlService.createUploadUrl(1L, ImageDomain.POST, "image/JPEG", VALID_FILE_SIZE);
@@ -169,7 +174,7 @@ class S3PresignedUrlServiceTest {
   void createUploadUrl_exactlyMaxFileSize_succeeds() {
     // given
     when(s3PresignedUrlManager.createUploadUrl(anyString(), anyString(), anyLong()))
-        .thenReturn(new S3PresignedUploadResult("upload-url", "image-url"));
+        .thenReturn(new S3PresignedUploadResult("upload-url", Map.of(), "image-url"));
 
     // when
     S3PresignedUploadResult result =

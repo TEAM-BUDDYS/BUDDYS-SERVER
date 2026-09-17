@@ -7,6 +7,7 @@ import org.sopt.buddys.domain.verification.code.ExchangeVerificationErrorCode;
 import org.sopt.buddys.domain.verification.entity.SupportedExchangeDocumentType;
 import org.sopt.buddys.domain.verification.service.result.ExchangeDocumentUploadUrlResult;
 import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
+import org.sopt.buddys.global.aws.s3.S3PresignedPostResult;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 
@@ -38,7 +39,7 @@ public class ExchangeDocumentUploadService {
         + "/" + UUID.randomUUID()
         + documentType.getExtension();
 
-    String uploadUrl = s3PresignedUrlManager.createPutUrl(
+    S3PresignedPostResult post = s3PresignedUrlManager.createPostUpload(
         documentKey,
         documentType.getContentType(),
         fileSize
@@ -51,7 +52,7 @@ public class ExchangeDocumentUploadService {
         fileSize
     );
 
-    return new ExchangeDocumentUploadUrlResult(uploadUrl, documentKey);
+    return new ExchangeDocumentUploadUrlResult(post.uploadUrl(), post.fields(), documentKey);
   }
 
   private void validateFileSize(Long fileSize) {

@@ -60,7 +60,7 @@ class ExchangeVerificationServiceTest {
     given(saved.getStatus()).willReturn(ExchangeVerificationStatus.PENDING);
     given(s3ObjectManager.findMetadata(DOCUMENT_KEY))
         .willReturn(Optional.of(new S3ObjectMetadata("application/pdf", FILE_SIZE)));
-    given(userRepository.findByIdForProfileUpdate(USER_ID)).willReturn(Optional.of(user));
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
     given(exchangeVerificationRepository.findByUserIdAndStatus(
         USER_ID,
         ExchangeVerificationStatus.PENDING
@@ -155,7 +155,7 @@ class ExchangeVerificationServiceTest {
     given(existing.getDocumentKey()).willReturn(PREVIOUS_DOCUMENT_KEY);
     given(s3ObjectManager.findMetadata(DOCUMENT_KEY))
         .willReturn(Optional.of(new S3ObjectMetadata("application/pdf", FILE_SIZE)));
-    given(userRepository.findByIdForProfileUpdate(USER_ID))
+    given(userRepository.findActiveByIdForUpdate(USER_ID))
         .willReturn(Optional.of(user));
     given(exchangeVerificationRepository.findByUserIdAndStatus(
         USER_ID,
