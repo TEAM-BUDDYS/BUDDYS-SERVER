@@ -7,6 +7,7 @@ import org.sopt.buddys.domain.chat.entity.ChatRoom;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserReportRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult.ChatRoomListItemResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomResult;
@@ -39,6 +40,7 @@ public class ChatRoomService {
   private final ChatRoomMemberRepository chatRoomMemberRepository;
   private final ChatRoomCommandService chatRoomCommandService;
   private final ChatUserBlockRepository chatUserBlockRepository;
+  private final ChatUserReportRepository chatUserReportRepository;
   private final UserRepository userRepository;
 
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -131,7 +133,8 @@ public class ChatRoomService {
   }
 
   private boolean canSendMessage(Long userId, Long partnerId) {
-    return !chatUserBlockRepository.existsBlockBetween(userId, partnerId);
+    return !chatUserBlockRepository.existsBlockBetween(userId, partnerId)
+        && !chatUserReportRepository.existsReportBetween(userId, partnerId);
   }
 
   private void validateUserExists(Long userId) {

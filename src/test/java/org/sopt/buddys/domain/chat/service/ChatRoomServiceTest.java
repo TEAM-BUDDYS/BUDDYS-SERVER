@@ -12,9 +12,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
+import org.sopt.buddys.domain.chat.entity.ChatUserReport;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserReportRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
@@ -60,6 +62,9 @@ class ChatRoomServiceTest {
 
     @Autowired
     private ChatUserBlockRepository chatUserBlockRepository;
+
+    @Autowired
+    private ChatUserReportRepository chatUserReportRepository;
 
     @Autowired
     private ChatRoomRepository chatRoomRepository;
@@ -274,6 +279,48 @@ class ChatRoomServiceTest {
                 participant.getId()
         ).chatRoom();
         chatUserBlockService.blockChatPartner(participant.getId(), chatRoom.getId());
+
+        // when
+        ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
+
+        // then
+        assertThat(result.canSendMessage()).isFalse();
+    }
+
+    @DisplayName("내가 상대방을 신고했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @Test
+    void getChatRoom_reportedByMe_returnsCanSendMessageFalse() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        chatUserReportRepository.save(new ChatUserReport(chatRoom, user, participant, "부적절한 언행"));
+
+        // when
+        ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
+
+        // then
+        assertThat(result.canSendMessage()).isFalse();
+    }
+
+    @DisplayName("상대방이 나를 신고했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @Test
+    void getChatRoom_reportedByPartner_returnsCanSendMessageFalse() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        chatUserReportRepository.save(new ChatUserReport(chatRoom, participant, user, "부적절한 언행"));
 
         // when
         ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
@@ -695,6 +742,7 @@ class ChatRoomServiceTest {
     private void cleanUp() {
         jdbcTemplate.update("UPDATE chat_room_member SET last_read_message_id = NULL");
         jdbcTemplate.update("DELETE FROM chat_message");
+        chatUserReportRepository.deleteAllInBatch();
         chatUserBlockRepository.deleteAllInBatch();
         chatRoomMemberRepository.deleteAllInBatch();
         chatRoomRepository.deleteAllInBatch();

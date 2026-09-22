@@ -16,7 +16,7 @@ public record ChatRoomResponse(
     ChatParticipantResponse participant,
 
     @Schema(description = "상대방에게 메시지를 보낼 수 있는지 여부. "
-        + "나 또는 상대방이 서로를 차단한 경우 false입니다.", example = "true")
+        + "나 또는 상대방이 서로를 차단했거나 신고한 경우 false입니다.", example = "true")
     boolean canSendMessage
 ) {
 

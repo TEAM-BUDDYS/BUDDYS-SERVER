@@ -12,7 +12,9 @@ import org.sopt.buddys.domain.chat.entity.ChatRoom;
 import org.sopt.buddys.domain.chat.repository.ChatMessageRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.entity.ChatUserReport;
 import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserReportRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageSendResult;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -49,6 +51,9 @@ class ChatMessageCommandServiceTest {
 
   @Autowired
   private ChatUserBlockRepository chatUserBlockRepository;
+
+  @Autowired
+  private ChatUserReportRepository chatUserReportRepository;
 
   @Autowired
   private ChatRoomMemberRepository chatRoomMemberRepository;
@@ -122,6 +127,42 @@ class ChatMessageCommandServiceTest {
         .isEqualTo(ChatErrorCode.BLOCKED_CHAT_PARTNER);
   }
 
+  @DisplayName("내가 상대방을 신고했으면 그 상대방과의 채팅방에 메시지를 보낼 수 없다")
+  @Test
+  void sendMessage_reportedByMe_throwsReportedChatPartner() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    User partner = userRepository.save(createUser("partner@test.com", "provider-partner", "상대방"));
+    ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(user.getId(), partner.getId()).chatRoom();
+    chatUserReportRepository.save(new ChatUserReport(chatRoom, user, partner, "부적절한 언행"));
+
+    // when, then
+    assertThatThrownBy(() ->
+        chatMessageCommandService.sendMessage(user.getId(), chatRoom.getId(), "안녕하세요")
+    )
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(ChatErrorCode.REPORTED_CHAT_PARTNER);
+  }
+
+  @DisplayName("상대방이 나를 신고했으면 그 상대방에게 메시지를 보낼 수 없다")
+  @Test
+  void sendMessage_reportedByPartner_throwsReportedChatPartner() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    User partner = userRepository.save(createUser("partner@test.com", "provider-partner", "상대방"));
+    ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(user.getId(), partner.getId()).chatRoom();
+    chatUserReportRepository.save(new ChatUserReport(chatRoom, partner, user, "부적절한 언행"));
+
+    // when, then
+    assertThatThrownBy(() ->
+        chatMessageCommandService.sendMessage(user.getId(), chatRoom.getId(), "안녕하세요")
+    )
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(ChatErrorCode.REPORTED_CHAT_PARTNER);
+  }
+
   @DisplayName("기존 채팅 내역은 차단 이후에도 그대로 유지된다")
   @Test
   void sendMessage_afterBlock_existingHistoryIsPreserved() {
@@ -148,6 +189,7 @@ class ChatMessageCommandServiceTest {
   }
 
   private void cleanUp() {
+    chatUserReportRepository.deleteAllInBatch();
     chatUserBlockRepository.deleteAllInBatch();
     chatMessageRepository.deleteAllInBatch();
     chatRoomMemberRepository.deleteAllInBatch();
