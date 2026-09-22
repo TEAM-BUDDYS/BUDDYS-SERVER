@@ -23,7 +23,7 @@ public record ExchangeVerificationDetailResult(
         verification.getId(),
         verification.getUser().getId(),
         verification.getUser().getNickname(),
-        verification.getUpdatedAt(),
+        verification.getCreatedAt(),
         verification.getStatus(),
         verification.getOriginalFileName(),
         documentUrl,

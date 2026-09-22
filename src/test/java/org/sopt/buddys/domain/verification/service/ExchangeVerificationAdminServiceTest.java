@@ -274,7 +274,8 @@ class ExchangeVerificationAdminServiceTest {
     ExchangeVerification verification = mock(ExchangeVerification.class);
     given(verification.getId()).willReturn(10L);
     given(verification.getUser()).willReturn(applicant);
-    given(verification.getUpdatedAt()).willReturn(submittedAt);
+    given(verification.getCreatedAt()).willReturn(submittedAt);
+    given(verification.getUpdatedAt()).willReturn(submittedAt.plusDays(1));
     given(verification.getStatus()).willReturn(status);
     return verification;
   }
