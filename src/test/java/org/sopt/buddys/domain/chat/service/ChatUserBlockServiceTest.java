@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,7 @@ import org.sopt.buddys.domain.chat.entity.ChatRoom;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
+import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -107,6 +110,24 @@ class ChatUserBlockServiceTest {
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
+  }
+
+  @DisplayName("탈퇴한 사용자가 차단을 시도하면 USER_NOT_FOUND 예외가 발생한다")
+  @Test
+  void blockChatPartner_withdrawnUser_throwsUserNotFound() {
+    // given
+    User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+    User partner = userRepository.save(createUser("partner@test.com", "provider-partner", "상대방"));
+    ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(user.getId(), partner.getId()).chatRoom();
+    ReflectionTestUtils.setField(user, "deletedAt", LocalDateTime.of(2026, 7, 10, 12, 0));
+    userRepository.saveAndFlush(user);
+
+    // when, then
+    assertThatThrownBy(() -> chatUserBlockService.blockChatPartner(user.getId(), chatRoom.getId()))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+    assertThat(chatUserBlockRepository.existsBlockBetween(user.getId(), partner.getId())).isFalse();
   }
 
   @DisplayName("채팅방 멤버가 아닌 사용자가 차단을 시도하면 FORBIDDEN 예외가 발생한다")

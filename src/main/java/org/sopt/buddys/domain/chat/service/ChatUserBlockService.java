@@ -6,6 +6,8 @@ import org.sopt.buddys.domain.chat.entity.ChatRoomMemberId;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
+import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
@@ -19,13 +21,21 @@ public class ChatUserBlockService {
   private final ChatRoomRepository chatRoomRepository;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
   private final ChatUserBlockRepository chatUserBlockRepository;
+  private final UserRepository userRepository;
 
   @Transactional
   public void blockChatPartner(Long userId, Long chatRoomId) {
+    validateUserExists(userId);
     Long partnerId = getChatPartnerId(userId, chatRoomId);
     chatRoomRepository.findByIdForUpdate(chatRoomId)
         .orElseThrow(() -> chatRoomAccessException(chatRoomId));
     chatUserBlockRepository.insertOrKeep(userId, partnerId);
+  }
+
+  private void validateUserExists(Long userId) {
+    if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+      throw new BaseException(UserErrorCode.USER_NOT_FOUND);
+    }
   }
 
   private Long getChatPartnerId(Long userId, Long chatRoomId) {
