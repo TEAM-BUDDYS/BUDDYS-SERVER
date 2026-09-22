@@ -2,6 +2,8 @@ package org.sopt.buddys.domain.magazine.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -37,17 +39,23 @@ public class Magazine extends BaseEntity {
   @Column(name = "published_at", nullable = false)
   private LocalDate publishedAt;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 30)
+  private MagazineCategory category;
+
   public Magazine(
       String title,
       String summary,
       String thumbnailImageUrl,
       String externalUrl,
-      LocalDate publishedAt
+      LocalDate publishedAt,
+      MagazineCategory category
   ) {
     this.title = title;
     this.summary = summary;
     this.thumbnailImageUrl = thumbnailImageUrl;
     this.externalUrl = externalUrl;
     this.publishedAt = publishedAt;
+    this.category = category;
   }
 }

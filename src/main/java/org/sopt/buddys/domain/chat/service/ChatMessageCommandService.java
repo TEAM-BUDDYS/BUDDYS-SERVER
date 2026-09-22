@@ -8,6 +8,8 @@ import org.sopt.buddys.domain.chat.entity.ChatRoomMemberId;
 import org.sopt.buddys.domain.chat.repository.ChatMessageRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserReportRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageSendResult;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.entity.User;
@@ -24,6 +26,8 @@ public class ChatMessageCommandService {
   private final ChatMessageRepository chatMessageRepository;
   private final ChatRoomRepository chatRoomRepository;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
+  private final ChatUserBlockRepository chatUserBlockRepository;
+  private final ChatUserReportRepository chatUserReportRepository;
   private final UserRepository userRepository;
 
   @Transactional
@@ -35,11 +39,29 @@ public class ChatMessageCommandService {
 
     User sender = getActiveUser(userId);
     ChatRoom chatRoom = getAccessibleChatRoom(userId, chatRoomId);
+    validateCanSendMessage(userId, chatRoomId);
     ChatMessage message = chatMessageRepository.save(
         new ChatMessage(chatRoom, sender, content)
     );
 
     return new ChatMessageSendResult(message);
+  }
+
+  private void validateCanSendMessage(Long userId, Long chatRoomId) {
+    Long partnerId = chatRoomMemberRepository.findOtherMemberUserId(chatRoomId, userId)
+        .orElse(null);
+
+    if (partnerId == null) {
+      return;
+    }
+
+    if (chatUserBlockRepository.existsBlockBetween(userId, partnerId)) {
+      throw new BaseException(ChatErrorCode.BLOCKED_CHAT_PARTNER);
+    }
+
+    if (chatUserReportRepository.existsReportBetween(userId, partnerId)) {
+      throw new BaseException(ChatErrorCode.REPORTED_CHAT_PARTNER);
+    }
   }
 
   private User getActiveUser(Long userId) {
@@ -53,7 +75,8 @@ public class ChatMessageCommandService {
   ) {
 
     if (chatRoomMemberRepository.existsById(new ChatRoomMemberId(chatRoomId, userId))) {
-      return chatRoomRepository.getReferenceById(chatRoomId);
+      return chatRoomRepository.findByIdForUpdate(chatRoomId)
+          .orElseThrow(() -> new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
     }
 
     if (!chatRoomRepository.existsById(chatRoomId)) {

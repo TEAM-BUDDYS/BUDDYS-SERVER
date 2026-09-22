@@ -13,14 +13,19 @@ public record ChatRoomResponse(
     OffsetDateTime createdAt,
 
     @Schema(description = "상대방 사용자 정보")
-    ChatParticipantResponse participant
+    ChatParticipantResponse participant,
+
+    @Schema(description = "상대방에게 메시지를 보낼 수 있는지 여부. "
+        + "나 또는 상대방이 서로를 차단했거나 신고한 경우 false입니다.", example = "true")
+    boolean canSendMessage
 ) {
 
   public static ChatRoomResponse from(ChatRoomResult result) {
     return new ChatRoomResponse(
         result.chatRoom().getId(),
         TimeConverter.toCommonTime(result.chatRoom().getCreatedAt()),
-        ChatParticipantResponse.from(result.participant())
+        ChatParticipantResponse.from(result.participant()),
+        result.canSendMessage()
     );
   }
 }
