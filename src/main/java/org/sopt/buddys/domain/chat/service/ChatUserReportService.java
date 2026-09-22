@@ -13,6 +13,7 @@ import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -27,6 +28,7 @@ public class ChatUserReportService {
   private final UserRepository userRepository;
   private final ChatReportMailSender chatReportMailSender;
 
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public void reportChatPartner(Long userId, Long chatRoomId, String reason) {
     User reporter = getActiveUser(userId);
     ChatRoomMemberRepository.ChatRoomDetailProjection chatRoomDetail =
@@ -36,8 +38,6 @@ public class ChatUserReportService {
     ChatRoom chatRoom = chatRoomDetail.getChatRoom();
     User reported = chatRoomDetail.getParticipant();
 
-    // 신고 기록은 먼저 별도 트랜잭션으로 커밋한다. 이후 운영 메일 발송이 실패하더라도
-    // (예: SES 일시 장애) 신고 접수 자체는 롤백되지 않고 남아 있어야 한다.
     ChatUserReport report = chatUserReportCommandService.save(chatRoom, reporter, reported, reason);
 
     sendReportMail(report);
