@@ -14,6 +14,7 @@ import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
 import org.sopt.buddys.domain.chat.service.result.ChatRoomListResult;
@@ -53,6 +54,12 @@ class ChatRoomServiceTest {
 
     @Autowired
     private ChatReadService chatReadService;
+
+    @Autowired
+    private ChatUserBlockService chatUserBlockService;
+
+    @Autowired
+    private ChatUserBlockRepository chatUserBlockRepository;
 
     @Autowired
     private ChatRoomRepository chatRoomRepository;
@@ -230,6 +237,49 @@ class ChatRoomServiceTest {
         assertThat(result.chatRoom().getId()).isEqualTo(chatRoom.getId());
         assertThat(result.participant().getId()).isEqualTo(participant.getId());
         assertThat(result.participant().getNickname()).isEqualTo(participant.getNickname());
+        assertThat(result.canSendMessage()).isTrue();
+    }
+
+    @DisplayName("내가 상대방을 차단했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @Test
+    void getChatRoom_blockedByMe_returnsCanSendMessageFalse() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        chatUserBlockService.blockChatPartner(user.getId(), chatRoom.getId());
+
+        // when
+        ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
+
+        // then
+        assertThat(result.canSendMessage()).isFalse();
+    }
+
+    @DisplayName("상대방이 나를 차단했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @Test
+    void getChatRoom_blockedByPartner_returnsCanSendMessageFalse() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        chatUserBlockService.blockChatPartner(participant.getId(), chatRoom.getId());
+
+        // when
+        ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
+
+        // then
+        assertThat(result.canSendMessage()).isFalse();
     }
 
     @DisplayName("존재하지 않는 채팅방을 조회하면 CHAT-E002 예외가 발생한다")
@@ -645,6 +695,7 @@ class ChatRoomServiceTest {
     private void cleanUp() {
         jdbcTemplate.update("UPDATE chat_room_member SET last_read_message_id = NULL");
         jdbcTemplate.update("DELETE FROM chat_message");
+        chatUserBlockRepository.deleteAllInBatch();
         chatRoomMemberRepository.deleteAllInBatch();
         chatRoomRepository.deleteAllInBatch();
         userRepository.deleteAllInBatch();
