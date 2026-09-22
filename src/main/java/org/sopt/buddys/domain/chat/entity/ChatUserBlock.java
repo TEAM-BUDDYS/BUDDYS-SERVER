@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.global.common.TimeConverter;
 
 @Getter
 @Entity
@@ -47,7 +47,7 @@ public class ChatUserBlock {
   @PrePersist
   private void prePersist() {
     if (createdAt == null) {
-      createdAt = ChatTimeConverter.now();
+      createdAt = TimeConverter.now();
     }
   }
 }
