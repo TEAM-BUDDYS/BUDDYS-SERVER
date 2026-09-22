@@ -8,6 +8,7 @@ import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.mail.MailProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
 import software.amazon.awssdk.services.sesv2.model.Body;
 import software.amazon.awssdk.services.sesv2.model.Content;
@@ -48,7 +49,7 @@ public class ChatReportMailSender {
 
     try {
       sesV2Client.sendEmail(request);
-    } catch (SesV2Exception e) {
+    } catch (SesV2Exception | SdkClientException e) {
       throw new BaseException(ChatErrorCode.REPORT_MAIL_SEND_FAILED, e);
     }
   }
