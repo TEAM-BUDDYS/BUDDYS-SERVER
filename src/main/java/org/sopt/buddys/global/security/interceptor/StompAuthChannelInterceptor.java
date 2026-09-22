@@ -8,6 +8,7 @@ import org.sopt.buddys.domain.chat.entity.ChatRoomMemberId;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.security.jwt.JwtProvider;
+import org.sopt.buddys.global.websocket.ActiveWebSocketSessionRegistry;
 import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -33,6 +34,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
   private final JwtProvider jwtProvider;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
   private final UserRepository userRepository;
+  private final ActiveWebSocketSessionRegistry sessionRegistry;
 
   @Override
   public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -66,6 +68,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     String accessToken = authorization.substring(BEARER_PREFIX.length());
     Long userId = jwtProvider.extractUserId(accessToken)
         .orElseThrow(() -> new BadCredentialsException("Invalid WebSocket access token."));
+    sessionRegistry.bindUser(accessor.getSessionId(), userId);
     if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
       throw new BadCredentialsException("Inactive WebSocket user.");
     }

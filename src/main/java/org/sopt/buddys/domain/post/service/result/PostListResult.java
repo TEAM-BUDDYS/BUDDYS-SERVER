@@ -16,7 +16,8 @@ public record PostListResult(
 
   public record PostSummaryResult(
       Post post,
-      String thumbnailImageUrl
+      String thumbnailImageUrl,
+      boolean isBookmarked
   ) {
   }
 }
