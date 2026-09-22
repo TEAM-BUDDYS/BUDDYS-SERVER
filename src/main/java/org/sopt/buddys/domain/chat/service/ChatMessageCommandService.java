@@ -64,7 +64,8 @@ public class ChatMessageCommandService {
   ) {
 
     if (chatRoomMemberRepository.existsById(new ChatRoomMemberId(chatRoomId, userId))) {
-      return chatRoomRepository.getReferenceById(chatRoomId);
+      return chatRoomRepository.findByIdForUpdate(chatRoomId)
+          .orElseThrow(() -> new BaseException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
     }
 
     if (!chatRoomRepository.existsById(chatRoomId)) {

@@ -23,6 +23,8 @@ public class ChatUserBlockService {
   @Transactional
   public void blockChatPartner(Long userId, Long chatRoomId) {
     Long partnerId = getChatPartnerId(userId, chatRoomId);
+    chatRoomRepository.findByIdForUpdate(chatRoomId)
+        .orElseThrow(() -> chatRoomAccessException(chatRoomId));
     chatUserBlockRepository.insertOrKeep(userId, partnerId);
   }
 
