@@ -16,12 +16,17 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Operation(
-    summary = "채팅방 상세 조회",
-    description = "채팅방 ID로 채팅방 기본 정보와 상대방 정보를 조회합니다. "
-        + "나 또는 상대방이 서로를 차단했거나 신고한 경우 canSendMessage가 false로 응답됩니다."
+    summary = "채팅 상대방 차단",
+    description = """
+        해당 채팅방의 상대방을 차단합니다.
+
+        - 차단 후에는 양쪽 모두 해당 상대방과 서로 메시지를 보낼 수 없습니다.
+        - 기존 채팅 내역은 삭제되지 않고 그대로 유지됩니다.
+        - 이미 차단한 상대방을 다시 차단해도 오류 없이 처리됩니다(멱등).
+        """
 )
 @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "채팅방 상세 조회 성공"),
+    @ApiResponse(responseCode = "200", description = "차단 성공"),
     @ApiResponse(
         responseCode = "403",
         description = "채팅방 접근 권한 없음",
@@ -40,37 +45,21 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
     ),
     @ApiResponse(
         responseCode = "404",
-        description = "채팅방 없음",
+        description = "채팅방을 찾을 수 없음",
         content = @Content(
             mediaType = "application/json",
             schema = @Schema(implementation = BaseResponse.class),
-            examples = {
-                @ExampleObject(
-                    name = "채팅방 없음",
-                    value = """
-                        {
-                          "success": false,
-                          "code": "CHAT-E002",
-                          "message": "채팅방을 찾을 수 없습니다.",
-                          "data": null
-                        }
-                        """
-                ),
-                @ExampleObject(
-                    name = "사용자 없음",
-                    value = """
-                        {
-                          "success": false,
-                          "code": "USER-E001",
-                          "message": "사용자를 찾을 수 없습니다.",
-                          "data": null
-                        }
-                        """
-                )
-            }
+            examples = @ExampleObject(value = """
+                {
+                  "success": false,
+                  "code": "CHAT-E002",
+                  "message": "채팅방을 찾을 수 없습니다.",
+                  "data": null
+                }
+                """)
         )
     )
 })
 @CommonErrorResponses
-public @interface GetChatRoomSwagger {
+public @interface BlockChatPartnerSwagger {
 }

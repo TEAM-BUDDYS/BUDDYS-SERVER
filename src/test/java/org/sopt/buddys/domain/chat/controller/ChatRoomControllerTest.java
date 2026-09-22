@@ -4,8 +4,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,12 +20,16 @@ import org.sopt.buddys.domain.chat.entity.ChatMessage;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
 import org.sopt.buddys.domain.chat.service.ChatMessageService;
 import org.sopt.buddys.domain.chat.service.ChatRoomService;
+import org.sopt.buddys.domain.chat.service.ChatUserBlockService;
+import org.sopt.buddys.domain.chat.service.ChatUserReportService;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
+import org.sopt.buddys.global.exception.GlobalExceptionHandler;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -38,16 +44,23 @@ class ChatRoomControllerTest {
   private static final long LOGIN_USER_ID = 1L;
 
   private ChatMessageService chatMessageService;
+  private ChatUserBlockService chatUserBlockService;
+  private ChatUserReportService chatUserReportService;
   private MockMvc mockMvc;
 
   @BeforeEach
   void setUp() {
     ChatRoomService chatRoomService = mock(ChatRoomService.class);
     chatMessageService = mock(ChatMessageService.class);
+    chatUserBlockService = mock(ChatUserBlockService.class);
+    chatUserReportService = mock(ChatUserReportService.class);
 
     mockMvc = MockMvcBuilders
-        .standaloneSetup(new ChatRoomController(chatRoomService, chatMessageService))
+        .standaloneSetup(new ChatRoomController(
+            chatRoomService, chatMessageService, chatUserBlockService, chatUserReportService
+        ))
         .setCustomArgumentResolvers(new TestLoginUserArgumentResolver())
+        .setControllerAdvice(new GlobalExceptionHandler())
         .build();
   }
 
@@ -131,6 +144,71 @@ class ChatRoomControllerTest {
         isNull(),
         eq(30)
     );
+  }
+
+  @DisplayName("채팅방 차단 요청이 오면 서비스에 위임한다")
+  @Test
+  void blockChatPartner_delegatesToService() throws Exception {
+    // given
+    Long chatRoomId = 1L;
+
+    // when
+    ResultActions result = mockMvc.perform(post("/api/v1/chat-rooms/{chatRoomId}/block", chatRoomId));
+
+    // then
+    result.andExpect(status().isOk());
+    verify(chatUserBlockService).blockChatPartner(LOGIN_USER_ID, chatRoomId);
+  }
+
+  @DisplayName("신고 요청에 바디가 없으면 사유 없이 서비스에 위임한다")
+  @Test
+  void reportChatPartner_withoutBody_delegatesWithNullReason() throws Exception {
+    // given
+    Long chatRoomId = 1L;
+
+    // when
+    ResultActions result = mockMvc.perform(post("/api/v1/chat-rooms/{chatRoomId}/report", chatRoomId));
+
+    // then
+    result.andExpect(status().isOk());
+    verify(chatUserReportService).reportChatPartner(LOGIN_USER_ID, chatRoomId, null);
+  }
+
+  @DisplayName("신고 요청에 사유가 포함되면 그 사유를 그대로 서비스에 전달한다")
+  @Test
+  void reportChatPartner_withReason_delegatesWithReason() throws Exception {
+    // given
+    Long chatRoomId = 1L;
+
+    // when
+    ResultActions result = mockMvc.perform(post("/api/v1/chat-rooms/{chatRoomId}/report", chatRoomId)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {"reason": "부적절한 언행"}
+            """));
+
+    // then
+    result.andExpect(status().isOk());
+    verify(chatUserReportService).reportChatPartner(LOGIN_USER_ID, chatRoomId, "부적절한 언행");
+  }
+
+  @DisplayName("신고 사유가 500자를 초과하면 400을 반환하고 서비스는 호출되지 않는다")
+  @Test
+  void reportChatPartner_reasonTooLong_returnsBadRequest() throws Exception {
+    // given
+    Long chatRoomId = 1L;
+    String tooLongReason = "a".repeat(501);
+
+    // when
+    ResultActions result = mockMvc.perform(post("/api/v1/chat-rooms/{chatRoomId}/report", chatRoomId)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"reason\": \"" + tooLongReason + "\"}"));
+
+    // then
+    result
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+    verifyNoInteractions(chatUserReportService);
   }
 
   private ChatMessage createMessage(

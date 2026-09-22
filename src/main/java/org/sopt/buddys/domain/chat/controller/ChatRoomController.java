@@ -7,16 +7,21 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.OffsetDateTime;
 import lombok.RequiredArgsConstructor;
+import org.sopt.buddys.domain.chat.controller.swagger.BlockChatPartnerSwagger;
 import org.sopt.buddys.domain.chat.controller.swagger.CreateChatRoomSwagger;
 import org.sopt.buddys.domain.chat.controller.swagger.GetChatMessagesSwagger;
 import org.sopt.buddys.domain.chat.controller.swagger.GetChatRoomsSwagger;
 import org.sopt.buddys.domain.chat.controller.swagger.GetChatRoomSwagger;
+import org.sopt.buddys.domain.chat.controller.swagger.ReportChatPartnerSwagger;
 import org.sopt.buddys.domain.chat.dto.request.CreateChatRoomRequest;
+import org.sopt.buddys.domain.chat.dto.request.ReportChatPartnerRequest;
 import org.sopt.buddys.domain.chat.dto.response.ChatMessageListResponse;
 import org.sopt.buddys.domain.chat.dto.response.ChatRoomListResponse;
 import org.sopt.buddys.domain.chat.dto.response.ChatRoomResponse;
 import org.sopt.buddys.domain.chat.service.ChatMessageService;
 import org.sopt.buddys.domain.chat.service.ChatRoomService;
+import org.sopt.buddys.domain.chat.service.ChatUserBlockService;
+import org.sopt.buddys.domain.chat.service.ChatUserReportService;
 import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
@@ -40,6 +45,8 @@ public class ChatRoomController {
 
   private final ChatRoomService chatRoomService;
   private final ChatMessageService chatMessageService;
+  private final ChatUserBlockService chatUserBlockService;
+  private final ChatUserReportService chatUserReportService;
 
   @CreateChatRoomSwagger
   @PostMapping
@@ -118,5 +125,33 @@ public class ChatRoomController {
             )
         )
     );
+  }
+
+  @BlockChatPartnerSwagger
+  @PostMapping("/{chatRoomId}/block")
+  public BaseResponse<Void> blockChatPartner(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "채팅방 ID", example = "1")
+      @PathVariable Long chatRoomId
+  ) {
+
+    chatUserBlockService.blockChatPartner(userId, chatRoomId);
+    return BaseResponse.success(GlobalSuccessCode.OK);
+  }
+
+  @ReportChatPartnerSwagger
+  @PostMapping("/{chatRoomId}/report")
+  public BaseResponse<Void> reportChatPartner(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "채팅방 ID", example = "1")
+      @PathVariable Long chatRoomId,
+      @RequestBody(required = false) @Valid ReportChatPartnerRequest request
+  ) {
+
+    String reason = request != null ? request.reason() : null;
+    chatUserReportService.reportChatPartner(userId, chatRoomId, reason);
+    return BaseResponse.success(GlobalSuccessCode.OK);
   }
 }
