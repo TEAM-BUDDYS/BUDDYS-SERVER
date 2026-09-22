@@ -92,6 +92,11 @@ public class User extends BaseEntity {
   @Column(name = "account_status", nullable = false, length = 20)
   private AccountStatus accountStatus = AccountStatus.ACTIVE;
 
+  @Builder.Default
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  private UserRole role = UserRole.USER;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "university_id")
   private University university;
@@ -209,6 +214,14 @@ public class User extends BaseEntity {
   public void verifyUniversity(University university) {
     this.university = university;
     this.universityVerified = true;
+  }
+
+  public void verifyExchange() {
+    this.exchangeVerified = true;
+  }
+
+  public boolean isAdmin() {
+    return role == UserRole.ADMIN;
   }
 
   public void withdraw() {

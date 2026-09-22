@@ -3,7 +3,7 @@ package org.sopt.buddys.domain.chat.dto.response;
 import java.time.OffsetDateTime;
 import org.sopt.buddys.domain.chat.entity.ChatMessage;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageSendResult;
-import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
+import org.sopt.buddys.global.common.TimeConverter;
 
 public record ChatMessageEventResponse(
     String type,
@@ -35,7 +35,7 @@ public record ChatMessageEventResponse(
           message.getId(),
           ChatParticipantResponse.from(message.getSender()),
           message.getMessage(),
-          ChatTimeConverter.toCommonTime(message.getCreatedAt())
+          TimeConverter.toCommonTime(message.getCreatedAt())
       );
     }
   }

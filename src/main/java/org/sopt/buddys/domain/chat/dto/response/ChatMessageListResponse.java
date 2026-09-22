@@ -7,7 +7,7 @@ import java.util.List;
 import org.sopt.buddys.domain.chat.entity.ChatMessage;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
-import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
+import org.sopt.buddys.global.common.TimeConverter;
 
 public record ChatMessageListResponse(
     @Schema(description = "메시지 목록")
@@ -35,7 +35,7 @@ public record ChatMessageListResponse(
 
     return new ChatMessageListResponse(
         messages,
-        ChatTimeConverter.toCommonTime(result.nextCursorSentAt()),
+        TimeConverter.toCommonTime(result.nextCursorSentAt()),
         result.nextCursorMessageId(),
         result.hasNext()
     );
@@ -69,7 +69,7 @@ public record ChatMessageListResponse(
           message.getId(),
           ChatParticipantResponse.from(message.getSender()),
           message.getMessage(),
-          ChatTimeConverter.toCommonTime(message.getCreatedAt()),
+          TimeConverter.toCommonTime(message.getCreatedAt()),
           result.mine(),
           result.read()
       );

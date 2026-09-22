@@ -22,7 +22,7 @@ import org.sopt.buddys.domain.chat.service.ChatMessageService;
 import org.sopt.buddys.domain.chat.service.ChatRoomService;
 import org.sopt.buddys.domain.chat.service.ChatUserBlockService;
 import org.sopt.buddys.domain.chat.service.ChatUserReportService;
-import org.sopt.buddys.domain.chat.util.ChatTimeConverter;
+import org.sopt.buddys.global.common.TimeConverter;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
@@ -119,7 +119,7 @@ public class ChatRoomController {
             chatMessageService.getMessages(
                 userId,
                 chatRoomId,
-                ChatTimeConverter.toStorageTime(cursorSentAt),
+                TimeConverter.toStorageTime(cursorSentAt),
                 cursorMessageId,
                 size
             )
