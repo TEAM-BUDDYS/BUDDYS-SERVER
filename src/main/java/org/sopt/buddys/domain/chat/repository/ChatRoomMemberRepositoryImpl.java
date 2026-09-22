@@ -2,8 +2,10 @@ package org.sopt.buddys.domain.chat.repository;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.DateTimeExpression;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -16,6 +18,7 @@ import org.sopt.buddys.domain.chat.entity.QChatRoom;
 import org.sopt.buddys.domain.chat.entity.QChatRoomMember;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository.ChatRoomListProjection;
 import org.sopt.buddys.domain.user.entity.QUser;
+import org.sopt.buddys.domain.user.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -29,6 +32,10 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
   private static final QChatMessage lastMessage = new QChatMessage("lastMessage");
   private static final QChatMessage newerMessage = new QChatMessage("newerMessage");
   private static final QChatMessage unreadMessage = new QChatMessage("unreadMessage");
+  private static final StringExpression participantDisplayNickname = new CaseBuilder()
+      .when(participant.deletedAt.isNotNull())
+      .then(User.WITHDRAWN_DISPLAY_NICKNAME)
+      .otherwise(participant.nickname);
 
   private final JPAQueryFactory queryFactory;
 
@@ -92,7 +99,7 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
         .select(
             chatRoom.id,
             participant.id,
-            participant.nickname,
+            participantDisplayNickname,
             participant.profileImageUrl,
             lastMessage.message,
             lastMessage.createdAt,
@@ -154,7 +161,7 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
     return new ChatRoomListProjectionDto(
         tuple.get(chatRoom.id),
         tuple.get(participant.id),
-        tuple.get(participant.nickname),
+        tuple.get(participantDisplayNickname),
         tuple.get(participant.profileImageUrl),
         tuple.get(lastMessage.message),
         tuple.get(lastMessage.createdAt),

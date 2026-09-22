@@ -8,10 +8,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.magazine.code.MagazineSuccessCode;
 import org.sopt.buddys.domain.magazine.dto.request.MagazineListRequest;
+import org.sopt.buddys.domain.magazine.dto.response.BookmarkedMagazineListResponse;
 import org.sopt.buddys.domain.magazine.dto.response.DeleteMagazineBookmarkSuccessResponse;
 import org.sopt.buddys.domain.magazine.dto.response.MagazineBookmarkResponse;
 import org.sopt.buddys.domain.magazine.dto.response.MagazineBookmarkSuccessResponse;
@@ -30,7 +33,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @RestController
 @Validated
@@ -43,8 +49,9 @@ public class MagazineController {
 
   @Operation(
       summary = "매거진 목록 조회",
-      description = "연도와 월을 기준으로 발행된 매거진 목록을 조회합니다. "
-          + "year, month를 모두 생략하면 Asia/Seoul 기준 현재 연월을 적용합니다."
+      description = "필수 카테고리와 선택 검색어로 매거진 목록을 조회합니다. "
+          + "검색어는 제목과 요약에 부분 일치로 적용합니다. "
+          + "LATEST는 발행일 최신순, BOOKMARK는 전체 사용자의 저장 수가 많은 순으로 정렬합니다."
   )
   @ApiResponses({
       @ApiResponse(
@@ -66,11 +73,37 @@ public class MagazineController {
         MagazineSuccessCode.MAGAZINE_LIST_FOUND,
         MagazineListResponse.from(magazineService.getMagazines(
             userId,
-            request.year(),
-            request.month(),
+            request.category(),
+            request.normalizedKeyword(),
+            request.sortOrDefault(),
             request.pageOrDefault(),
             request.sizeOrDefault()
         ))
+    );
+  }
+
+  @Operation(
+      summary = "저장한 매거진 목록 조회",
+      description = "로그인한 사용자가 저장한 매거진 목록을 최신 저장순으로 조회합니다."
+  )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "401", description = "인증 필요")
+  })
+  @InvalidRequestResponse
+  @CommonErrorResponses
+  @GetMapping("/bookmarks")
+  public BaseResponse<BookmarkedMagazineListResponse> getBookmarkedMagazines(
+      @Parameter(hidden = true)
+      @LoginUser Long userId,
+      @Parameter(description = "페이지 번호. 0 이상입니다.", example = "0")
+      @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "페이지 크기. 1 이상 100 이하입니다.", example = "20")
+      @RequestParam(defaultValue = "20") @Min(1) @Max(MAX_PAGE_SIZE) int size
+  ) {
+    return BaseResponse.success(
+        MagazineSuccessCode.MAGAZINE_BOOKMARK_LIST_FOUND,
+        BookmarkedMagazineListResponse.from(magazineService.getBookmarkedMagazines(userId, page, size))
     );
   }
 

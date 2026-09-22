@@ -1,45 +1,51 @@
 package org.sopt.buddys.domain.magazine.service;
 
-import java.time.DateTimeException;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.magazine.code.MagazineErrorCode;
 import org.sopt.buddys.domain.magazine.entity.Magazine;
+import org.sopt.buddys.domain.magazine.entity.MagazineCategory;
+import org.sopt.buddys.domain.magazine.entity.MagazineSort;
 import org.sopt.buddys.domain.magazine.repository.MagazineBookmarkRepository;
 import org.sopt.buddys.domain.magazine.repository.MagazineRepository;
 import org.sopt.buddys.domain.magazine.service.result.MagazineBookmarkResult;
+import org.sopt.buddys.domain.magazine.service.result.BookmarkedMagazineListResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult;
 import org.sopt.buddys.domain.magazine.service.result.MagazineListResult.MagazineSummaryResult;
+import org.sopt.buddys.global.common.code.GlobalErrorCode;
+import org.sopt.buddys.domain.user.code.UserErrorCode;
+import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MagazineService {
 
-  private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
-
   private final MagazineRepository magazineRepository;
   private final MagazineBookmarkRepository magazineBookmarkRepository;
+  private final UserRepository userRepository;
 
-  public MagazineListResult getMagazines(Long userId, Integer year, Integer month, int page, int size) {
-    YearMonth yearMonth = resolveYearMonth(year, month);
-    LocalDate startDate = yearMonth.atDay(1);
-    LocalDate endDate = yearMonth.atEndOfMonth();
-
-    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id")));
-    Page<Magazine> magazinePage = magazineRepository.findByPublishedAtBetween(startDate, endDate, pageable);
+  public MagazineListResult getMagazines(
+      Long userId,
+      MagazineCategory category,
+      String keyword,
+      MagazineSort sort,
+      int page,
+      int size
+  ) {
+    Pageable pageable = PageRequest.of(page, size);
+    Page<Magazine> magazinePage = magazineRepository.searchMagazines(category, keyword, sort, pageable);
 
     Set<Long> bookmarkedMagazineIds = getBookmarkedMagazineIds(userId, magazinePage.getContent());
     List<MagazineSummaryResult> magazines = magazinePage.getContent().stream()
@@ -47,8 +53,6 @@ public class MagazineService {
         .toList();
 
     return new MagazineListResult(
-        yearMonth.getYear(),
-        yearMonth.getMonthValue(),
         magazinePage.getTotalElements(),
         magazinePage.getNumber(),
         magazinePage.getSize(),
@@ -57,9 +61,30 @@ public class MagazineService {
     );
   }
 
+  public BookmarkedMagazineListResult getBookmarkedMagazines(Long userId, int page, int size) {
+    validatePageRequest(page, size);
+    Pageable pageable = PageRequest.of(page, size);
+    Slice<Magazine> magazines = magazineBookmarkRepository.findBookmarkedMagazinesByUserId(userId, pageable);
+
+    return new BookmarkedMagazineListResult(
+        magazines.getContent(),
+        magazines.getNumber(),
+        magazines.getSize(),
+        magazines.hasNext()
+    );
+  }
+
+  private void validatePageRequest(int page, int size) {
+    if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+  }
+
   @Transactional
   public MagazineBookmarkResult bookmarkMagazine(Long userId, Long magazineId) {
     validateMagazineExists(magazineId);
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     magazineBookmarkRepository.insertOrKeep(userId, magazineId);
     return new MagazineBookmarkResult(magazineId, true);
@@ -76,20 +101,6 @@ public class MagazineService {
   private void validateMagazineExists(Long magazineId) {
     if (!magazineRepository.existsById(magazineId)) {
       throw new BaseException(MagazineErrorCode.MAGAZINE_NOT_FOUND);
-    }
-  }
-
-  private YearMonth resolveYearMonth(Integer year, Integer month) {
-    if (year == null && month == null) {
-      return YearMonth.now(SEOUL_ZONE);
-    }
-    if (year == null || month == null) {
-      throw new BaseException(MagazineErrorCode.INVALID_YEAR_MONTH);
-    }
-    try {
-      return YearMonth.of(year, month);
-    } catch (DateTimeException e) {
-      throw new BaseException(MagazineErrorCode.INVALID_YEAR_MONTH);
     }
   }
 

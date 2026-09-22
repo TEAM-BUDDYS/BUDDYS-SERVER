@@ -36,6 +36,8 @@ import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
 import org.sopt.buddys.domain.post.service.command.UpdatePostCommand;
+import org.sopt.buddys.domain.post.service.result.ClosingSoonPostResult;
+import org.sopt.buddys.domain.post.service.result.ClosingSoonPostResult.ClosingSoonPostSummaryResult;
 import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.post.service.result.PostBookmarkResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult;
@@ -55,10 +57,14 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
+
+  private static final int CLOSING_SOON_POST_LIMIT = 4;
 
   private final PostRepository postRepository;
   private final PostBookmarkRepository postBookmarkRepository;
@@ -116,6 +122,9 @@ public class PostService {
 
   @Transactional
   public Post updatePostStatus(Long userId, Long postId, PostStatus status) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     if (status == null) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
@@ -135,6 +144,9 @@ public class PostService {
 
   @Transactional
   public Post updatePost(Long userId, Long postId, UpdatePostCommand command) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     validateUpdateRequest(command);
 
     Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
@@ -190,6 +202,9 @@ public class PostService {
 
   @Transactional
   public Post deletePost(Long userId, Long postId) {
+    userRepository.findActiveByIdForUpdate(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
     Post post = postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
     if (!post.getAuthor().getId().equals(userId)) {
@@ -207,7 +222,7 @@ public class PostService {
   public PostBookmarkResult bookmarkPost(Long userId, Long postId) {
     postRepository.findByIdAndDeletedAtIsNull(postId)
         .orElseThrow(() -> new BaseException(PostErrorCode.POST_NOT_FOUND));
-    userRepository.findByIdAndDeletedAtIsNull(userId)
+    userRepository.findActiveByIdForUpdate(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     postBookmarkRepository.insertOrKeep(userId, postId);
@@ -230,10 +245,15 @@ public class PostService {
 
     Slice<Post> posts = postRepository.searchPosts(userId, condition, PageRequest.of(page, size));
     Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts.getContent());
+    Set<Long> bookmarkedPostIds = getBookmarkedPostIds(userId, posts.getContent());
 
     List<PostSummaryResult> postResults = posts.getContent()
         .stream()
-        .map(post -> new PostSummaryResult(post, thumbnailImageUrls.get(post.getId())))
+        .map(post -> new PostSummaryResult(
+            post,
+            thumbnailImageUrls.get(post.getId()),
+            bookmarkedPostIds.contains(post.getId())
+        ))
         .toList();
 
     return new PostListResult(
@@ -242,6 +262,38 @@ public class PostService {
         posts.getSize(),
         posts.hasNext()
     );
+  }
+
+  public ClosingSoonPostResult getClosingSoonPosts(Long userId) {
+    List<Post> posts = postRepository.findClosingSoonPosts(LocalDate.now(), CLOSING_SOON_POST_LIMIT);
+    Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts);
+    Set<Long> bookmarkedPostIds = getBookmarkedPostIds(userId, posts);
+
+    return new ClosingSoonPostResult(
+        posts.stream()
+            .map(post -> new ClosingSoonPostSummaryResult(
+                post,
+                thumbnailImageUrls.get(post.getId()),
+                bookmarkedPostIds.contains(post.getId())
+            ))
+            .toList()
+    );
+  }
+
+  public PostListResult getBookmarkedPosts(Long userId, int page, int size) {
+    validatePageRequest(page, size);
+
+    Slice<Post> posts = postBookmarkRepository.findBookmarkedPostsByUserId(
+        userId,
+        PageRequest.of(page, size)
+    );
+    Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts.getContent());
+
+    List<PostSummaryResult> postResults = posts.getContent().stream()
+        .map(post -> new PostSummaryResult(post, thumbnailImageUrls.get(post.getId()), true))
+        .toList();
+
+    return new PostListResult(postResults, posts.getNumber(), posts.getSize(), posts.hasNext());
   }
 
   private PostDetailResult toPostDetailResult(Long userId, Post post) {
@@ -488,7 +540,7 @@ public class PostService {
   }
 
   private void validatePageRequest(int page, int size) {
-    if (page < 0 || size < 1) {
+    if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
   }
@@ -517,5 +569,13 @@ public class PostService {
             PostThumbnailProjection::getThumbnailImageUrl,
             (first, second) -> first
         ));
+  }
+
+  private Set<Long> getBookmarkedPostIds(Long userId, List<Post> posts) {
+    List<Long> postIds = posts.stream().map(Post::getId).toList();
+    if (postIds.isEmpty()) {
+      return Set.of();
+    }
+    return postBookmarkRepository.findBookmarkedPostIds(userId, postIds);
   }
 }
