@@ -29,7 +29,7 @@ public class AirlineService {
       return new SliceImpl<>(List.of(), PageRequest.of(page, size), false);
     }
 
-    String escapedKeyword = escapeLikeWildcards(keyword.trim());
+    String escapedKeyword = escapeLikeWildcards(keyword.strip());
     return airlineRepository.search(escapedKeyword, PageRequest.of(page, size));
   }
 

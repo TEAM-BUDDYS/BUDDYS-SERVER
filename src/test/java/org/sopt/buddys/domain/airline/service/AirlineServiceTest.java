@@ -109,6 +109,21 @@ class AirlineServiceTest {
     assertThat(result.getContent()).isEmpty();
   }
 
+  @DisplayName("키워드 앞뒤의 유니코드 공백이 제거되고 남은 검색어로 검색된다")
+  @Test
+  void searchAirlines_unicodeWhitespacePadding_stripsAndMatches() {
+    // given
+    insertAirline("대한항공", "KE");
+
+    // when
+    Slice<Airline> result = airlineService.searchAirlines(" 대한항공 ", 0, 20);
+
+    // then
+    assertThat(result.getContent())
+        .extracting(Airline::getName)
+        .containsExactly("대한항공");
+  }
+
   @DisplayName("검색 결과는 항공사명 오름차순으로 정렬된다")
   @Test
   void searchAirlines_ordersByNameAsc() {
