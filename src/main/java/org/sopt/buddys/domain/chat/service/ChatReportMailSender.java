@@ -7,6 +7,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.exception.BaseException;
 import org.sopt.buddys.global.mail.MailProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
 import software.amazon.awssdk.services.sesv2.model.Body;
 import software.amazon.awssdk.services.sesv2.model.Content;
@@ -67,9 +68,9 @@ public class ChatReportMailSender {
         </div>
         """.formatted(
         report.getChatRoom().getId(),
-        reporter.getNickname(), reporter.getId(), reporter.getEmail(),
-        reported.getNickname(), reported.getId(), reported.getEmail(),
-        reason,
+        HtmlUtils.htmlEscape(reporter.getNickname()), reporter.getId(), HtmlUtils.htmlEscape(reporter.getEmail()),
+        HtmlUtils.htmlEscape(reported.getNickname()), reported.getId(), HtmlUtils.htmlEscape(reported.getEmail()),
+        HtmlUtils.htmlEscape(reason),
         report.getCreatedAt()
     );
   }
