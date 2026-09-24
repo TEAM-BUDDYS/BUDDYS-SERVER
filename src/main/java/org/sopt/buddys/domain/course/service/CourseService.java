@@ -96,8 +96,8 @@ public class CourseService {
 
   @Transactional
   public Course createCourse(Long userId, CreateCourseCommand command) {
-    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
-        command.endDate(), command.tagIds(), command.days());
+    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
+        command.tagIds(), command.days());
     validateDateRanges(command.startDate(), command.endDate(), command.days());
     validateDayNumbersUnique(command.days());
 
@@ -135,8 +135,8 @@ public class CourseService {
     course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
-    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
-        command.endDate(), command.tagIds(), command.days());
+    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
+        command.tagIds(), command.days());
     validateDateRanges(command.startDate(), command.endDate(), command.days());
     validateDayNumbersUnique(command.days());
 
@@ -251,16 +251,12 @@ public class CourseService {
       List<Long> countryIds,
       List<Long> cityIds,
       String title,
-      LocalDate startDate,
-      LocalDate endDate,
       List<Long> tagIds,
       List<CourseDayCommand> days
   ) {
     if (countryIds == null || countryIds.isEmpty()
         || cityIds == null || cityIds.isEmpty()
         || title == null || title.isBlank()
-        || startDate == null
-        || endDate == null
         || tagIds == null || tagIds.isEmpty()
         || days == null || days.isEmpty()) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
@@ -290,7 +286,10 @@ public class CourseService {
   }
 
   private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseDayCommand> days) {
-    if (endDate.isBefore(startDate)) {
+    if ((startDate == null) != (endDate == null)) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+    if (startDate != null && endDate.isBefore(startDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     for (CourseDayCommand day : days) {

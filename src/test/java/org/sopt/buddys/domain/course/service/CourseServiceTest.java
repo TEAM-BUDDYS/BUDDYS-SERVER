@@ -290,6 +290,59 @@ class CourseServiceTest {
         );
   }
 
+  @DisplayName("출발일과 도착일을 모두 입력하지 않아도 코스가 생성된다")
+  @Test
+  void createCourse_withoutDates_savesCourseWithNullDates() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    CreateCourseCommand command = createDefaultCommand(countryId, cityId, null, null, tagId);
+
+    // when
+    Course course = courseService.createCourse(author.getId(), command);
+
+    // then
+    Course savedCourse = courseRepository.findById(course.getId()).orElseThrow();
+    assertThat(savedCourse.getStartDate()).isNull();
+    assertThat(savedCourse.getEndDate()).isNull();
+  }
+
+  @DisplayName("출발일만 입력하고 도착일을 입력하지 않으면 예외가 발생한다")
+  @Test
+  void createCourse_onlyStartDateProvided_throwsInvalidRequest() {
+    // given
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    CreateCourseCommand command = createDefaultCommand(
+        countryId, cityId, LocalDate.of(2026, 9, 1), null, tagId);
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(1L, command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
+        );
+  }
+
+  @DisplayName("도착일만 입력하고 출발일을 입력하지 않으면 예외가 발생한다")
+  @Test
+  void createCourse_onlyEndDateProvided_throwsInvalidRequest() {
+    // given
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    CreateCourseCommand command = createDefaultCommand(
+        countryId, cityId, null, LocalDate.of(2026, 9, 5), tagId);
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(1L, command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
+        );
+  }
+
   @DisplayName("일자(dayNumber)가 중복되면 예외가 발생한다")
   @Test
   void createCourse_duplicateDayNumber_throwsException() {

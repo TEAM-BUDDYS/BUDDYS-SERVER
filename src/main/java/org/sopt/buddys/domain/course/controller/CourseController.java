@@ -98,7 +98,12 @@ public class CourseController {
     );
   }
 
-  @Operation(summary = "코스 게시글 작성", description = "로그인한 사용자가 여행 코스 게시글을 작성합니다.")
+  @Operation(
+      summary = "코스 게시글 작성",
+      description = "로그인한 사용자가 여행 코스 게시글을 작성합니다. "
+          + "출발일(startDate)과 도착일(endDate)은 선택 입력이며, 둘 다 생략하면 날짜 없이 코스가 생성됩니다. "
+          + "단, 하나만 입력하면 잘못된 요청으로 처리됩니다."
+  )
   @ApiResponses({
       @ApiResponse(responseCode = "201", description = "작성 성공"),
       @ApiResponse(
@@ -110,6 +115,17 @@ public class CourseController {
               examples = {
                   @ExampleObject(
                       name = "잘못된 요청",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "GLB-E001",
+                            "message": "잘못된 요청입니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "출발일/도착일 중 하나만 입력",
                       value = """
                           {
                             "success": false,

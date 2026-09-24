@@ -34,10 +34,10 @@ public record CourseDetailResponse(
     @Schema(description = "여행 도시 목록", requiredMode = Schema.RequiredMode.REQUIRED)
     List<CourseCityResponse> cities,
 
-    @Schema(description = "출발일", example = "2026-09-01", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "출발일", example = "2026-09-01", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
     LocalDate startDate,
 
-    @Schema(description = "도착일", example = "2026-09-05", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "도착일", example = "2026-09-05", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
     LocalDate endDate,
 
     @Schema(description = "연결된 태그 목록", requiredMode = Schema.RequiredMode.REQUIRED)

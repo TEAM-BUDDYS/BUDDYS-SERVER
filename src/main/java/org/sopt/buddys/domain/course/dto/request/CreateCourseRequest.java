@@ -26,12 +26,10 @@ public record CreateCourseRequest(
     @Schema(description = "코스 소개", example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.")
     String content,
 
-    @Schema(description = "출발일", example = "2026-09-01")
-    @NotNull
+    @Schema(description = "출발일. 미입력 시 날짜 없이 코스가 생성됩니다.", example = "2026-09-01", nullable = true)
     LocalDate startDate,
 
-    @Schema(description = "도착일", example = "2026-09-05")
-    @NotNull
+    @Schema(description = "도착일. 미입력 시 날짜 없이 코스가 생성됩니다.", example = "2026-09-05", nullable = true)
     LocalDate endDate,
 
     @Schema(description = "연결할 태그 ID 목록 (활동 최대 3개, 관심사 최대 2개, 동행스타일 최대 2개, 활동 태그 1개 이상 필수)", example = "[1, 4, 9]")

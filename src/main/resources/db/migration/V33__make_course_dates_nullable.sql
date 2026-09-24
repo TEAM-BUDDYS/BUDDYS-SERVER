@@ -1,0 +1,3 @@
+ALTER TABLE course
+    MODIFY COLUMN start_date DATE NULL,
+    MODIFY COLUMN end_date DATE NULL;

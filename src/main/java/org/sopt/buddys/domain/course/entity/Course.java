@@ -37,10 +37,10 @@ public class Course extends BaseEntity {
   @Column(columnDefinition = "TEXT")
   private String content;
 
-  @Column(name = "start_date", nullable = false)
+  @Column(name = "start_date")
   private LocalDate startDate;
 
-  @Column(name = "end_date", nullable = false)
+  @Column(name = "end_date")
   private LocalDate endDate;
 
   @Column(name = "view_count", nullable = false)
