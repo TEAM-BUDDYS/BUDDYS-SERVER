@@ -266,6 +266,8 @@ class CourseControllerTest extends IntegrationTestSupport {
                       "dayNumber": 1,
                       "date": "2026-09-01",
                       "imageUrls": ["https://example.com/a.jpg"],
+                      "memo": "예약 필수",
+                      "cost": 22000,
                       "places": [
                         {
                           "googlePlaceId": "ChIJ-test-place",
@@ -273,9 +275,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                           "category": "TOURISM",
                           "latitude": 48.8606,
                           "longitude": 2.3376,
-                          "orderNo": 0,
-                          "memo": "예약 필수",
-                          "cost": 22000
+                          "orderNo": 0
                         }
                       ],
                       "flights": [

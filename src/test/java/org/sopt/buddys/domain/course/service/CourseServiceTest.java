@@ -139,15 +139,15 @@ class CourseServiceTest {
             (short) 1,
             LocalDate.of(2026, 9, 1),
             List.of("https://example.com/a.jpg", "https://example.com/b.jpg"),
+            "예약 필수",
+            BigDecimal.valueOf(22000),
             List.of(new CoursePlaceCommand(
                 "ChIJ-place-1",
                 "루브르 박물관",
                 "TOURISM",
                 BigDecimal.valueOf(48.8606),
                 BigDecimal.valueOf(2.3376),
-                (short) 0,
-                "예약 필수",
-                BigDecimal.valueOf(22000)
+                (short) 0
             )),
             List.of(new CourseFlightCommand(
                 "대한항공",
@@ -174,6 +174,8 @@ class CourseServiceTest {
     assertThat(courseTagRepository.findAllByCourseIdWithTag(course.getId())).hasSize(1);
     assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId())).hasSize(1);
     assertThat(courseDays).hasSize(1);
+    assertThat(courseDays.get(0).getMemo()).isEqualTo("예약 필수");
+    assertThat(courseDays.get(0).getCost()).isEqualByComparingTo(BigDecimal.valueOf(22000));
     assertThat(courseImageRepository.findImageUrlsByCourseIdIn(List.of(course.getId()))).hasSize(2);
     assertThat(coursePlaceRepository.findAllByCourseDayIdInWithPlace(courseDayIds)).hasSize(1);
     assertThat(courseFlightRepository.findAllByCourseDayIdIn(courseDayIds)).hasSize(1);
@@ -197,10 +199,10 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(new CourseDayCommand(
-            (short) 1, null, List.of("https://example.com/day1.jpg"),
+            (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-shared", "루브르 박물관", "TOURISM",
-                BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0, null, null)), null))));
+                BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0)), null))));
 
     // when
     courseService.createCourse(secondAuthor.getId(), new CreateCourseCommand(
@@ -208,10 +210,10 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(new CourseDayCommand(
-            (short) 1, null, List.of("https://example.com/day1.jpg"),
+            (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-shared", "가짜 이름", "RESTAURANT",
-                BigDecimal.valueOf(0), BigDecimal.valueOf(0), (short) 0, null, null)), null))));
+                BigDecimal.valueOf(0), BigDecimal.valueOf(0), (short) 0)), null))));
 
     // then
     Place place = placeRepository.findByGooglePlaceId("ChIJ-shared").orElseThrow();
@@ -236,13 +238,13 @@ class CourseServiceTest {
         List.of(tagId), null,
         List.of(
             new CourseDayCommand(
-                (short) 1, null, List.of("https://example.com/day1.jpg"),
+                (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
                 List.of(new CoursePlaceCommand(
-                    "ChIJ-conflict", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null)), null),
+                    "ChIJ-conflict", "루브르 박물관", "TOURISM", null, null, (short) 0)), null),
             new CourseDayCommand(
-                (short) 2, null, List.of("https://example.com/day2.jpg"),
+                (short) 2, null, List.of("https://example.com/day2.jpg"), null, null,
                 List.of(new CoursePlaceCommand(
-                    "ChIJ-conflict", "루브르 카페", "CAFE", null, null, (short) 0, null, null)), null)
+                    "ChIJ-conflict", "루브르 카페", "CAFE", null, null, (short) 0)), null)
         ));
 
     // when, then
@@ -264,7 +266,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, null, null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(1L, command))
@@ -356,8 +358,8 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null),
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null),
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)
         ));
 
     // when, then
@@ -380,7 +382,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(999_999L),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -402,7 +404,7 @@ class CourseServiceTest {
         List.of(countryId, 999_999L), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -424,7 +426,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId, 999_999L), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -446,7 +448,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(interestTagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -473,7 +475,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         activityTagIds, null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -495,7 +497,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(author.getId()),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -522,9 +524,9 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(activityTagId), List.of(companion.getId()),
         List.of(new CourseDayCommand(
-            (short) 1, LocalDate.of(2026, 9, 1), List.of("https://example.com/old-day.jpg"),
+            (short) 1, LocalDate.of(2026, 9, 1), List.of("https://example.com/old-day.jpg"), null, null,
             List.of(new CoursePlaceCommand(
-                "ChIJ-old", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null)),
+                "ChIJ-old", "루브르 박물관", "TOURISM", null, null, (short) 0)),
             List.of(new CourseFlightCommand(
                 "대한항공", "KE901", "ICN", LocalDateTime.of(2026, 9, 1, 13, 0),
                 "CDG", LocalDateTime.of(2026, 9, 1, 18, 30))))));
@@ -536,8 +538,9 @@ class CourseServiceTest {
         List.of(newActivityTagId),
         List.of(new CourseDayCommand(
             (short) 1, LocalDate.of(2026, 10, 1), List.of("https://example.com/new-day.jpg"),
+            "예약 필수", BigDecimal.valueOf(16000),
             List.of(new CoursePlaceCommand(
-                "ChIJ-new", "콜로세움", "TOURISM", null, null, (short) 0, "예약 필수", BigDecimal.valueOf(16000))),
+                "ChIJ-new", "콜로세움", "TOURISM", null, null, (short) 0)),
             List.of(new CourseFlightCommand(
                 "아시아나항공", "OZ501", "ICN", LocalDateTime.of(2026, 10, 1, 9, 0),
                 "FCO", LocalDateTime.of(2026, 10, 1, 16, 0))))));
@@ -562,6 +565,9 @@ class CourseServiceTest {
         courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(course.getId())
             .stream().map(CourseDay::getId).toList();
     assertThat(updatedCourseDayIds).hasSize(1);
+    CourseDay updatedDay = courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(course.getId()).get(0);
+    assertThat(updatedDay.getMemo()).isEqualTo("예약 필수");
+    assertThat(updatedDay.getCost()).isEqualByComparingTo(BigDecimal.valueOf(16000));
     assertThat(courseFlightRepository.findAllByCourseDayIdIn(updatedCourseDayIds))
         .extracting("airline").containsExactly("아시아나항공");
     assertThat(courseImageRepository.findAll())
@@ -655,8 +661,8 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId),
         List.of(
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null),
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null),
+            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)
         ));
 
     // when, then
@@ -709,15 +715,15 @@ class CourseServiceTest {
             (short) 1,
             LocalDate.of(2026, 9, 1),
             List.of("https://example.com/a.jpg"),
+            "예약 필수",
+            BigDecimal.valueOf(22000),
             List.of(new CoursePlaceCommand(
                 "ChIJ-place-1",
                 "루브르 박물관",
                 "TOURISM",
                 BigDecimal.valueOf(48.8606),
                 BigDecimal.valueOf(2.3376),
-                (short) 0,
-                "예약 필수",
-                BigDecimal.valueOf(22000)
+                (short) 0
             )),
             List.of(new CourseFlightCommand(
                 "대한항공",
@@ -744,6 +750,8 @@ class CourseServiceTest {
     assertThat(result.companions()).extracting("userId").containsExactly(companion.getId());
     assertThat(result.days()).hasSize(1);
     assertThat(result.days().get(0).imageUrls()).containsExactly("https://example.com/a.jpg");
+    assertThat(result.days().get(0).memo()).isEqualTo("예약 필수");
+    assertThat(result.days().get(0).cost()).isEqualByComparingTo(BigDecimal.valueOf(22000));
     assertThat(result.days().get(0).places()).hasSize(1);
     assertThat(result.days().get(0).places().get(0).name()).isEqualTo("루브르 박물관");
     assertThat(result.days().get(0).flights()).hasSize(1);
@@ -792,7 +800,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(companion.getId()),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
     Course course = courseService.createCourse(author.getId(), command);
     jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), companion.getId());
 
@@ -971,7 +979,7 @@ class CourseServiceTest {
         List.of(franceId, germanyId), List.of(parisId, berlinId), "유럽 코스", "내용",
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
     Course course = courseService.createCourse(author.getId(), command);
     courseService.bookmarkCourse(viewer.getId(), course.getId());
 
@@ -1075,7 +1083,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         startDate, endDate,
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
   }
 
   private UpdateCourseCommand createDefaultUpdateCommand(
@@ -1085,7 +1093,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         startDate, endDate,
         List.of(tagId),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
   }
 
   private User createUser(String email, String providerId, String nickname) {

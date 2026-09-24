@@ -372,7 +372,9 @@ public class CourseService {
 
   private void saveCourseDays(Course course, List<CourseDayCommand> days) {
     List<CourseDay> courseDays = courseDayRepository.saveAll(days.stream()
-        .map(dayCommand -> new CourseDay(course, dayCommand.dayNumber(), dayCommand.date()))
+        .map(dayCommand -> new CourseDay(
+            course, dayCommand.dayNumber(), dayCommand.date(), dayCommand.memo(), dayCommand.cost()
+        ))
         .toList());
 
     for (int i = 0; i < days.size(); i++) {
@@ -409,7 +411,7 @@ public class CourseService {
         CoursePlaceCommand placeCommand = placeCommands.get(index);
         Place place = placesByGooglePlaceId.get(placeCommand.googlePlaceId());
         Short orderNo = placeCommand.orderNo() != null ? placeCommand.orderNo() : (short) index;
-        coursePlaces.add(new CoursePlace(courseDay, place, orderNo, placeCommand.memo(), placeCommand.cost()));
+        coursePlaces.add(new CoursePlace(courseDay, place, orderNo));
       }
     }
     coursePlaceRepository.saveAll(coursePlaces);
@@ -689,6 +691,8 @@ public class CourseService {
             day.getDayNumber(),
             day.getDate(),
             imageUrlsByDayId.getOrDefault(day.getId(), List.of()),
+            day.getMemo(),
+            day.getCost(),
             placesByDayId.getOrDefault(day.getId(), List.of()),
             flightsByDayId.getOrDefault(day.getId(), List.of())
         ))
@@ -753,9 +757,7 @@ public class CourseService {
         place.getName(),
         place.getCategory(),
         place.getLatitude(),
-        place.getLongitude(),
-        coursePlace.getMemo(),
-        coursePlace.getCost()
+        place.getLongitude()
     );
   }
 }

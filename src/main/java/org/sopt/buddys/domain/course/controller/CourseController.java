@@ -389,6 +389,8 @@ public class CourseController {
         request.dayNumber(),
         request.date(),
         request.imageUrls(),
+        request.memo(),
+        request.cost(),
         request.places() == null ? null : request.places().stream().map(this::toCommand).toList(),
         request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
     );
@@ -401,9 +403,7 @@ public class CourseController {
         request.category(),
         request.latitude(),
         request.longitude(),
-        request.orderNo(),
-        request.memo(),
-        request.cost()
+        request.orderNo()
     );
   }
 

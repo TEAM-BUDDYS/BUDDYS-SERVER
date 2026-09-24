@@ -196,6 +196,12 @@ public record CourseDetailResponse(
       @Schema(description = "해당 일자의 사진 목록", requiredMode = Schema.RequiredMode.REQUIRED)
       List<String> imageUrls,
 
+      @Schema(description = "해당 일자의 메모", example = "예약 필수", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
+      String memo,
+
+      @Schema(description = "해당 일자의 비용", example = "22000", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
+      BigDecimal cost,
+
       @Schema(description = "해당 일자에 방문한 장소 목록", requiredMode = Schema.RequiredMode.REQUIRED)
       List<PlaceResponse> places,
 
@@ -214,6 +220,8 @@ public record CourseDetailResponse(
           day.dayNumber(),
           day.date(),
           day.imageUrls(),
+          day.memo(),
+          day.cost(),
           day.places().stream().map(PlaceResponse::from).toList(),
           day.flights().stream().map(FlightResponse::from).toList()
       );
@@ -269,13 +277,7 @@ public record CourseDetailResponse(
       BigDecimal latitude,
 
       @Schema(description = "경도", example = "2.3376", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
-      BigDecimal longitude,
-
-      @Schema(description = "메모", example = "예약 필수", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
-      String memo,
-
-      @Schema(description = "비용", example = "22000", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
-      BigDecimal cost
+      BigDecimal longitude
   ) {
 
     private static PlaceResponse from(CourseDetailResult.PlaceResult place) {
@@ -285,9 +287,7 @@ public record CourseDetailResponse(
           place.name(),
           place.category(),
           place.latitude(),
-          place.longitude(),
-          place.memo(),
-          place.cost()
+          place.longitude()
       );
     }
   }
