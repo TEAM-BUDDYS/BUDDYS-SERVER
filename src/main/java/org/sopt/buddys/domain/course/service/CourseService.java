@@ -286,7 +286,8 @@ public class CourseService {
   }
 
   private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseDayCommand> days) {
-    if ((startDate == null) != (endDate == null)) {
+    boolean onlyOneDateProvided = (startDate == null) != (endDate == null);
+    if (onlyOneDateProvided) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     if (startDate != null && endDate.isBefore(startDate)) {

@@ -188,7 +188,13 @@ public class CourseController {
         ));
   }
 
-  @Operation(summary = "코스 수정", description = "코스 작성자가 코스 정보를 수정합니다. 요청 본문으로 국가/도시/날짜/제목/내용/태그/일자별 사진·장소·메모·비용/항공편 정보 전체를 대체합니다.")
+  @Operation(
+      summary = "코스 수정",
+      description = "코스 작성자가 코스 정보를 수정합니다. "
+          + "요청 본문으로 국가/도시/날짜/제목/내용/태그/일자별 사진·장소·메모·비용/항공편 정보 전체를 대체합니다. "
+          + "출발일(startDate)과 도착일(endDate)은 선택 입력이며, 둘 다 생략하면 날짜 없이 수정됩니다. "
+          + "단, 하나만 입력하면 잘못된 요청으로 처리됩니다."
+  )
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "수정 성공"),
       @ApiResponse(
@@ -200,6 +206,17 @@ public class CourseController {
               examples = {
                   @ExampleObject(
                       name = "잘못된 요청",
+                      value = """
+                          {
+                            "success": false,
+                            "code": "GLB-E001",
+                            "message": "잘못된 요청입니다.",
+                            "data": null
+                          }
+                          """
+                  ),
+                  @ExampleObject(
+                      name = "출발일/도착일 중 하나만 입력",
                       value = """
                           {
                             "success": false,

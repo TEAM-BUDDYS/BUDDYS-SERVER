@@ -572,6 +572,49 @@ class CourseServiceTest {
         .extracting(cc -> cc.getUser().getId()).containsExactly(companion.getId());
   }
 
+  @DisplayName("출발일과 도착일을 모두 입력하지 않아도 코스가 수정된다")
+  @Test
+  void updateCourse_withoutDates_savesCourseWithNullDates() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+    UpdateCourseCommand updateCommand = createDefaultUpdateCommand(countryId, cityId, null, null, tagId);
+
+    // when
+    courseService.updateCourse(author.getId(), course.getId(), updateCommand);
+
+    // then
+    Course updatedCourse = courseRepository.findById(course.getId()).orElseThrow();
+    assertThat(updatedCourse.getStartDate()).isNull();
+    assertThat(updatedCourse.getEndDate()).isNull();
+  }
+
+  @DisplayName("수정 시 출발일만 입력하고 도착일을 입력하지 않으면 예외가 발생한다")
+  @Test
+  void updateCourse_onlyStartDateProvided_throwsInvalidRequest() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = courseService.createCourse(
+        author.getId(),
+        createDefaultCommand(countryId, cityId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5), tagId));
+    UpdateCourseCommand updateCommand = createDefaultUpdateCommand(
+        countryId, cityId, LocalDate.of(2026, 9, 1), null, tagId);
+
+    // when, then
+    assertThatThrownBy(() -> courseService.updateCourse(author.getId(), course.getId(), updateCommand))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
+        );
+  }
+
   @DisplayName("작성자가 아닌 유저가 코스를 수정하면 예외가 발생한다")
   @Test
   void updateCourse_notAuthor_throwsForbidden() {
