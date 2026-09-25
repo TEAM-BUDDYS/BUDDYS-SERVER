@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.place.service.result.PlaceSearchResult;
 import org.sopt.buddys.domain.place.service.result.PlaceSearchResult.PlaceSearchItemResult;
 import org.sopt.buddys.domain.place.util.AddressComponentParser;
 import org.sopt.buddys.domain.place.util.GoogleMapsUrlBuilder;
+import org.sopt.buddys.global.common.NullPairValidator;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -163,7 +164,7 @@ public class PlaceService {
   }
 
   private void validateCoordinates(BigDecimal lat, BigDecimal lng) {
-    if ((lat == null) != (lng == null)) {
+    if (!NullPairValidator.isValidPair(lat, lng)) {
       throw new BaseException(PlaceErrorCode.LAT_LNG_MUST_BE_PAIRED);
     }
   }

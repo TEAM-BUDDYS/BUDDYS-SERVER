@@ -59,6 +59,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.service.AuthorProfileMapper;
 import org.sopt.buddys.domain.user.service.result.AuthorProfile;
+import org.sopt.buddys.global.common.NullPairValidator;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -286,8 +287,7 @@ public class CourseService {
   }
 
   private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseDayCommand> days) {
-    boolean onlyOneDateProvided = (startDate == null) != (endDate == null);
-    if (onlyOneDateProvided) {
+    if (!NullPairValidator.isValidPair(startDate, endDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     if (startDate != null && endDate.isBefore(startDate)) {

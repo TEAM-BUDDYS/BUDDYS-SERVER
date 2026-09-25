@@ -2,12 +2,14 @@ package org.sopt.buddys.domain.course.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import org.sopt.buddys.global.common.NullPairValidator;
 
 public record CreateCourseRequest(
     @Schema(description = "국가 ID 목록", example = "[240]")
@@ -46,4 +48,9 @@ public record CreateCourseRequest(
     @Size(max = 30)
     List<@NotNull @Valid CourseDayRequest> days
 ) {
+
+  @AssertTrue(message = "출발일과 도착일은 함께 입력하거나 함께 생략해야 합니다.")
+  private boolean isDateRangeValid() {
+    return NullPairValidator.isValidPair(startDate, endDate);
+  }
 }
