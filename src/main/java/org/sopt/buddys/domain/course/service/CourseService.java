@@ -59,6 +59,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.service.AuthorProfileMapper;
 import org.sopt.buddys.domain.user.service.result.AuthorProfile;
+import org.sopt.buddys.global.common.NullPairValidator;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -96,8 +97,8 @@ public class CourseService {
 
   @Transactional
   public Course createCourse(Long userId, CreateCourseCommand command) {
-    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
-        command.endDate(), command.tagIds(), command.days());
+    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
+        command.tagIds(), command.days());
     validateDateRanges(command.startDate(), command.endDate(), command.days());
     validateDayNumbersUnique(command.days());
 
@@ -135,8 +136,8 @@ public class CourseService {
     course = courseRepository.findByIdAndDeletedAtIsNullForUpdate(courseId)
         .orElseThrow(() -> new BaseException(CourseErrorCode.COURSE_NOT_FOUND));
 
-    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(), command.startDate(),
-        command.endDate(), command.tagIds(), command.days());
+    validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
+        command.tagIds(), command.days());
     validateDateRanges(command.startDate(), command.endDate(), command.days());
     validateDayNumbersUnique(command.days());
 
@@ -251,16 +252,12 @@ public class CourseService {
       List<Long> countryIds,
       List<Long> cityIds,
       String title,
-      LocalDate startDate,
-      LocalDate endDate,
       List<Long> tagIds,
       List<CourseDayCommand> days
   ) {
     if (countryIds == null || countryIds.isEmpty()
         || cityIds == null || cityIds.isEmpty()
         || title == null || title.isBlank()
-        || startDate == null
-        || endDate == null
         || tagIds == null || tagIds.isEmpty()
         || days == null || days.isEmpty()) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
@@ -290,7 +287,10 @@ public class CourseService {
   }
 
   private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseDayCommand> days) {
-    if (endDate.isBefore(startDate)) {
+    if (!NullPairValidator.isValidPair(startDate, endDate)) {
+      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
+    }
+    if (startDate != null && endDate.isBefore(startDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     for (CourseDayCommand day : days) {
@@ -372,7 +372,9 @@ public class CourseService {
 
   private void saveCourseDays(Course course, List<CourseDayCommand> days) {
     List<CourseDay> courseDays = courseDayRepository.saveAll(days.stream()
-        .map(dayCommand -> new CourseDay(course, dayCommand.dayNumber(), dayCommand.date()))
+        .map(dayCommand -> new CourseDay(
+            course, dayCommand.dayNumber(), dayCommand.date(), dayCommand.memo(), dayCommand.cost()
+        ))
         .toList());
 
     for (int i = 0; i < days.size(); i++) {
@@ -409,7 +411,7 @@ public class CourseService {
         CoursePlaceCommand placeCommand = placeCommands.get(index);
         Place place = placesByGooglePlaceId.get(placeCommand.googlePlaceId());
         Short orderNo = placeCommand.orderNo() != null ? placeCommand.orderNo() : (short) index;
-        coursePlaces.add(new CoursePlace(courseDay, place, orderNo, placeCommand.memo(), placeCommand.cost()));
+        coursePlaces.add(new CoursePlace(courseDay, place, orderNo));
       }
     }
     coursePlaceRepository.saveAll(coursePlaces);
@@ -689,6 +691,8 @@ public class CourseService {
             day.getDayNumber(),
             day.getDate(),
             imageUrlsByDayId.getOrDefault(day.getId(), List.of()),
+            day.getMemo(),
+            day.getCost(),
             placesByDayId.getOrDefault(day.getId(), List.of()),
             flightsByDayId.getOrDefault(day.getId(), List.of())
         ))
@@ -753,9 +757,7 @@ public class CourseService {
         place.getName(),
         place.getCategory(),
         place.getLatitude(),
-        place.getLongitude(),
-        coursePlace.getMemo(),
-        coursePlace.getCost()
+        place.getLongitude()
     );
   }
 }

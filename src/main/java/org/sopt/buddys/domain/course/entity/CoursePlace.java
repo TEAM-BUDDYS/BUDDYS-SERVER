@@ -9,7 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -38,21 +37,13 @@ public class CoursePlace {
   @Column(name = "order_no", nullable = false)
   private Short orderNo = 0;
 
-  @Column(length = 500)
-  private String memo;
-
-  @Column(precision = 12, scale = 2)
-  private BigDecimal cost;
-
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
-  public CoursePlace(CourseDay courseDay, Place place, Short orderNo, String memo, BigDecimal cost) {
+  public CoursePlace(CourseDay courseDay, Place place, Short orderNo) {
     this.courseDay = courseDay;
     this.place = place;
     this.orderNo = orderNo;
-    this.memo = memo;
-    this.cost = cost;
   }
 }

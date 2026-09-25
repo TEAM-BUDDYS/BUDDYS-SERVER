@@ -253,7 +253,7 @@ class CourseCommentControllerTest extends IntegrationTestSupport {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
     return courseService.createCourse(author.getId(), command);
   }
 

@@ -2,12 +2,14 @@ package org.sopt.buddys.domain.course.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import org.sopt.buddys.global.common.NullPairValidator;
 
 public record UpdateCourseRequest(
     @Schema(description = "국가 ID 목록", example = "[240]")
@@ -26,12 +28,10 @@ public record UpdateCourseRequest(
     @Schema(description = "코스 소개", example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.")
     String content,
 
-    @Schema(description = "출발일", example = "2026-09-01")
-    @NotNull
+    @Schema(description = "출발일. 미입력 시 날짜 없이 수정됩니다.", example = "2026-09-01", nullable = true)
     LocalDate startDate,
 
-    @Schema(description = "도착일", example = "2026-09-05")
-    @NotNull
+    @Schema(description = "도착일. 미입력 시 날짜 없이 수정됩니다.", example = "2026-09-05", nullable = true)
     LocalDate endDate,
 
     @Schema(description = "연결할 태그 ID 목록 (활동 최대 3개, 관심사 최대 2개, 동행스타일 최대 2개, 활동 태그 1개 이상 필수)", example = "[1, 4, 9]")
@@ -44,4 +44,9 @@ public record UpdateCourseRequest(
     @Size(max = 30)
     List<@NotNull @Valid CourseDayRequest> days
 ) {
+
+  @AssertTrue(message = "출발일과 도착일은 함께 입력하거나 함께 생략해야 합니다.")
+  private boolean isDateRangeValid() {
+    return NullPairValidator.isValidPair(startDate, endDate);
+  }
 }

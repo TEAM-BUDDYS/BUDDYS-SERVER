@@ -8,8 +8,6 @@ public record CoursePlaceCommand(
     String category,
     BigDecimal latitude,
     BigDecimal longitude,
-    Short orderNo,
-    String memo,
-    BigDecimal cost
+    Short orderNo
 ) {
 }

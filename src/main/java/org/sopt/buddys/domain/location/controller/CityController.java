@@ -30,7 +30,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class CityController {
   private final CityService cityService;
 
-  @Operation(summary = "도시 검색", description = "특정 국가에 속한 도시를 검색합니다.")
+  @Operation(
+      summary = "도시 검색",
+      description = "특정 국가에 속한 도시를 검색합니다. "
+          + "응답의 latitude/longitude는 해당 도시의 중심 좌표로, 근처 장소 조회(/api/v1/places/nearby)의 lat/lng로 그대로 사용할 수 있습니다. "
+          + "일부 도시는 좌표가 없어 null일 수 있습니다. "
+          + "recommendedRadius는 도시 인구 기반으로 추정한 추천 반경(미터)으로, 동일 API의 radius로 사용할 수 있습니다."
+  )
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "검색 성공"),
       @ApiResponse(responseCode = "400", description = "잘못된 요청"),

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.sql.Statement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
@@ -265,6 +266,8 @@ class CourseControllerTest extends IntegrationTestSupport {
                       "dayNumber": 1,
                       "date": "2026-09-01",
                       "imageUrls": ["https://example.com/a.jpg"],
+                      "memo": "예약 필수",
+                      "cost": 22000,
                       "places": [
                         {
                           "googlePlaceId": "ChIJ-test-place",
@@ -272,9 +275,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                           "category": "TOURISM",
                           "latitude": 48.8606,
                           "longitude": 2.3376,
-                          "orderNo": 0,
-                          "memo": "예약 필수",
-                          "cost": 22000
+                          "orderNo": 0
                         }
                       ],
                       "flights": [
@@ -297,6 +298,77 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.courseId").isNumber());
 
     assertThat(courseRepository.findAll()).hasSize(1);
+  }
+
+  @DisplayName("출발일과 도착일 없이도 코스 게시글을 작성할 수 있다")
+  @Test
+  void createCourse_withoutDates_returnsCreated() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "날짜 미정 코스",
+                  "tagIds": [%d],
+                  "days": [
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": ["https://example.com/a.jpg"]
+                    }
+                  ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.data.courseId").isNumber());
+
+    Course savedCourse = courseRepository.findAll().stream()
+        .filter(course -> course.getTitle().equals("날짜 미정 코스"))
+        .findFirst().orElseThrow();
+    assertThat(savedCourse.getStartDate()).isNull();
+    assertThat(savedCourse.getEndDate()).isNull();
+  }
+
+  @DisplayName("출발일만 입력하고 도착일을 입력하지 않으면 실패한다")
+  @Test
+  void createCourse_onlyStartDate_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "날짜 일부만 입력한 코스",
+                  "startDate": "2026-09-01",
+                  "tagIds": [%d],
+                  "days": [
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": ["https://example.com/a.jpg"]
+                    }
+                  ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   @DisplayName("로그인하지 않은 사용자는 코스 게시글을 작성할 수 없다")
@@ -329,6 +401,42 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "days": []
                 }
                 """))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @DisplayName("일자 비용의 정수부가 10자리를 초과하면 실패한다")
+  @Test
+  void createCourse_costIntegerPartTooLong_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": ["https://example.com/a.jpg"],
+                      "cost": 12345678901,
+                      "places": []
+                    }
+                  ]
+                }
+                """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("GLB-E001"));
@@ -541,6 +649,100 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.title").value("수정된 파리 코스"))
         .andExpect(jsonPath("$.data.content").value("수정된 소개"));
+  }
+
+  @DisplayName("출발일과 도착일 없이도 코스를 수정할 수 있다")
+  @Test
+  void updateCourse_withoutDates_returnsOk() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 5일 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isCreated());
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(put("/api/v1/courses/{courseId}", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "날짜 미정으로 수정",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/updated-day1.jpg"] } ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true));
+
+    Course updatedCourse = courseRepository.findById(courseId).orElseThrow();
+    assertThat(updatedCourse.getStartDate()).isNull();
+    assertThat(updatedCourse.getEndDate()).isNull();
+  }
+
+  @DisplayName("수정 시 출발일만 입력하고 도착일을 입력하지 않으면 실패한다")
+  @Test
+  void updateCourse_onlyStartDate_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 5일 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isCreated());
+
+    Long courseId = courseRepository.findAll().get(0).getId();
+
+    // when, then
+    mockMvc.perform(put("/api/v1/courses/{courseId}", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "날짜 일부만 입력한 코스",
+                  "startDate": "2026-10-01",
+                  "tagIds": [%d],
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/updated-day1.jpg"] } ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   @DisplayName("작성자가 아닌 유저가 수정하면 실패한다")
