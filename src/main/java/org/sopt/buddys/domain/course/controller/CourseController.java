@@ -14,10 +14,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.code.CourseSuccessCode;
-import org.sopt.buddys.domain.course.dto.request.CourseDayRequest;
-import org.sopt.buddys.domain.course.dto.request.CourseFlightRequest;
 import org.sopt.buddys.domain.course.dto.request.CourseListRequest;
-import org.sopt.buddys.domain.course.dto.request.CoursePlaceRequest;
 import org.sopt.buddys.domain.course.dto.request.CreateCourseRequest;
 import org.sopt.buddys.domain.course.dto.request.UpdateCourseRequest;
 import org.sopt.buddys.domain.course.dto.response.CourseBookmarkResponse;
@@ -26,11 +23,6 @@ import org.sopt.buddys.domain.course.dto.response.CourseListResponse;
 import org.sopt.buddys.domain.course.dto.response.CreateCourseResponse;
 import org.sopt.buddys.domain.course.dto.response.UpdateCourseResponse;
 import org.sopt.buddys.domain.course.service.CourseService;
-import org.sopt.buddys.domain.course.service.command.CourseDayCommand;
-import org.sopt.buddys.domain.course.service.command.CourseFlightCommand;
-import org.sopt.buddys.domain.course.service.command.CoursePlaceCommand;
-import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
-import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
@@ -184,7 +176,7 @@ public class CourseController {
         .status(GlobalSuccessCode.CREATED.getHttpStatus())
         .body(BaseResponse.success(
             GlobalSuccessCode.CREATED,
-            CreateCourseResponse.from(courseService.createCourse(userId, toCommand(request)))
+            CreateCourseResponse.from(courseService.createCourse(userId, CourseCommandMapper.toCommand(request)))
         ));
   }
 
@@ -276,7 +268,7 @@ public class CourseController {
   ) {
     return BaseResponse.success(
         CourseSuccessCode.COURSE_UPDATED,
-        UpdateCourseResponse.from(courseService.updateCourse(userId, courseId, toCommand(request)))
+        UpdateCourseResponse.from(courseService.updateCourse(userId, courseId, CourseCommandMapper.toCommand(request)))
     );
   }
 
@@ -357,64 +349,4 @@ public class CourseController {
     );
   }
 
-  private CreateCourseCommand toCommand(CreateCourseRequest request) {
-    return new CreateCourseCommand(
-        request.countryIds(),
-        request.cityIds(),
-        request.title(),
-        request.content(),
-        request.startDate(),
-        request.endDate(),
-        request.tagIds(),
-        request.companionUserIds(),
-        request.days() == null ? null : request.days().stream().map(this::toCommand).toList()
-    );
-  }
-
-  private UpdateCourseCommand toCommand(UpdateCourseRequest request) {
-    return new UpdateCourseCommand(
-        request.countryIds(),
-        request.cityIds(),
-        request.title(),
-        request.content(),
-        request.startDate(),
-        request.endDate(),
-        request.tagIds(),
-        request.days() == null ? null : request.days().stream().map(this::toCommand).toList()
-    );
-  }
-
-  private CourseDayCommand toCommand(CourseDayRequest request) {
-    return new CourseDayCommand(
-        request.dayNumber(),
-        request.date(),
-        request.imageUrls(),
-        request.memo(),
-        request.cost(),
-        request.places() == null ? null : request.places().stream().map(this::toCommand).toList(),
-        request.flights() == null ? null : request.flights().stream().map(this::toCommand).toList()
-    );
-  }
-
-  private CoursePlaceCommand toCommand(CoursePlaceRequest request) {
-    return new CoursePlaceCommand(
-        request.googlePlaceId(),
-        request.name(),
-        request.category(),
-        request.latitude(),
-        request.longitude(),
-        request.orderNo()
-    );
-  }
-
-  private CourseFlightCommand toCommand(CourseFlightRequest request) {
-    return new CourseFlightCommand(
-        request.airline(),
-        request.flightNumber(),
-        request.departureAirport(),
-        request.departureAt(),
-        request.arrivalAirport(),
-        request.arrivalAt()
-    );
-  }
 }
