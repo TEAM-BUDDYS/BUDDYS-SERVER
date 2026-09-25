@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.course.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -32,6 +33,7 @@ public record CourseDayRequest(
 
     @Schema(description = "해당 일자의 비용", example = "22000")
     @DecimalMin(value = "0", inclusive = true)
+    @Digits(integer = 10, fraction = 2)
     BigDecimal cost,
 
     @Schema(description = "해당 일자에 방문한 장소 목록 (최대 10곳)")

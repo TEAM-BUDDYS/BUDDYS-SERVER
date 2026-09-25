@@ -406,6 +406,42 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
+  @DisplayName("일자 비용의 정수부가 10자리를 초과하면 실패한다")
+  @Test
+  void createCourse_costIntegerPartTooLong_returnsBadRequest() throws Exception {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    // when, then
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "파리 코스",
+                  "startDate": "2026-09-01",
+                  "endDate": "2026-09-05",
+                  "tagIds": [%d],
+                  "days": [
+                    {
+                      "dayNumber": 1,
+                      "imageUrls": ["https://example.com/a.jpg"],
+                      "cost": 12345678901,
+                      "places": []
+                    }
+                  ]
+                }
+                """.formatted(countryId, cityId, tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
   @DisplayName("dayNumber가 중복되면 실패한다")
   @Test
   void createCourse_duplicateDayNumber_returnsBadRequest() throws Exception {
