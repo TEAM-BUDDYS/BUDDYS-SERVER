@@ -1,5 +1,7 @@
 package org.sopt.buddys.domain.location.service;
 
+import org.sopt.buddys.global.common.PlaceSearchRadiusConstants;
+
 public final class CityRecommendedRadiusCalculator {
 
   private static final long SMALL_CITY_POPULATION_THRESHOLD = 50_000L;
@@ -17,6 +19,13 @@ public final class CityRecommendedRadiusCalculator {
   }
 
   public static int calculate(long population) {
+    int radius = calculateByPopulation(population);
+    // /places/nearby가 허용하는 최대 반경을 넘지 않도록 클램프한다.
+    // 이 값이 줄어들면(예: 구글 API 비용 절감) recommendedRadius도 자동으로 함께 줄어든다.
+    return Math.min(radius, PlaceSearchRadiusConstants.MAX_NEARBY_RADIUS_METERS);
+  }
+
+  private static int calculateByPopulation(long population) {
     if (population < SMALL_CITY_POPULATION_THRESHOLD) {
       return SMALL_CITY_RADIUS_METERS;
     }

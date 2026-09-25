@@ -17,6 +17,7 @@ import org.sopt.buddys.domain.place.service.result.PlaceSearchResult.PlaceSearch
 import org.sopt.buddys.domain.place.util.AddressComponentParser;
 import org.sopt.buddys.domain.place.util.GoogleMapsUrlBuilder;
 import org.sopt.buddys.global.common.NullPairValidator;
+import org.sopt.buddys.global.common.PlaceSearchRadiusConstants;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -28,8 +29,6 @@ public class PlaceService {
 
   private static final String PHOTO_URL_TEMPLATE = "/api/v1/places/%s/photo?maxWidth=400";
   private static final int DEFAULT_NEARBY_RADIUS_METERS = 1_500;
-  private static final int MIN_NEARBY_RADIUS_METERS = 1;
-  private static final int MAX_NEARBY_RADIUS_METERS = 50_000;
   private static final BigDecimal MIN_LATITUDE = BigDecimal.valueOf(-90);
   private static final BigDecimal MAX_LATITUDE = BigDecimal.valueOf(90);
   private static final BigDecimal MIN_LONGITUDE = BigDecimal.valueOf(-180);
@@ -190,7 +189,8 @@ public class PlaceService {
     if (radiusMeters == null) {
       return DEFAULT_NEARBY_RADIUS_METERS;
     }
-    if (radiusMeters < MIN_NEARBY_RADIUS_METERS || radiusMeters > MAX_NEARBY_RADIUS_METERS) {
+    if (radiusMeters < PlaceSearchRadiusConstants.MIN_NEARBY_RADIUS_METERS
+        || radiusMeters > PlaceSearchRadiusConstants.MAX_NEARBY_RADIUS_METERS) {
       throw new BaseException(PlaceErrorCode.INVALID_RADIUS);
     }
     return radiusMeters;

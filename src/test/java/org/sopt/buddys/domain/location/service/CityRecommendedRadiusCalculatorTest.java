@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.global.common.PlaceSearchRadiusConstants;
 
 class CityRecommendedRadiusCalculatorTest {
 
@@ -40,5 +41,16 @@ class CityRecommendedRadiusCalculatorTest {
   void calculate_megaCity_returns40km() {
     assertThat(CityRecommendedRadiusCalculator.calculate(5_000_000L)).isEqualTo(40_000);
     assertThat(CityRecommendedRadiusCalculator.calculate(30_000_000L)).isEqualTo(40_000);
+  }
+
+  @DisplayName("어떤 인구를 넣어도 /places/nearby가 허용하는 최대 반경을 넘지 않는다")
+  @Test
+  void calculate_neverExceedsNearbyMaxRadius() {
+    assertThat(CityRecommendedRadiusCalculator.calculate(0L))
+        .isLessThanOrEqualTo(PlaceSearchRadiusConstants.MAX_NEARBY_RADIUS_METERS);
+    assertThat(CityRecommendedRadiusCalculator.calculate(30_000_000L))
+        .isLessThanOrEqualTo(PlaceSearchRadiusConstants.MAX_NEARBY_RADIUS_METERS);
+    assertThat(CityRecommendedRadiusCalculator.calculate(Long.MAX_VALUE))
+        .isLessThanOrEqualTo(PlaceSearchRadiusConstants.MAX_NEARBY_RADIUS_METERS);
   }
 }
