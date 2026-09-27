@@ -1,7 +1,6 @@
 package org.sopt.buddys.domain.course.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -30,14 +29,6 @@ public record CoursePlaceRequest(
 
     @Schema(description = "하루 내 방문 순서", example = "0")
     @PositiveOrZero
-    Short orderNo,
-
-    @Schema(description = "메모", example = "예약 필수")
-    @Size(max = 500)
-    String memo,
-
-    @Schema(description = "비용", example = "22000")
-    @DecimalMin(value = "0", inclusive = true)
-    BigDecimal cost
+    Short orderNo
 ) {
 }

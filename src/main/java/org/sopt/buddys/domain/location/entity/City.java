@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.math.BigDecimal;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -41,4 +42,10 @@ public class City {
 
   @Column(nullable = false)
   private Long population;
+
+  @Column(precision = 10, scale = 7)
+  private BigDecimal latitude;
+
+  @Column(precision = 10, scale = 7)
+  private BigDecimal longitude;
 }

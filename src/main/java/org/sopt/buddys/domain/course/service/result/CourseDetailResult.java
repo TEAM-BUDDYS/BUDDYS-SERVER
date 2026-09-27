@@ -88,6 +88,8 @@ public record CourseDetailResult(
       Short dayNumber,
       LocalDate date,
       List<String> imageUrls,
+      String memo,
+      BigDecimal cost,
       List<PlaceResult> places,
       List<FlightResult> flights
   ) {
@@ -105,9 +107,7 @@ public record CourseDetailResult(
       String name,
       PlaceCategory category,
       BigDecimal latitude,
-      BigDecimal longitude,
-      String memo,
-      BigDecimal cost
+      BigDecimal longitude
   ) {
   }
 }

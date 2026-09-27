@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -40,9 +41,17 @@ public class CourseDay {
   @Column
   private LocalDate date;
 
-  public CourseDay(Course course, Short dayNumber, LocalDate date) {
+  @Column(length = 500)
+  private String memo;
+
+  @Column(precision = 12, scale = 2)
+  private BigDecimal cost;
+
+  public CourseDay(Course course, Short dayNumber, LocalDate date, String memo, BigDecimal cost) {
     this.course = course;
     this.dayNumber = dayNumber;
     this.date = date;
+    this.memo = memo;
+    this.cost = cost;
   }
 }

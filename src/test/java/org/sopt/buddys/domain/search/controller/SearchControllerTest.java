@@ -201,7 +201,7 @@ class SearchControllerTest extends IntegrationTestSupport {
     User author = saveUser("author@test.com", "author", "ParisUser", AccountStatus.ACTIVE);
     Location location = saveLocation("France", "FR", "Paris", "파리");
     Course course = saveCourse(author, location, "Paris course", "course content");
-    CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now()));
+    CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now(), null, null));
     courseImageRepository.saveAndFlush(new CourseImage(day, "https://example.com/day.jpg", (short) 0));
     courseBookmarkRepository.saveAndFlush(new CourseBookmark(viewer, course));
     Post post = savePost(author, location, "Paris post", "post content");
@@ -363,13 +363,13 @@ class SearchControllerTest extends IntegrationTestSupport {
   }
 
   private void savePlace(Course course, String name, String googlePlaceId) {
-    CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now()));
+    CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now(), null, null));
     Place place = placeRepository.saveAndFlush(Place.builder()
         .googlePlaceId(googlePlaceId)
         .name(name)
         .category(PlaceCategory.TOURISM)
         .build());
-    coursePlaceRepository.saveAndFlush(new CoursePlace(day, place, (short) 0, null, null));
+    coursePlaceRepository.saveAndFlush(new CoursePlace(day, place, (short) 0));
   }
 
   private Post savePost(User author, Location location, String title, String content) {

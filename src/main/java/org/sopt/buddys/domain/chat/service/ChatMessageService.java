@@ -14,6 +14,7 @@ import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.global.common.NullPairValidator;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.PageRequest;
@@ -115,7 +116,7 @@ public class ChatMessageService {
             LocalDateTime cursorSentAt,
             Long cursorMessageId
     ) {
-        if ((cursorSentAt == null) != (cursorMessageId == null)) {
+        if (!NullPairValidator.isValidPair(cursorSentAt, cursorMessageId)) {
             throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
         }
     }

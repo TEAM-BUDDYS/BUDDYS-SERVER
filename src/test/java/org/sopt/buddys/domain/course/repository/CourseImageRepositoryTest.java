@@ -61,7 +61,7 @@ class CourseImageRepositoryTest extends IntegrationTestSupport {
   }
 
   private CourseDay saveDay(Course course, int dayNumber) {
-    return courseDayRepository.save(new CourseDay(course, (short) dayNumber, null));
+    return courseDayRepository.save(new CourseDay(course, (short) dayNumber, null, null, null));
   }
 
   private void saveImage(CourseDay day, String url, int orderNo) {
