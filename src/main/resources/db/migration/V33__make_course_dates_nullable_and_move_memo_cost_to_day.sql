@@ -1,3 +1,7 @@
+ALTER TABLE course
+    MODIFY COLUMN start_date DATE NULL,
+    MODIFY COLUMN end_date DATE NULL;
+
 ALTER TABLE course_day
     ADD COLUMN memo VARCHAR(500) NULL,
     ADD COLUMN cost DECIMAL(12, 2) NULL;
