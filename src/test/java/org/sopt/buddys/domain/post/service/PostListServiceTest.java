@@ -138,6 +138,7 @@ class PostListServiceTest {
     // when
     PostListResult keywordResult = postService.getPosts(viewer.getId(), condition("파리"), 0, 20);
     PostListResult blankKeywordResult = postService.getPosts(viewer.getId(), condition("   "), 0, 20);
+    PostListResult keywordSecondPage = postService.getPosts(viewer.getId(), condition("파리"), 1, 1);
 
     // then
     assertThat(keywordResult.content()).extracting(post -> post.post().getTitle())
@@ -145,8 +146,7 @@ class PostListServiceTest {
     assertThat(blankKeywordResult.content()).hasSize(3);
     assertThat(keywordResult.totalElements()).isEqualTo(2);
     assertThat(blankKeywordResult.totalElements()).isEqualTo(3);
-    assertThat(postService.getPosts(viewer.getId(), condition("파리"), 1, 1).totalElements())
-        .isEqualTo(2);
+    assertThat(keywordSecondPage.totalElements()).isEqualTo(2);
   }
 
   @DisplayName("국가, 날짜, 나이, 성별, 동행 유형, 태그 조건을 함께 적용한다")
@@ -327,16 +327,16 @@ class PostListServiceTest {
     // when
     PostListResult firstPage = postService.getPosts(viewer.getId(), emptyCondition(), 0, 1);
     PostListResult secondPage = postService.getPosts(viewer.getId(), emptyCondition(), 1, 1);
+    PostListResult largerPage = postService.getPosts(viewer.getId(), emptyCondition(), 0, 10);
+    PostListResult beyondLastPage = postService.getPosts(viewer.getId(), emptyCondition(), 5, 1);
     PostListResponse response = PostListResponse.from(firstPage);
 
     // then
     assertThat(firstPage.totalElements()).isEqualTo(2);
     assertThat(secondPage.totalElements()).isEqualTo(2);
     assertThat(response.totalElements()).isEqualTo(2);
-    PostListResult largerPage = postService.getPosts(viewer.getId(), emptyCondition(), 0, 10);
     assertThat(largerPage.totalElements()).isEqualTo(2);
     assertThat(largerPage.content()).hasSize(2);
-    PostListResult beyondLastPage = postService.getPosts(viewer.getId(), emptyCondition(), 5, 1);
     assertThat(beyondLastPage.content()).isEmpty();
     assertThat(beyondLastPage.hasNext()).isFalse();
     assertThat(beyondLastPage.totalElements()).isEqualTo(2);

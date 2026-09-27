@@ -295,7 +295,10 @@ public class PostService {
         .toList();
 
     return new PostListResult(
-        postResults, posts.getNumber(), posts.getSize(), posts.hasNext(),
+        postResults,
+        posts.getNumber(),
+        posts.getSize(),
+        posts.hasNext(),
         postBookmarkRepository.countBookmarkedPostsByUserId(userId)
     );
   }

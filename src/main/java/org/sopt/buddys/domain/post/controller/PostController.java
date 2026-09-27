@@ -61,7 +61,11 @@ public class PostController {
 
   private final PostService postService;
 
-  @Operation(summary = "동행 게시글 목록 조회", description = "모집중인 삭제되지 않은 동행 게시글 목록을 조건에 따라 조회합니다. totalElements는 페이지 번호·크기와 무관한 검색·필터 조건에 일치하는 전체 게시글 수입니다.")
+  @Operation(
+      summary = "동행 게시글 목록 조회",
+      description = "모집중인 삭제되지 않은 동행 게시글 목록을 조건에 따라 조회합니다. "
+          + "totalElements는 페이지 번호·크기와 무관한 검색·필터 조건에 일치하는 전체 게시글 수입니다."
+  )
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "조회 성공"),
       @ApiResponse(responseCode = "401", description = "인증 필요")
@@ -104,7 +108,8 @@ public class PostController {
 
   @Operation(
       summary = "저장한 게시글 목록 조회",
-      description = "로그인한 사용자가 저장한 게시글 목록을 최신 저장순으로 조회합니다. totalElements는 모집 상태와 무관하게 해당 사용자가 저장한 삭제되지 않은 전체 게시글 수입니다."
+      description = "로그인한 사용자가 저장한 게시글 목록을 최신 저장순으로 조회합니다. "
+          + "totalElements는 모집 상태와 무관하게 해당 사용자가 저장한 삭제되지 않은 전체 게시글 수입니다."
   )
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "조회 성공"),

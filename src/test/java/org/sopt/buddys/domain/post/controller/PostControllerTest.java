@@ -248,6 +248,7 @@ class PostControllerTest {
         .andExpect(jsonPath("$.data.content[0].postId").value(older.getId()))
         .andExpect(jsonPath("$.data.totalElements").value(2))
         .andExpect(jsonPath("$.data.hasNext").value(false));
+
     mockMvc.perform(get("/api/v1/posts/bookmarks")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(other.getId()))
             .param("size", "10"))
