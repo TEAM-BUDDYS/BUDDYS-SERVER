@@ -19,7 +19,10 @@ public record PostListResponse(
     int size,
 
     @Schema(description = "다음 페이지 존재 여부", example = "true")
-    boolean hasNext
+    boolean hasNext,
+
+    @Schema(description = "페이지 번호·크기와 무관한 조회 조건에 일치하는 전체 게시글 수. 저장 목록은 해당 사용자가 저장한 삭제되지 않은 게시글 수입니다.", example = "42")
+    long totalElements
 ) {
 
   public PostListResponse {
@@ -33,7 +36,8 @@ public record PostListResponse(
             .toList(),
         result.page(),
         result.size(),
-        result.hasNext()
+        result.hasNext(),
+        result.totalElements()
     );
   }
 

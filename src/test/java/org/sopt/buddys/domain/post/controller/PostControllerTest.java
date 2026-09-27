@@ -139,6 +139,7 @@ class PostControllerTest {
         .andExpect(jsonPath("$.data.content[0].recruitmentStatus").value("RECRUITING"))
         .andExpect(jsonPath("$.data.content[0].isBookmarked").value(false))
         .andExpect(jsonPath("$.data.page").value(0))
+        .andExpect(jsonPath("$.data.totalElements").value(1))
         .andExpect(jsonPath("$.data.size").value(20))
         .andExpect(jsonPath("$.data.hasNext").value(false));
   }
@@ -173,6 +174,8 @@ class PostControllerTest {
     User viewer = userRepository.save(createUser("viewer@test.com", "provider-viewer", "조회자"));
     User other = userRepository.save(createUser("other@test.com", "provider-other", "다른 사용자"));
     Post older = createPost(other);
+    older.updateStatus(PostStatus.COMPLETED);
+    postRepository.saveAndFlush(older);
     Post newer = postRepository.save(new Post(
         other,
         older.getCountry(),
@@ -233,6 +236,7 @@ class PostControllerTest {
         .andExpect(jsonPath("$.data.content[0].isBookmarked").value(true))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.size").value(1))
+        .andExpect(jsonPath("$.data.totalElements").value(2))
         .andExpect(jsonPath("$.data.hasNext").value(true));
 
     mockMvc.perform(get("/api/v1/posts/bookmarks")
@@ -242,7 +246,13 @@ class PostControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.content.length()").value(1))
         .andExpect(jsonPath("$.data.content[0].postId").value(older.getId()))
+        .andExpect(jsonPath("$.data.totalElements").value(2))
         .andExpect(jsonPath("$.data.hasNext").value(false));
+    mockMvc.perform(get("/api/v1/posts/bookmarks")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(other.getId()))
+            .param("size", "10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.totalElements").value(1));
   }
 
   @DisplayName("저장한 게시글 목록은 인증과 페이지 범위를 검증한다")

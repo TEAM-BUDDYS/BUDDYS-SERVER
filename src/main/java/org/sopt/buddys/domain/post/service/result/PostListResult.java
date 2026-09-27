@@ -7,7 +7,8 @@ public record PostListResult(
     List<PostSummaryResult> content,
     int page,
     int size,
-    boolean hasNext
+    boolean hasNext,
+    long totalElements
 ) {
 
   public PostListResult {

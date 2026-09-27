@@ -11,5 +11,7 @@ public interface PostRepositoryCustom {
 
   Slice<Post> searchPosts(Long userId, PostSearchCondition condition, Pageable pageable);
 
+  long countPosts(PostSearchCondition condition);
+
   List<Post> findClosingSoonPosts(LocalDate today, int limit);
 }
