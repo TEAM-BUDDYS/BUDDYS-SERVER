@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.course.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -336,6 +337,12 @@ class CourseControllerTest extends IntegrationTestSupport {
         .findFirst().orElseThrow();
     assertThat(savedCourse.getStartDate()).isNull();
     assertThat(savedCourse.getEndDate()).isNull();
+
+    mockMvc.perform(get("/api/v1/courses/{courseId}", savedCourse.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.startDate").value(nullValue()))
+        .andExpect(jsonPath("$.data.endDate").value(nullValue()));
   }
 
   @DisplayName("출발일만 입력하고 도착일을 입력하지 않으면 실패한다")
@@ -697,6 +704,12 @@ class CourseControllerTest extends IntegrationTestSupport {
     Course updatedCourse = courseRepository.findById(courseId).orElseThrow();
     assertThat(updatedCourse.getStartDate()).isNull();
     assertThat(updatedCourse.getEndDate()).isNull();
+
+    mockMvc.perform(get("/api/v1/courses/{courseId}", courseId)
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.startDate").value(nullValue()))
+        .andExpect(jsonPath("$.data.endDate").value(nullValue()));
   }
 
   @DisplayName("수정 시 출발일만 입력하고 도착일을 입력하지 않으면 실패한다")
