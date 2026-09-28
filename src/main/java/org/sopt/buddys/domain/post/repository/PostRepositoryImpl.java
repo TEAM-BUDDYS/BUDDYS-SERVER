@@ -53,6 +53,16 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
   }
 
   @Override
+  public long countPosts(PostSearchCondition condition) {
+    return queryFactory
+        .select(post.id.countDistinct())
+        .from(post)
+        .join(post.country)
+        .where(toPredicate(condition))
+        .fetchOne();
+  }
+
+  @Override
   public List<Post> findClosingSoonPosts(LocalDate today, int limit) {
     return queryFactory
         .selectFrom(post)

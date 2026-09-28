@@ -37,7 +37,10 @@ public class SearchController {
 
   @Operation(
       summary = "통합 검색",
-      description = "검색어로 코스, 사용자, 모집 중 동행 게시글을 동시에 검색합니다. 각 영역에 동일한 페이지 번호와 크기를 적용합니다."
+      description = "검색어로 코스, 사용자, 모집 중 동행 게시글을 동시에 검색합니다. "
+          + "각 영역에 동일한 페이지 번호와 크기를 적용합니다. "
+          + "posts.totalElements는 페이지 번호·크기와 무관하게 검색어에 일치하는 "
+          + "삭제되지 않은 모집 중 게시글의 전체 수입니다."
   )
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "검색 성공. 결과가 없는 영역은 빈 목록 반환")

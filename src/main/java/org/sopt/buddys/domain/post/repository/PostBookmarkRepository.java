@@ -25,6 +25,14 @@ public interface PostBookmarkRepository extends JpaRepository<PostBookmark, Post
   Slice<Post> findBookmarkedPostsByUserId(@Param("userId") Long userId, Pageable pageable);
 
   @Query("""
+      select count(pb)
+      from PostBookmark pb
+      where pb.user.id = :userId
+        and pb.post.deletedAt is null
+      """)
+  long countBookmarkedPostsByUserId(@Param("userId") Long userId);
+
+  @Query("""
       select pb.post.id
       from PostBookmark pb
       where pb.user.id = :userId

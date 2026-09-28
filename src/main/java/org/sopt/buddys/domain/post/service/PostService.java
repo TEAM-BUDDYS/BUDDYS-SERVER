@@ -260,7 +260,8 @@ public class PostService {
         postResults,
         posts.getNumber(),
         posts.getSize(),
-        posts.hasNext()
+        posts.hasNext(),
+        postRepository.countPosts(condition)
     );
   }
 
@@ -293,7 +294,13 @@ public class PostService {
         .map(post -> new PostSummaryResult(post, thumbnailImageUrls.get(post.getId()), true))
         .toList();
 
-    return new PostListResult(postResults, posts.getNumber(), posts.getSize(), posts.hasNext());
+    return new PostListResult(
+        postResults,
+        posts.getNumber(),
+        posts.getSize(),
+        posts.hasNext(),
+        postBookmarkRepository.countBookmarkedPostsByUserId(userId)
+    );
   }
 
   private PostDetailResult toPostDetailResult(Long userId, Post post) {

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -105,6 +106,11 @@ class PostListServiceTest {
     createPost(author.getId(), "최신 글", "본문", franceId, parisId,
         List.of(GenderCondition.MALE, GenderCondition.FEMALE));
 
+    Post deletedPost = createPost(author.getId(), "삭제된 글", "본문", franceId, parisId,
+        List.of(GenderCondition.FEMALE));
+    deletedPost.softDelete(LocalDateTime.now());
+    postRepository.saveAndFlush(deletedPost);
+
     // when
     PostListResult result = postService.getPosts(viewer.getId(), emptyCondition(), 0, 20);
 
@@ -114,6 +120,7 @@ class PostListServiceTest {
     assertThat(result.content()).extracting(post -> post.post().getId())
         .contains(myPost.getId())
         .doesNotContain(completedPost.getId());
+    assertThat(result.totalElements()).isEqualTo(3);
     assertThat(result.hasNext()).isFalse();
   }
 
@@ -131,11 +138,15 @@ class PostListServiceTest {
     // when
     PostListResult keywordResult = postService.getPosts(viewer.getId(), condition("파리"), 0, 20);
     PostListResult blankKeywordResult = postService.getPosts(viewer.getId(), condition("   "), 0, 20);
+    PostListResult keywordSecondPage = postService.getPosts(viewer.getId(), condition("파리"), 1, 1);
 
     // then
     assertThat(keywordResult.content()).extracting(post -> post.post().getTitle())
         .containsExactly("제목", "파리 산책");
     assertThat(blankKeywordResult.content()).hasSize(3);
+    assertThat(keywordResult.totalElements()).isEqualTo(2);
+    assertThat(blankKeywordResult.totalElements()).isEqualTo(3);
+    assertThat(keywordSecondPage.totalElements()).isEqualTo(2);
   }
 
   @DisplayName("국가, 날짜, 나이, 성별, 동행 유형, 태그 조건을 함께 적용한다")
@@ -178,6 +189,7 @@ class PostListServiceTest {
     // then
     assertThat(result.content()).extracting(post -> post.post().getTitle())
         .containsExactly("조건 일치");
+    assertThat(result.totalElements()).isEqualTo(1);
   }
 
   @DisplayName("성별 무관 게시글은 남성과 여성 필터에 모두 반환된다")
@@ -276,6 +288,7 @@ class PostListServiceTest {
     // then
     assertThat(result.content()).extracting(post -> post.post().getId())
         .containsExactly(ownPost.getId(), matchedPost.getId());
+    assertThat(result.totalElements()).isEqualTo(2);
   }
 
   @DisplayName("페이징, hasNext, 썸네일, durationDays를 반환한다")
@@ -314,9 +327,22 @@ class PostListServiceTest {
     // when
     PostListResult firstPage = postService.getPosts(viewer.getId(), emptyCondition(), 0, 1);
     PostListResult secondPage = postService.getPosts(viewer.getId(), emptyCondition(), 1, 1);
+    PostListResult largerPage = postService.getPosts(viewer.getId(), emptyCondition(), 0, 10);
+    PostListResult beyondLastPage = postService.getPosts(viewer.getId(), emptyCondition(), 5, 1);
     PostListResponse response = PostListResponse.from(firstPage);
 
     // then
+    assertThat(firstPage.totalElements()).isEqualTo(2);
+    assertThat(secondPage.totalElements()).isEqualTo(2);
+    assertThat(response.totalElements()).isEqualTo(2);
+    assertThat(largerPage.totalElements()).isEqualTo(2);
+    assertThat(largerPage.content()).hasSize(2);
+    assertThat(beyondLastPage.content()).isEmpty();
+    assertThat(beyondLastPage.hasNext()).isFalse();
+    assertThat(beyondLastPage.totalElements()).isEqualTo(2);
+    assertThat(firstPage.page()).isZero();
+    assertThat(secondPage.page()).isEqualTo(1);
+    assertThat(firstPage.size()).isEqualTo(1);
     assertThat(firstPage.hasNext()).isTrue();
     assertThat(secondPage.hasNext()).isFalse();
     assertThat(response.content().get(0).durationDays()).isEqualTo(6);
@@ -332,6 +358,7 @@ class PostListServiceTest {
     PostListResult result = postService.getPosts(viewer.getId(), condition("없는검색어"), 0, 20);
 
     // then
+    assertThat(result.totalElements()).isZero();
     assertThat(result.content()).isEmpty();
     assertThat(result.hasNext()).isFalse();
   }

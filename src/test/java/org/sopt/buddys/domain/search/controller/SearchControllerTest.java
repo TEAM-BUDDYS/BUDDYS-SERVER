@@ -184,6 +184,16 @@ class SearchControllerTest extends IntegrationTestSupport {
 
     assertPostIds("/api/v1/search", viewer, titleMatch.getId(), contentMatch.getId());
 
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "  paris  ")
+            .param("page", "1")
+            .param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.posts.content.length()").value(1))
+        .andExpect(jsonPath("$.data.posts.totalElements").value(2))
+        .andExpect(jsonPath("$.data.posts.hasNext").value(false));
+
     mockMvc.perform(get("/api/v1/posts")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
             .param("keyword", "  paris  "))
@@ -226,6 +236,7 @@ class SearchControllerTest extends IntegrationTestSupport {
             .value("https://example.com/post.jpg"))
         .andExpect(jsonPath("$.data.courses.page").value(0))
         .andExpect(jsonPath("$.data.users.size").value(5))
+        .andExpect(jsonPath("$.data.posts.totalElements").value(1))
         .andExpect(jsonPath("$.data.posts.size").value(5));
   }
 
@@ -243,6 +254,7 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.posts.content").isEmpty())
         .andExpect(jsonPath("$.data.courses.hasNext").value(false))
         .andExpect(jsonPath("$.data.users.hasNext").value(false))
+        .andExpect(jsonPath("$.data.posts.totalElements").value(0))
         .andExpect(jsonPath("$.data.posts.hasNext").value(false));
   }
 
