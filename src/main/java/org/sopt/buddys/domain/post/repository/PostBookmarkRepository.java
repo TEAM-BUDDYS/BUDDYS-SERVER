@@ -27,7 +27,6 @@ public interface PostBookmarkRepository extends JpaRepository<PostBookmark, Post
   @Query("""
       select count(pb)
       from PostBookmark pb
-      join pb.post.country
       where pb.user.id = :userId
         and pb.post.deletedAt is null
       """)
