@@ -13,4 +13,6 @@ public interface UserRepositoryCustom {
       AccountStatus accountStatus,
       Pageable pageable
   );
+
+  long countActiveUsersByNickname(String keyword, Long excludeUserId, AccountStatus accountStatus);
 }

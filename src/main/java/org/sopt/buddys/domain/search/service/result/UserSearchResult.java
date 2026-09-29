@@ -6,6 +6,7 @@ public record UserSearchResult(
     List<UserSummaryResult> content,
     int page,
     int size,
+    long totalElements,
     boolean hasNext
 ) {
 

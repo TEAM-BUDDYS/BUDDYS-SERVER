@@ -10,4 +10,6 @@ public interface CourseRepositoryCustom {
   Slice<Course> searchCourses(CourseSearchCondition condition, Pageable pageable);
 
   Slice<Course> searchCoursesByKeyword(String keyword, Pageable pageable);
+
+  long countCoursesByKeyword(String keyword);
 }

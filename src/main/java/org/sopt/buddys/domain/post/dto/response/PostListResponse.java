@@ -102,7 +102,7 @@ public record PostListResponse(
       @Schema(description = "국가 ID", example = "1")
       Long countryId,
 
-      @Schema(description = "국가 이름", example = "France")
+      @Schema(description = "국가 이름", example = "프랑스")
       String name
   ) {
 

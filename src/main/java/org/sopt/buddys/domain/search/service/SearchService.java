@@ -53,6 +53,10 @@ public class SearchService {
         ))
         .toList();
 
-    return new UserSearchResult(content, users.getNumber(), users.getSize(), users.hasNext());
+    return new UserSearchResult(
+        content, users.getNumber(), users.getSize(),
+        userRepository.countActiveUsersByNickname(keyword, userId, AccountStatus.ACTIVE),
+        users.hasNext()
+    );
   }
 }

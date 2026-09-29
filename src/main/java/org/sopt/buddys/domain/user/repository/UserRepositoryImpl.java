@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.user.repository;
 
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -30,12 +31,7 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
   ) {
     List<User> users = queryFactory
         .selectFrom(user)
-        .where(
-            user.nickname.lower().contains(keyword.toLowerCase(Locale.ROOT)),
-            user.id.ne(excludeUserId),
-            user.accountStatus.eq(accountStatus),
-            user.deletedAt.isNull()
-        )
+        .where(searchCondition(keyword, excludeUserId, accountStatus))
         .orderBy(user.createdAt.desc(), user.id.desc())
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + 1L)
@@ -46,5 +42,21 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
       users = users.subList(0, pageable.getPageSize());
     }
     return new SliceImpl<>(users, pageable, hasNext);
+  }
+
+  @Override
+  public long countActiveUsersByNickname(String keyword, Long excludeUserId, AccountStatus accountStatus) {
+    return queryFactory
+        .select(user.id.count())
+        .from(user)
+        .where(searchCondition(keyword, excludeUserId, accountStatus))
+        .fetchOne();
+  }
+
+  private BooleanExpression searchCondition(String keyword, Long excludeUserId, AccountStatus accountStatus) {
+    return user.nickname.lower().contains(keyword.toLowerCase(Locale.ROOT))
+        .and(user.id.ne(excludeUserId))
+        .and(user.accountStatus.eq(accountStatus))
+        .and(user.deletedAt.isNull());
   }
 }

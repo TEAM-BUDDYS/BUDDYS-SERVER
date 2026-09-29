@@ -97,13 +97,14 @@ class SearchControllerTest extends IntegrationTestSupport {
     Location textLocation = saveLocation("France", "FR", "Paris", "파리");
     Course textAndPlaceCourse = saveCourse(
         author, textLocation, "Shared PARIS Art Journey", "A Shared special Story");
-    savePlace(textAndPlaceCourse, "Shared Match Museum", "place-match");
+    savePlace(textAndPlaceCourse, "Shared Match Museum", "place-match", 1);
+    savePlace(textAndPlaceCourse, "Shared Match Museum Annex", "place-match-annex", 2);
     Location countryLocation = saveLocation("Matchland", "ML", "CountryCity", "국가도시");
     Course countryCourse = saveCourse(author, countryLocation, "국가 검색 코스", "내용");
     Location cityLocation = saveLocation("Cityland", "CL", "MatchCity", "매치시");
     Course cityCourse = saveCourse(author, cityLocation, "도시 검색 코스", "내용");
     Course deletedCourse = saveCourse(author, textLocation, "Another Art", "Story");
-    savePlace(deletedCourse, "Match Museum Annex", "place-deleted");
+    savePlace(deletedCourse, "Match Museum Annex", "place-deleted", 1);
     deletedCourse.delete();
     courseRepository.saveAndFlush(deletedCourse);
 
@@ -122,9 +123,14 @@ class SearchControllerTest extends IntegrationTestSupport {
     User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
     User author = saveUser("author@test.com", "author", "작성자", AccountStatus.ACTIVE);
     Location location = saveLocation("France", "FR", "Paris", "파리");
+    Long[] courseIds = new Long[6];
     for (int index = 0; index < 6; index++) {
-      saveCourse(author, location, "Page course " + index, "content");
+      courseIds[index] = saveCourse(author, location, "Page course " + index, "content").getId();
     }
+    Course deleted = saveCourse(author, location, "Page deleted", "content");
+    deleted.delete();
+    courseRepository.saveAndFlush(deleted);
+    saveCourse(author, location, "Unrelated course", "content");
 
     mockMvc.perform(get("/api/v1/search")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
@@ -135,7 +141,13 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.courses.content.length()").value(5))
         .andExpect(jsonPath("$.data.courses.page").value(0))
         .andExpect(jsonPath("$.data.courses.size").value(5))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(6))
+        .andExpect(jsonPath("$.data.courses.content[0].courseId").value(courseIds[5]))
         .andExpect(jsonPath("$.data.courses.hasNext").value(true));
+
+    assertCoursePage(viewer, 1, 5, 1, 6, false, courseIds[0]);
+    assertCoursePage(viewer, 1, 2, 2, 6, true, courseIds[3]);
+    assertCoursePage(viewer, 3, 2, 0, 6, false, null);
   }
 
   @DisplayName("사용자 검색은 닉네임 부분 일치 시 본인과 비활성 및 삭제 사용자를 제외한다")
@@ -146,6 +158,7 @@ class SearchControllerTest extends IntegrationTestSupport {
     User second = saveUser("second@test.com", "second", "TRAVELMate", AccountStatus.ACTIVE);
     saveUser("withdrawn@test.com", "withdrawn", "TravelWithdrawn", AccountStatus.WITHDRAWN);
     saveUser("suspended@test.com", "suspended", "TravelSuspended", AccountStatus.SUSPENDED);
+    saveUser("unrelated@test.com", "unrelated", "Unrelated", AccountStatus.ACTIVE);
     User deleted = saveUser("deleted@test.com", "deleted", "TravelDeleted", AccountStatus.ACTIVE);
     jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), deleted.getId());
 
@@ -153,6 +166,7 @@ class SearchControllerTest extends IntegrationTestSupport {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
             .param("keyword", "  travel  "))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.users.totalElements").value(2))
         .andExpect(jsonPath("$.data.users.content.length()").value(2))
         .andExpect(jsonPath("$.data.users.content[*].userId")
             .value(org.hamcrest.Matchers.containsInAnyOrder(first.getId().intValue(), second.getId().intValue())))
@@ -164,7 +178,26 @@ class SearchControllerTest extends IntegrationTestSupport {
             .param("size", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.users.content.length()").value(1))
+        .andExpect(jsonPath("$.data.users.totalElements").value(2))
+        .andExpect(jsonPath("$.data.users.content[0].userId").value(second.getId()))
         .andExpect(jsonPath("$.data.users.hasNext").value(true));
+
+    for (int page = 1; page <= 2; page++) {
+      var result = mockMvc.perform(get("/api/v1/search")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+              .param("keyword", "travel")
+              .param("page", String.valueOf(page))
+              .param("size", "1"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.data.users.page").value(page))
+          .andExpect(jsonPath("$.data.users.size").value(1))
+          .andExpect(jsonPath("$.data.users.content.length()").value(2 - page))
+          .andExpect(jsonPath("$.data.users.totalElements").value(2))
+          .andExpect(jsonPath("$.data.users.hasNext").value(false));
+      if (page == 1) {
+        result.andExpect(jsonPath("$.data.users.content[0].userId").value(first.getId()));
+      }
+    }
   }
 
   @DisplayName("게시글은 기존 제목과 본문 검색을 재사용하고 모집 완료 및 삭제 게시글을 제외한다")
@@ -236,6 +269,8 @@ class SearchControllerTest extends IntegrationTestSupport {
             .value("https://example.com/post.jpg"))
         .andExpect(jsonPath("$.data.courses.page").value(0))
         .andExpect(jsonPath("$.data.users.size").value(5))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(1))
+        .andExpect(jsonPath("$.data.users.totalElements").value(1))
         .andExpect(jsonPath("$.data.posts.totalElements").value(1))
         .andExpect(jsonPath("$.data.posts.size").value(5));
   }
@@ -254,6 +289,8 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.posts.content").isEmpty())
         .andExpect(jsonPath("$.data.courses.hasNext").value(false))
         .andExpect(jsonPath("$.data.users.hasNext").value(false))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(0))
+        .andExpect(jsonPath("$.data.users.totalElements").value(0))
         .andExpect(jsonPath("$.data.posts.totalElements").value(0))
         .andExpect(jsonPath("$.data.posts.hasNext").value(false));
   }
@@ -296,12 +333,33 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['500']").exists());
   }
 
+  private void assertCoursePage(
+      User viewer, int page, int size, int contentSize, long totalElements,
+      boolean hasNext, Long firstCourseId
+  ) throws Exception {
+    var result = mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "page")
+            .param("page", String.valueOf(page))
+            .param("size", String.valueOf(size)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses.content.length()").value(contentSize))
+        .andExpect(jsonPath("$.data.courses.page").value(page))
+        .andExpect(jsonPath("$.data.courses.size").value(size))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(totalElements))
+        .andExpect(jsonPath("$.data.courses.hasNext").value(hasNext));
+    if (firstCourseId != null) {
+      result.andExpect(jsonPath("$.data.courses.content[0].courseId").value(firstCourseId));
+    }
+  }
+
   private void assertSingleCourse(User viewer, String keyword, Long courseId) throws Exception {
     mockMvc.perform(get("/api/v1/search")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
             .param("keyword", keyword))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.courses.content.length()").value(1))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(1))
         .andExpect(jsonPath("$.data.courses.content[0].courseId").value(courseId));
   }
 
@@ -374,8 +432,9 @@ class SearchControllerTest extends IntegrationTestSupport {
     return course;
   }
 
-  private void savePlace(Course course, String name, String googlePlaceId) {
-    CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now(), null, null));
+  private void savePlace(Course course, String name, String googlePlaceId, int dayNumber) {
+    CourseDay day = courseDayRepository.saveAndFlush(
+        new CourseDay(course, (short) dayNumber, LocalDate.now().plusDays(dayNumber - 1L), null, null));
     Place place = placeRepository.saveAndFlush(Place.builder()
         .googlePlaceId(googlePlaceId)
         .name(name)

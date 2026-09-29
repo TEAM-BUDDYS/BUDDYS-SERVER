@@ -42,6 +42,7 @@ import org.sopt.buddys.domain.course.service.command.CreateCourseCommand;
 import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.course.service.result.CourseListResult;
+import org.sopt.buddys.domain.course.service.result.CourseSearchResult;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
@@ -170,10 +171,13 @@ public class CourseService {
     return toCourseListResult(userId, courses);
   }
 
-  public CourseListResult searchCourses(Long userId, String keyword, int page, int size) {
+  public CourseSearchResult searchCourses(Long userId, String keyword, int page, int size) {
     validatePageRequest(page, size);
     Slice<Course> courses = courseRepository.searchCoursesByKeyword(keyword, PageRequest.of(page, size));
-    return toCourseListResult(userId, courses);
+    return new CourseSearchResult(
+        toCourseListResult(userId, courses),
+        courseRepository.countCoursesByKeyword(keyword)
+    );
   }
 
   public CourseListResult getBookmarkedCourses(Long userId, int page, int size) {

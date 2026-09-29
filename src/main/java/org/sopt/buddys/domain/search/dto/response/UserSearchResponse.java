@@ -14,6 +14,9 @@ public record UserSearchResponse(
     @Schema(description = "페이지 크기", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
     int size,
 
+    @Schema(description = "검색 조건에 일치하는 전체 사용자 수", example = "12", requiredMode = Schema.RequiredMode.REQUIRED)
+    long totalElements,
+
     @Schema(description = "다음 페이지 존재 여부", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
     boolean hasNext
 ) {
@@ -27,6 +30,7 @@ public record UserSearchResponse(
         result.content().stream().map(UserSummaryResponse::from).toList(),
         result.page(),
         result.size(),
+        result.totalElements(),
         result.hasNext()
     );
   }
