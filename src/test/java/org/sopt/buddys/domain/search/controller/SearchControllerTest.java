@@ -10,6 +10,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
 import org.sopt.buddys.domain.course.entity.CourseCity;
@@ -327,10 +330,67 @@ class SearchControllerTest extends IntegrationTestSupport {
             .value(0))
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'size')].schema.default")
             .value(5))
+        .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'type')].required")
+            .value(false))
+        .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'type')].schema.enum")
+            .value(org.hamcrest.Matchers.contains(java.util.List.of("POST", "COURSE", "USER"))))
+        .andExpect(jsonPath("$.components.schemas.SearchResponse.required").doesNotExist())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['200']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['400']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['401']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['500']").exists());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"POST,posts,postId", "COURSE,courses,courseId", "USER,users,userId"})
+  void search_type_returnsOnlySelectedSection(String type, String section, String idField) throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    Location location = saveLocation("France", "FR", "Paris", "파리");
+    long firstId = 0;
+    for (int index = 0; index < 3; index++) {
+      User author = saveUser("author" + index + "@test.com", "author" + index,
+          "ParisUser" + index, AccountStatus.ACTIVE);
+      Course course = saveCourse(author, location, "Paris course", "content");
+      Post post = savePost(author, location, "Paris post", "content");
+      if (index == 1) {
+        firstId = switch (type) {
+          case "POST" -> post.getId();
+          case "COURSE" -> course.getId();
+          default -> author.getId();
+        };
+      }
+    }
+
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "  Paris  ").param("type", type)
+            .param("page", "1").param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", org.hamcrest.Matchers.aMapWithSize(1)))
+        .andExpect(jsonPath("$.data." + section + ".content[0]." + idField).value(firstId))
+        .andExpect(jsonPath("$.data." + section + ".page").value(1))
+        .andExpect(jsonPath("$.data." + section + ".size").value(1))
+        .andExpect(jsonPath("$.data." + section + ".totalElements").value(3))
+        .andExpect(jsonPath("$.data." + section + ".hasNext").value(true));
+
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "no-result").param("type", type))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", org.hamcrest.Matchers.aMapWithSize(1)))
+        .andExpect(jsonPath("$.data." + section + ".content").isEmpty())
+        .andExpect(jsonPath("$.data." + section + ".totalElements").value(0));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"INVALID", "post", "", " ", " POST ", "POST,USER"})
+  void search_invalidType_returnsBadRequest(String type) throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "Paris").param("type", type))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   private void assertCoursePage(
