@@ -39,6 +39,8 @@ public class SearchController {
       summary = "통합 검색",
       description = "검색어로 코스, 사용자, 모집 중 동행 게시글을 동시에 검색합니다. "
           + "각 영역에 동일한 페이지 번호와 크기를 적용합니다. "
+          + "courses.totalElements와 users.totalElements는 page=0에서만 전체 건수를 제공하며 "
+          + "page>0에서는 건수를 조회하지 않고 명시적으로 null을 반환합니다. "
           + "posts.totalElements는 페이지 번호·크기와 무관하게 검색어에 일치하는 "
           + "삭제되지 않은 모집 중 게시글의 전체 수입니다."
   )

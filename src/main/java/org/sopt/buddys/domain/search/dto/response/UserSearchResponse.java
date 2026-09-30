@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.search.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import org.sopt.buddys.domain.search.service.result.UserSearchResult;
@@ -14,6 +15,11 @@ public record UserSearchResponse(
     @Schema(description = "페이지 크기", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
     int size,
 
+    @Schema(description = "검색 조건에 일치하는 전체 사용자 수. page=0에서만 제공하며 page>0에서는 null입니다.",
+        example = "12", nullable = true, requiredMode = Schema.RequiredMode.REQUIRED)
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    Long totalElements,
+
     @Schema(description = "다음 페이지 존재 여부", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
     boolean hasNext
 ) {
@@ -27,6 +33,7 @@ public record UserSearchResponse(
         result.content().stream().map(UserSummaryResponse::from).toList(),
         result.page(),
         result.size(),
+        result.totalElements(),
         result.hasNext()
     );
   }

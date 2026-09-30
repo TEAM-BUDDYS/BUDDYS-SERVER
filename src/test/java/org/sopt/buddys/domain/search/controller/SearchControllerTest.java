@@ -1,15 +1,26 @@
 package org.sopt.buddys.domain.search.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
 import org.sopt.buddys.domain.course.entity.CourseCity;
@@ -47,10 +58,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class SearchControllerTest extends IntegrationTestSupport {
 
-  @Autowired
+  @MockitoSpyBean
   private UserRepository userRepository;
 
   @Autowired
@@ -59,7 +71,7 @@ class SearchControllerTest extends IntegrationTestSupport {
   @Autowired
   private CityRepository cityRepository;
 
-  @Autowired
+  @MockitoSpyBean
   private CourseRepository courseRepository;
 
   @Autowired
@@ -97,13 +109,14 @@ class SearchControllerTest extends IntegrationTestSupport {
     Location textLocation = saveLocation("France", "FR", "Paris", "파리");
     Course textAndPlaceCourse = saveCourse(
         author, textLocation, "Shared PARIS Art Journey", "A Shared special Story");
-    savePlace(textAndPlaceCourse, "Shared Match Museum", "place-match");
+    savePlace(textAndPlaceCourse, "Shared Match Museum", "place-match", 1);
+    savePlace(textAndPlaceCourse, "Shared Match Museum Annex", "place-match-annex", 2);
     Location countryLocation = saveLocation("Matchland", "ML", "CountryCity", "국가도시");
     Course countryCourse = saveCourse(author, countryLocation, "국가 검색 코스", "내용");
     Location cityLocation = saveLocation("Cityland", "CL", "MatchCity", "매치시");
     Course cityCourse = saveCourse(author, cityLocation, "도시 검색 코스", "내용");
     Course deletedCourse = saveCourse(author, textLocation, "Another Art", "Story");
-    savePlace(deletedCourse, "Match Museum Annex", "place-deleted");
+    savePlace(deletedCourse, "Match Museum Annex", "place-deleted", 1);
     deletedCourse.delete();
     courseRepository.saveAndFlush(deletedCourse);
 
@@ -122,9 +135,14 @@ class SearchControllerTest extends IntegrationTestSupport {
     User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
     User author = saveUser("author@test.com", "author", "작성자", AccountStatus.ACTIVE);
     Location location = saveLocation("France", "FR", "Paris", "파리");
+    Long[] courseIds = new Long[6];
     for (int index = 0; index < 6; index++) {
-      saveCourse(author, location, "Page course " + index, "content");
+      courseIds[index] = saveCourse(author, location, "Page course " + index, "content").getId();
     }
+    Course deleted = saveCourse(author, location, "Page deleted", "content");
+    deleted.delete();
+    courseRepository.saveAndFlush(deleted);
+    saveCourse(author, location, "Unrelated course", "content");
 
     mockMvc.perform(get("/api/v1/search")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
@@ -135,7 +153,16 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.courses.content.length()").value(5))
         .andExpect(jsonPath("$.data.courses.page").value(0))
         .andExpect(jsonPath("$.data.courses.size").value(5))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(6))
+        .andExpect(jsonPath("$.data.courses.content[0].courseId").value(courseIds[5]))
         .andExpect(jsonPath("$.data.courses.hasNext").value(true));
+
+    verify(courseRepository).countCoursesByKeyword("page");
+    clearInvocations(courseRepository);
+    assertCoursePage(viewer, 1, 5, 1, false, courseIds[0]);
+    assertCoursePage(viewer, 1, 2, 2, true, courseIds[3]);
+    assertCoursePage(viewer, 3, 2, 0, false, null);
+    verify(courseRepository, never()).countCoursesByKeyword(anyString());
   }
 
   @DisplayName("사용자 검색은 닉네임 부분 일치 시 본인과 비활성 및 삭제 사용자를 제외한다")
@@ -146,6 +173,7 @@ class SearchControllerTest extends IntegrationTestSupport {
     User second = saveUser("second@test.com", "second", "TRAVELMate", AccountStatus.ACTIVE);
     saveUser("withdrawn@test.com", "withdrawn", "TravelWithdrawn", AccountStatus.WITHDRAWN);
     saveUser("suspended@test.com", "suspended", "TravelSuspended", AccountStatus.SUSPENDED);
+    saveUser("unrelated@test.com", "unrelated", "Unrelated", AccountStatus.ACTIVE);
     User deleted = saveUser("deleted@test.com", "deleted", "TravelDeleted", AccountStatus.ACTIVE);
     jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), deleted.getId());
 
@@ -153,6 +181,7 @@ class SearchControllerTest extends IntegrationTestSupport {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
             .param("keyword", "  travel  "))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.users.totalElements").value(2))
         .andExpect(jsonPath("$.data.users.content.length()").value(2))
         .andExpect(jsonPath("$.data.users.content[*].userId")
             .value(org.hamcrest.Matchers.containsInAnyOrder(first.getId().intValue(), second.getId().intValue())))
@@ -164,7 +193,29 @@ class SearchControllerTest extends IntegrationTestSupport {
             .param("size", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.users.content.length()").value(1))
+        .andExpect(jsonPath("$.data.users.totalElements").value(2))
+        .andExpect(jsonPath("$.data.users.content[0].userId").value(second.getId()))
         .andExpect(jsonPath("$.data.users.hasNext").value(true));
+
+    clearInvocations(userRepository);
+    for (int page = 1; page <= 2; page++) {
+      var result = mockMvc.perform(get("/api/v1/search")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+              .param("keyword", "travel")
+              .param("page", String.valueOf(page))
+              .param("size", "1"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.data.users.page").value(page))
+          .andExpect(jsonPath("$.data.users.size").value(1))
+          .andExpect(jsonPath("$.data.users.content.length()").value(2 - page))
+          .andExpect(jsonPath("$.data.users.totalElements").hasJsonPath())
+          .andExpect(jsonPath("$.data.users.totalElements").value(nullValue()))
+          .andExpect(jsonPath("$.data.users.hasNext").value(false));
+      if (page == 1) {
+        result.andExpect(jsonPath("$.data.users.content[0].userId").value(first.getId()));
+      }
+    }
+    verify(userRepository, never()).countActiveUsersByNickname(anyString(), any(), any());
   }
 
   @DisplayName("게시글은 기존 제목과 본문 검색을 재사용하고 모집 완료 및 삭제 게시글을 제외한다")
@@ -236,6 +287,8 @@ class SearchControllerTest extends IntegrationTestSupport {
             .value("https://example.com/post.jpg"))
         .andExpect(jsonPath("$.data.courses.page").value(0))
         .andExpect(jsonPath("$.data.users.size").value(5))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(1))
+        .andExpect(jsonPath("$.data.users.totalElements").value(1))
         .andExpect(jsonPath("$.data.posts.totalElements").value(1))
         .andExpect(jsonPath("$.data.posts.size").value(5));
   }
@@ -254,8 +307,39 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.posts.content").isEmpty())
         .andExpect(jsonPath("$.data.courses.hasNext").value(false))
         .andExpect(jsonPath("$.data.users.hasNext").value(false))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(0))
+        .andExpect(jsonPath("$.data.users.totalElements").value(0))
         .andExpect(jsonPath("$.data.posts.totalElements").value(0))
         .andExpect(jsonPath("$.data.posts.hasNext").value(false));
+  }
+
+  @DisplayName("첫 페이지에서만 count하고 이후 페이지 직접 요청은 명시적 null을 반환한다")
+  @ParameterizedTest
+  @ValueSource(ints = {0, 1, 3})
+  void search_countsOnlyOnFirstPage(int page) throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    clearInvocations(courseRepository, userRepository);
+
+    var result = mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "no-result")
+            .param("page", String.valueOf(page)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses.totalElements").hasJsonPath())
+        .andExpect(jsonPath("$.data.users.totalElements").hasJsonPath())
+        .andExpect(jsonPath("$.data.posts.totalElements").value(0));
+
+    if (page == 0) {
+      result.andExpect(jsonPath("$.data.courses.totalElements").value(0))
+          .andExpect(jsonPath("$.data.users.totalElements").value(0));
+      verify(courseRepository).countCoursesByKeyword("no-result");
+      verify(userRepository).countActiveUsersByNickname("no-result", viewer.getId(), AccountStatus.ACTIVE);
+    } else {
+      result.andExpect(jsonPath("$.data.courses.totalElements").value(nullValue()))
+          .andExpect(jsonPath("$.data.users.totalElements").value(nullValue()));
+      verify(courseRepository, never()).countCoursesByKeyword(anyString());
+      verify(userRepository, never()).countActiveUsersByNickname(anyString(), any(), any());
+    }
   }
 
   @DisplayName("검색 요청값이 유효하지 않으면 400을 반환한다")
@@ -282,7 +366,7 @@ class SearchControllerTest extends IntegrationTestSupport {
   @DisplayName("통합 검색 OpenAPI는 필수 검색어와 기본 pagination 및 공통 응답을 문서화한다")
   @Test
   void search_openApiContract_matchesRequestAndResponse() throws Exception {
-    mockMvc.perform(get("/v3/api-docs"))
+    var response = mockMvc.perform(get("/v3/api-docs"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'keyword')].required")
             .value(true))
@@ -293,7 +377,41 @@ class SearchControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['200']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['400']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['401']").exists())
-        .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['500']").exists());
+        .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['500']").exists())
+        .andReturn().getResponse().getContentAsString();
+
+    var document = JsonPath.parse(response);
+    for (String section : List.of("courses", "users")) {
+      String ref = document.read("$.components.schemas.SearchResponse.properties." + section + "['$ref']");
+      String schemaPath = "$.components.schemas." + ref.substring(ref.lastIndexOf('/') + 1);
+      List<String> required = document.read(schemaPath + ".required");
+      Map<String, Object> total = document.read(schemaPath + ".properties.totalElements");
+      assertThat(required).contains("totalElements");
+      assertThat((String) total.get("description")).contains("page=0", "page>0", "null");
+      assertThat(Boolean.TRUE.equals(total.get("nullable"))
+          || (total.get("type") instanceof List<?> types && types.contains("null"))).isTrue();
+    }
+  }
+
+  private void assertCoursePage(
+      User viewer, int page, int size, int contentSize,
+      boolean hasNext, Long firstCourseId
+  ) throws Exception {
+    var result = mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "page")
+            .param("page", String.valueOf(page))
+            .param("size", String.valueOf(size)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.courses.content.length()").value(contentSize))
+        .andExpect(jsonPath("$.data.courses.page").value(page))
+        .andExpect(jsonPath("$.data.courses.size").value(size))
+        .andExpect(jsonPath("$.data.courses.totalElements").hasJsonPath())
+        .andExpect(jsonPath("$.data.courses.totalElements").value(nullValue()))
+        .andExpect(jsonPath("$.data.courses.hasNext").value(hasNext));
+    if (firstCourseId != null) {
+      result.andExpect(jsonPath("$.data.courses.content[0].courseId").value(firstCourseId));
+    }
   }
 
   private void assertSingleCourse(User viewer, String keyword, Long courseId) throws Exception {
@@ -302,6 +420,7 @@ class SearchControllerTest extends IntegrationTestSupport {
             .param("keyword", keyword))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.courses.content.length()").value(1))
+        .andExpect(jsonPath("$.data.courses.totalElements").value(1))
         .andExpect(jsonPath("$.data.courses.content[0].courseId").value(courseId));
   }
 
@@ -374,8 +493,9 @@ class SearchControllerTest extends IntegrationTestSupport {
     return course;
   }
 
-  private void savePlace(Course course, String name, String googlePlaceId) {
-    CourseDay day = courseDayRepository.saveAndFlush(new CourseDay(course, (short) 1, LocalDate.now(), null, null));
+  private void savePlace(Course course, String name, String googlePlaceId, int dayNumber) {
+    CourseDay day = courseDayRepository.saveAndFlush(
+        new CourseDay(course, (short) dayNumber, LocalDate.now().plusDays(dayNumber - 1L), null, null));
     Place place = placeRepository.saveAndFlush(Place.builder()
         .googlePlaceId(googlePlaceId)
         .name(name)

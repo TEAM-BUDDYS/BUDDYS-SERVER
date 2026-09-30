@@ -58,37 +58,9 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
 
   @Override
   public Slice<Course> searchCoursesByKeyword(String keyword, Pageable pageable) {
-    String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
     List<Course> courses = queryFactory
         .selectFrom(course)
-        .where(
-            course.deletedAt.isNull(),
-            course.title.lower().contains(normalizedKeyword)
-                .or(course.content.lower().contains(normalizedKeyword))
-                .or(course.id.in(
-                    JPAExpressions
-                        .select(courseDay.course.id)
-                        .from(coursePlace)
-                        .join(coursePlace.courseDay, courseDay)
-                        .join(coursePlace.place, place)
-                        .where(place.name.lower().contains(normalizedKeyword))
-                ))
-                .or(course.id.in(
-                    JPAExpressions
-                        .select(courseCountry.course.id)
-                        .from(courseCountry)
-                        .where(courseCountry.country.name.lower().contains(normalizedKeyword))
-                ))
-                .or(course.id.in(
-                    JPAExpressions
-                        .select(courseCity.course.id)
-                        .from(courseCity)
-                        .where(
-                            courseCity.city.name.lower().contains(normalizedKeyword)
-                                .or(courseCity.city.koreanName.lower().contains(normalizedKeyword))
-                        )
-                ))
-        )
+        .where(course.deletedAt.isNull(), keywordContains(keyword))
         .orderBy(course.createdAt.desc(), course.id.desc())
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + 1L)
@@ -99,6 +71,44 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
       courses = courses.subList(0, pageable.getPageSize());
     }
     return new SliceImpl<>(courses, pageable, hasNext);
+  }
+
+  @Override
+  public long countCoursesByKeyword(String keyword) {
+    return queryFactory
+        .select(course.id.count())
+        .from(course)
+        .where(course.deletedAt.isNull(), keywordContains(keyword))
+        .fetchOne();
+  }
+
+  private BooleanExpression keywordContains(String keyword) {
+    String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
+    return course.title.lower().contains(normalizedKeyword)
+        .or(course.content.lower().contains(normalizedKeyword))
+        .or(course.id.in(
+            JPAExpressions
+                .select(courseDay.course.id)
+                .from(coursePlace)
+                .join(coursePlace.courseDay, courseDay)
+                .join(coursePlace.place, place)
+                .where(place.name.lower().contains(normalizedKeyword))
+        ))
+        .or(course.id.in(
+            JPAExpressions
+                .select(courseCountry.course.id)
+                .from(courseCountry)
+                .where(courseCountry.country.name.lower().contains(normalizedKeyword))
+        ))
+        .or(course.id.in(
+            JPAExpressions
+                .select(courseCity.course.id)
+                .from(courseCity)
+                .where(
+                    courseCity.city.name.lower().contains(normalizedKeyword)
+                        .or(courseCity.city.koreanName.lower().contains(normalizedKeyword))
+                )
+        ));
   }
 
   private BooleanExpression countryEquals(Long countryId) {
