@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import java.time.LocalDate;
 import java.util.List;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
+import org.sopt.buddys.domain.post.entity.AuthorVerification;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
@@ -39,6 +40,12 @@ public record PostListRequest(
   @Schema(description = "태그 ID", example = "1")
   Long tagId,
 
+  @Schema(description = "작성자 인증 조건 목록. 허용값: UNIVERSITY(대학 인증), EXCHANGE(파견교 인증). "
+      + "복수 선택은 authorVerifications=UNIVERSITY&authorVerifications=EXCHANGE 또는 "
+      + "authorVerifications=UNIVERSITY,EXCHANGE로 전달합니다. 둘 다 선택하면 AND로 적용하며, "
+      + "미선택 시 인증 상태로 필터링하지 않습니다.")
+  List<AuthorVerification> authorVerifications,
+
   @Schema(description = "페이지 번호. 0 이상입니다.", example = "0")
   @Min(0)
   Integer page,
@@ -66,7 +73,8 @@ public record PostListRequest(
         ageConditions,
         genderConditions,
         companionTypes,
-        tagId
+        tagId,
+        authorVerifications
     );
   }
 }

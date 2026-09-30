@@ -1291,6 +1291,31 @@ class PostControllerTest {
         .andExpect(jsonPath("$.paths['/api/v1/posts/closing-soon'].get.responses['500']").exists());
   }
 
+  @Test
+  @DisplayName("작성자 인증 필터는 반복 및 쉼표 파라미터를 지원하고 잘못된 값은 거절한다")
+  void getPosts_authorVerifications_bindsMultipleSelections() throws Exception {
+    User viewer = userRepository.save(createUser("viewer@test.com", "viewer", "조회자"));
+    User author = createUser("author@test.com", "author", "작성자");
+    author.verifyUniversity(null);
+    author.verifyExchange();
+    author = userRepository.saveAndFlush(author);
+    Post post = createPost(author);
+
+    for (String[] values : List.of(new String[]{"UNIVERSITY"}, new String[]{"EXCHANGE"},
+        new String[]{"UNIVERSITY", "EXCHANGE"}, new String[]{"UNIVERSITY,EXCHANGE"})) {
+      mockMvc.perform(get("/api/v1/posts")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+              .param("authorVerifications", values))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.data.content[0].postId").value(post.getId()))
+          .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("authorVerifications", "IDENTITY"))
+        .andExpect(status().isBadRequest());
+  }
+
   private Post createPost(User author) {
     Long countryId = insertCountry("대한민국", "KR");
     Long cityId = insertCity(countryId, "Seoul", "서울특별시", 10_000_000L);

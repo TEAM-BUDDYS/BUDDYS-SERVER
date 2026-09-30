@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.dto.response.PostListResponse;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
+import org.sopt.buddys.domain.post.entity.AuthorVerification;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
@@ -389,6 +390,72 @@ class PostListServiceTest {
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(GlobalErrorCode.INVALID_REQUEST)
         );
+  }
+
+  @Test
+  @DisplayName("작성자 실제 인증 상태를 AND로 적용하고 페이지와 무관한 전체 건수를 반환한다")
+  void getPosts_authorVerifications_filtersActualFlagsAndCountsAllPages() {
+    User university = createUser("university@test.com", "university", "대학");
+    university.verifyUniversity(null);
+    university = userRepository.saveAndFlush(university);
+    User exchange = createUser("exchange@test.com", "exchange", "파견");
+    exchange.verifyExchange();
+    exchange = userRepository.saveAndFlush(exchange);
+    author.verifyUniversity(null);
+    author.verifyExchange();
+    userRepository.saveAndFlush(author);
+
+    createPost(viewer.getId(), "미인증", "본문", franceId, parisId, List.of(GenderCondition.FEMALE));
+    createPost(university.getId(), "대학", "본문", franceId, parisId, List.of(GenderCondition.FEMALE));
+    createPost(exchange.getId(), "파견", "본문", franceId, parisId, List.of(GenderCondition.FEMALE));
+    createPost(author.getId(), "둘 다", "본문", franceId, parisId, List.of(GenderCondition.FEMALE));
+    Post completed = createPost(author.getId(), "완료", "본문", franceId, parisId,
+        List.of(GenderCondition.FEMALE));
+    completed.updateStatus(PostStatus.COMPLETED);
+    postRepository.saveAndFlush(completed);
+    Post deleted = createPost(author.getId(), "삭제", "본문", franceId, parisId,
+        List.of(GenderCondition.FEMALE));
+    deleted.softDelete(LocalDateTime.now());
+    postRepository.saveAndFlush(deleted);
+
+    assertVerificationResult(null, "둘 다", "파견", "대학", "미인증");
+    assertVerificationResult(List.of(), "둘 다", "파견", "대학", "미인증");
+    assertVerificationResult(List.of(AuthorVerification.UNIVERSITY), "둘 다", "대학");
+    assertVerificationResult(List.of(AuthorVerification.EXCHANGE), "둘 다", "파견");
+    assertVerificationResult(List.of(AuthorVerification.UNIVERSITY, AuthorVerification.EXCHANGE), "둘 다");
+
+    PostSearchCondition combined = new PostSearchCondition("둘", franceId,
+        LocalDate.now().plusDays(9), LocalDate.now().plusDays(13),
+        List.of(AgeCondition.EARLY_20S), List.of(GenderCondition.FEMALE),
+        List.of(CompanionType.MEAL), travelTagId,
+        List.of(AuthorVerification.UNIVERSITY, AuthorVerification.EXCHANGE));
+    PostListResult result = postService.getPosts(viewer.getId(), combined, 0, 20);
+    assertThat(result.content()).extracting(item -> item.post().getTitle()).containsExactly("둘 다");
+    assertThat(result.totalElements()).isEqualTo(1);
+    PostSearchCondition noMatch = new PostSearchCondition("미인증", null, null, null,
+        null, null, null, null, List.of(AuthorVerification.UNIVERSITY));
+    PostListResult empty = postService.getPosts(viewer.getId(), noMatch, 0, 1);
+    assertThat(empty.content()).isEmpty();
+    assertThat(empty.totalElements()).isZero();
+    assertThat(empty.hasNext()).isFalse();
+  }
+
+  private void assertVerificationResult(List<AuthorVerification> verifications, String... titles) {
+    PostSearchCondition condition = new PostSearchCondition(null, null, null, null,
+        null, null, null, null, verifications);
+    PostListResult all = postService.getPosts(viewer.getId(), condition, 0, 20);
+    assertThat(all.content()).extracting(item -> item.post().getTitle()).containsExactly(titles);
+    assertThat(all.totalElements()).isEqualTo(titles.length);
+    for (int page = 0; page <= titles.length; page++) {
+      PostListResult result = postService.getPosts(viewer.getId(), condition, page, 1);
+      assertThat(result.totalElements()).isEqualTo(titles.length);
+      assertThat(result.hasNext()).isEqualTo(page < titles.length - 1);
+      if (page < titles.length) {
+        assertThat(result.content()).extracting(item -> item.post().getTitle()).containsExactly(titles[page]);
+      } else {
+        assertThat(result.content()).isEmpty();
+      }
+    }
   }
 
   private PostSearchCondition emptyCondition() {
