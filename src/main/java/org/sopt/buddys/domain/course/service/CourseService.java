@@ -176,7 +176,7 @@ public class CourseService {
     Slice<Course> courses = courseRepository.searchCoursesByKeyword(keyword, PageRequest.of(page, size));
     return new CourseSearchResult(
         toCourseListResult(userId, courses),
-        courseRepository.countCoursesByKeyword(keyword)
+        page == 0 ? courseRepository.countCoursesByKeyword(keyword) : null
     );
   }
 

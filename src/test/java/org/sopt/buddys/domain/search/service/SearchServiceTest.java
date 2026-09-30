@@ -9,8 +9,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import java.util.List;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,49 +33,52 @@ class SearchServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private PostService postService;
 
-  @ParameterizedTest(name = "type={0}: 선택 영역만 조회하고 생략하면 모두 조회한다")
-  @NullSource
-  @EnumSource(SearchType.class)
-  void search_queriesOnlySelectedSections(SearchType type) {
-    var pageable = PageRequest.of(2, 3);
+  @ParameterizedTest(name = "type={0}, page={1}: 선택 영역만 조회하고 첫 페이지에서만 사용자 count한다")
+  @CsvSource({",0", ",2", "POST,0", "POST,2", "COURSE,0", "COURSE,2", "USER,0", "USER,2"})
+  void search_queriesOnlySelectedSections(SearchType type, int page) {
+    var pageable = PageRequest.of(page, 3);
     var condition = new PostSearchCondition("Paris", null, null, null, null, null, null, null);
-    var courses = new CourseSearchResult(new CourseListResult(List.of(), 2, 3, false), 8);
-    var posts = new PostListResult(List.of(), 2, 3, false, 7);
+    var courses = new CourseSearchResult(new CourseListResult(List.of(), page, 3, false), page == 0 ? 8L : null);
+    var posts = new PostListResult(List.of(), page, 3, false, 7);
     if (type == null || type == SearchType.COURSE) {
-      given(courseService.searchCourses(1L, "Paris", 2, 3)).willReturn(courses);
+      given(courseService.searchCourses(1L, "Paris", page, 3)).willReturn(courses);
     }
     if (type == null || type == SearchType.POST) {
-      given(postService.getPosts(1L, condition, 2, 3)).willReturn(posts);
+      given(postService.getPosts(1L, condition, page, 3)).willReturn(posts);
     }
     if (type == null || type == SearchType.USER) {
       given(userRepository.searchActiveUsersByNickname("Paris", 1L, AccountStatus.ACTIVE, pageable))
           .willReturn(new SliceImpl<>(List.of(), pageable, false));
-      given(userRepository.countActiveUsersByNickname("Paris", 1L, AccountStatus.ACTIVE))
-          .willReturn(6L);
+      if (page == 0) {
+        given(userRepository.countActiveUsersByNickname("Paris", 1L, AccountStatus.ACTIVE))
+            .willReturn(6L);
+      }
     }
 
-    var result = searchService.search(1L, "Paris", 2, 3, type);
+    var result = searchService.search(1L, "Paris", page, 3, type);
 
     if (type == null || type == SearchType.COURSE) {
       assertThat(result.courses()).isSameAs(courses);
-      verify(courseService).searchCourses(1L, "Paris", 2, 3);
+      verify(courseService).searchCourses(1L, "Paris", page, 3);
     } else {
       assertThat(result.courses()).isNull();
       verifyNoInteractions(courseService);
     }
     if (type == null || type == SearchType.POST) {
       assertThat(result.posts()).isSameAs(posts);
-      verify(postService).getPosts(1L, condition, 2, 3);
+      verify(postService).getPosts(1L, condition, page, 3);
     } else {
       assertThat(result.posts()).isNull();
       verifyNoInteractions(postService);
     }
     if (type == null || type == SearchType.USER) {
-      assertThat(result.users().totalElements()).isEqualTo(6);
-      assertThat(result.users().page()).isEqualTo(2);
+      assertThat(result.users().totalElements()).isEqualTo(page == 0 ? 6L : null);
+      assertThat(result.users().page()).isEqualTo(page);
       assertThat(result.users().size()).isEqualTo(3);
       verify(userRepository).searchActiveUsersByNickname("Paris", 1L, AccountStatus.ACTIVE, pageable);
-      verify(userRepository).countActiveUsersByNickname("Paris", 1L, AccountStatus.ACTIVE);
+      if (page == 0) {
+        verify(userRepository).countActiveUsersByNickname("Paris", 1L, AccountStatus.ACTIVE);
+      }
     } else {
       assertThat(result.users()).isNull();
       verifyNoInteractions(userRepository);
