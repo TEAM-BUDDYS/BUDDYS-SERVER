@@ -55,7 +55,7 @@ public class SearchService {
 
     return new UserSearchResult(
         content, users.getNumber(), users.getSize(),
-        userRepository.countActiveUsersByNickname(keyword, userId, AccountStatus.ACTIVE),
+        page == 0 ? userRepository.countActiveUsersByNickname(keyword, userId, AccountStatus.ACTIVE) : null,
         users.hasNext()
     );
   }
