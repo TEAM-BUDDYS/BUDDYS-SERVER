@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,6 +21,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
@@ -95,7 +97,7 @@ class SearchControllerTest extends IntegrationTestSupport {
   @Autowired
   private PlaceRepository placeRepository;
 
-  @Autowired
+  @MockitoSpyBean
   private PostRepository postRepository;
 
   @Autowired
@@ -374,6 +376,11 @@ class SearchControllerTest extends IntegrationTestSupport {
             .value(0))
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'size')].schema.default")
             .value(5))
+        .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'type')].required")
+            .value(false))
+        .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'type')].schema.enum")
+            .value(org.hamcrest.Matchers.contains(java.util.List.of("POST", "COURSE", "USER"))))
+        .andExpect(jsonPath("$.components.schemas.SearchResponse.required").doesNotExist())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['200']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['400']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['401']").exists())
@@ -391,6 +398,91 @@ class SearchControllerTest extends IntegrationTestSupport {
       assertThat(Boolean.TRUE.equals(total.get("nullable"))
           || (total.get("type") instanceof List<?> types && types.contains("null"))).isTrue();
     }
+  }
+
+  @ParameterizedTest(name = "type={0}, page={1}: 응답 영역과 검색·count 범위를 유지한다")
+  @CsvSource({",0", ",1", "POST,0", "POST,1", "COURSE,0", "COURSE,1", "USER,0", "USER,1"})
+  void search_typeAndPage_returnsSelectedSectionsAndCountsOnlyWhenNeeded(String type, int page)
+      throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    Location location = saveLocation("France", "FR", "Paris", "파리");
+    Map<String, Long> expectedIds = new java.util.HashMap<>();
+    for (int index = 0; index < 3; index++) {
+      User author = saveUser("author" + index + "@test.com", "author" + index,
+          "ParisUser" + index, AccountStatus.ACTIVE);
+      Course course = saveCourse(author, location, "Paris course", "content");
+      Post post = savePost(author, location, "Paris post", "content");
+      if (index == 2 - page) {
+        expectedIds.put("courses", course.getId());
+        expectedIds.put("users", author.getId());
+        expectedIds.put("posts", post.getId());
+      }
+    }
+
+    for (String keyword : List.of("  Paris  ", "no-result")) {
+      clearInvocations(courseRepository, userRepository, postRepository);
+      var request = get("/api/v1/search")
+          .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+          .param("keyword", keyword).param("page", String.valueOf(page)).param("size", "1");
+      if (type != null) {
+        request.param("type", type);
+      }
+      var result = mockMvc.perform(request)
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.data", org.hamcrest.Matchers.aMapWithSize(type == null ? 3 : 1)));
+      boolean hasResults = !keyword.equals("no-result");
+      for (var entry : Map.of("COURSE", "courses", "USER", "users", "POST", "posts").entrySet()) {
+        String section = entry.getValue();
+        String path = "$.data." + section;
+        if (type != null && !type.equals(entry.getKey())) {
+          result.andExpect(jsonPath(path).doesNotHaveJsonPath());
+          continue;
+        }
+        result.andExpect(jsonPath(path + ".page").value(page))
+            .andExpect(jsonPath(path + ".size").value(1))
+            .andExpect(jsonPath(path + ".content.length()").value(hasResults ? 1 : 0))
+            .andExpect(jsonPath(path + ".hasNext").value(hasResults))
+            .andExpect(jsonPath(path + ".totalElements").hasJsonPath());
+        if (page > 0 && !section.equals("posts")) {
+          result.andExpect(jsonPath(path + ".totalElements").value(nullValue()));
+        } else {
+          result.andExpect(jsonPath(path + ".totalElements").value(hasResults ? 3 : 0));
+        }
+        if (hasResults) {
+          String idField = switch (section) {
+            case "courses" -> "courseId";
+            case "users" -> "userId";
+            default -> "postId";
+          };
+          result.andExpect(jsonPath(path + ".content[0]." + idField).value(expectedIds.get(section)));
+        }
+      }
+      assertSearchQueryScope(type, page);
+    }
+  }
+
+  private void assertSearchQueryScope(String type, int page) {
+    int courses = type == null || type.equals("COURSE") ? 1 : 0;
+    int users = type == null || type.equals("USER") ? 1 : 0;
+    int posts = type == null || type.equals("POST") ? 1 : 0;
+    verify(courseRepository, times(courses)).searchCoursesByKeyword(anyString(), any());
+    verify(courseRepository, times(page == 0 ? courses : 0)).countCoursesByKeyword(anyString());
+    verify(userRepository, times(users)).searchActiveUsersByNickname(anyString(), any(), any(), any());
+    verify(userRepository, times(page == 0 ? users : 0))
+        .countActiveUsersByNickname(anyString(), any(), any());
+    verify(postRepository, times(posts)).searchPosts(any(), any(), any());
+    verify(postRepository, times(posts)).countPosts(any());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"INVALID", "post", "", " ", " POST ", "POST,USER"})
+  void search_invalidType_returnsBadRequest(String type) throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "Paris").param("type", type))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
   private void assertCoursePage(

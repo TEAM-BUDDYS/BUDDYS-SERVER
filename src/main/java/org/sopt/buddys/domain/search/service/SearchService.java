@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.service.CourseService;
 import org.sopt.buddys.domain.post.service.PostService;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
+import org.sopt.buddys.domain.search.service.command.SearchType;
 import org.sopt.buddys.domain.search.service.result.SearchResult;
 import org.sopt.buddys.domain.search.service.result.UserSearchResult;
 import org.sopt.buddys.domain.search.service.result.UserSearchResult.UserSummaryResult;
@@ -25,16 +26,18 @@ public class SearchService {
   private final UserRepository userRepository;
   private final PostService postService;
 
-  public SearchResult search(Long userId, String keyword, int page, int size) {
+  public SearchResult search(Long userId, String keyword, int page, int size, SearchType type) {
     return new SearchResult(
-        courseService.searchCourses(userId, keyword, page, size),
-        searchUsers(userId, keyword, page, size),
-        postService.getPosts(
+        type == null || type == SearchType.COURSE
+            ? courseService.searchCourses(userId, keyword, page, size) : null,
+        type == null || type == SearchType.USER
+            ? searchUsers(userId, keyword, page, size) : null,
+        type == null || type == SearchType.POST ? postService.getPosts(
             userId,
             new PostSearchCondition(keyword, null, null, null, null, null, null, null),
             page,
             size
-        )
+        ) : null
     );
   }
 

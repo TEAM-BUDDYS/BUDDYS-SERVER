@@ -38,6 +38,8 @@ public class SearchController {
   @Operation(
       summary = "통합 검색",
       description = "검색어로 코스, 사용자, 모집 중 동행 게시글을 동시에 검색합니다. "
+          + "type을 생략하면 세 영역을 모두 조회하고 반환하며, POST/COURSE/USER를 지정하면 해당 영역만 조회하고 반환합니다. "
+          + "선택하지 않은 영역은 응답 필드에서 제외됩니다. 잘못된 type은 400(GLB-E001)을 반환합니다. "
           + "각 영역에 동일한 페이지 번호와 크기를 적용합니다. "
           + "courses.totalElements와 users.totalElements는 page=0에서만 전체 건수를 제공하며 "
           + "page>0에서는 건수를 조회하지 않고 명시적으로 null을 반환합니다. "
@@ -61,7 +63,8 @@ public class SearchController {
             userId,
             request.normalizedKeyword(),
             request.pageOrDefault(),
-            request.sizeOrDefault()
+            request.sizeOrDefault(),
+            request.searchType()
         ))
     );
   }
