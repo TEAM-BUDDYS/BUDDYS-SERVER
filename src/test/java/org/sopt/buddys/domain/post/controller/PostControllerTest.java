@@ -1300,15 +1300,39 @@ class PostControllerTest {
     author.verifyExchange();
     author = userRepository.saveAndFlush(author);
     Post post = createPost(author);
+    User university = createUser("university@test.com", "university", "대학 인증");
+    university.verifyUniversity(null);
+    Post universityPost = createPost(userRepository.saveAndFlush(university), post.getCountry(),
+        post.getCity(), "대학 인증", "본문", post.getStartDate(), post.getEndDate());
+    User exchange = createUser("exchange@test.com", "exchange", "파견교 인증");
+    exchange.verifyExchange();
+    Post exchangePost = createPost(userRepository.saveAndFlush(exchange), post.getCountry(),
+        post.getCity(), "파견교 인증", "본문", post.getStartDate(), post.getEndDate());
+    Post unverifiedPost = createPost(viewer, post.getCountry(), post.getCity(), "미인증", "본문",
+        post.getStartDate(), post.getEndDate());
+
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.content[*].postId").value(
+            org.hamcrest.Matchers.containsInAnyOrder(post.getId().intValue(),
+                universityPost.getId().intValue(), exchangePost.getId().intValue(),
+                unverifiedPost.getId().intValue())))
+        .andExpect(jsonPath("$.data.totalElements").value(4));
 
     for (String[] values : List.of(new String[]{"UNIVERSITY"}, new String[]{"EXCHANGE"},
         new String[]{"UNIVERSITY", "EXCHANGE"}, new String[]{"UNIVERSITY,EXCHANGE"})) {
+      Integer[] expectedIds = values.length == 1 && !values[0].contains(",")
+          ? new Integer[]{post.getId().intValue(),
+              (values[0].equals("UNIVERSITY") ? universityPost : exchangePost).getId().intValue()}
+          : new Integer[]{post.getId().intValue()};
       mockMvc.perform(get("/api/v1/posts")
               .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
               .param("authorVerifications", values))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$.data.content[0].postId").value(post.getId()))
-          .andExpect(jsonPath("$.data.totalElements").value(1));
+          .andExpect(jsonPath("$.data.content[*].postId")
+              .value(org.hamcrest.Matchers.containsInAnyOrder(expectedIds)))
+          .andExpect(jsonPath("$.data.totalElements").value(expectedIds.length));
     }
     mockMvc.perform(get("/api/v1/posts")
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))

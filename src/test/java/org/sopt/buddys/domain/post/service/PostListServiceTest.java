@@ -181,7 +181,8 @@ class PostListServiceTest {
         List.of(AgeCondition.EARLY_20S),
         List.of(GenderCondition.FEMALE),
         List.of(CompanionType.MEAL),
-        mealTagId
+        mealTagId,
+        null
     );
 
     // when
@@ -205,13 +206,13 @@ class PostListServiceTest {
     // when
     PostListResult femaleResult = postService.getPosts(
         viewer.getId(),
-        new PostSearchCondition(null, null, null, null, null, List.of(GenderCondition.FEMALE), null, null),
+        new PostSearchCondition(null, null, null, null, null, List.of(GenderCondition.FEMALE), null, null, null),
         0,
         20
     );
     PostListResult maleResult = postService.getPosts(
         viewer.getId(),
-        new PostSearchCondition(null, null, null, null, null, List.of(GenderCondition.MALE), null, null),
+        new PostSearchCondition(null, null, null, null, null, List.of(GenderCondition.MALE), null, null, null),
         0,
         20
     );
@@ -280,7 +281,8 @@ class PostListServiceTest {
         List.of(AgeCondition.EARLY_20S, AgeCondition.MID_20S),
         List.of(GenderCondition.MALE, GenderCondition.FEMALE),
         List.of(CompanionType.MEAL),
-        mealTagId
+        mealTagId,
+        null
     );
 
     // when
@@ -376,6 +378,7 @@ class PostListServiceTest {
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -459,11 +462,11 @@ class PostListServiceTest {
   }
 
   private PostSearchCondition emptyCondition() {
-    return new PostSearchCondition(null, null, null, null, null, null, null, null);
+    return new PostSearchCondition(null, null, null, null, null, null, null, null, null);
   }
 
   private PostSearchCondition condition(String keyword) {
-    return new PostSearchCondition(keyword, null, null, null, null, null, null, null);
+    return PostSearchCondition.keywordOnly(keyword);
   }
 
   private Post createPost(

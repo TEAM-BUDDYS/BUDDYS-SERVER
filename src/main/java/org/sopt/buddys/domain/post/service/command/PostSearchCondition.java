@@ -19,10 +19,7 @@ public record PostSearchCondition(
     List<AuthorVerification> authorVerifications
 ) {
 
-  public PostSearchCondition(String keyword, Long countryId, LocalDate startDate, LocalDate endDate,
-      List<AgeCondition> ageConditions, List<GenderCondition> genderConditions,
-      List<CompanionType> companionTypes, Long tagId) {
-    this(keyword, countryId, startDate, endDate, ageConditions, genderConditions, companionTypes,
-        tagId, null);
+  public static PostSearchCondition keywordOnly(String keyword) {
+    return new PostSearchCondition(keyword, null, null, null, null, null, null, null, null);
   }
 }
