@@ -37,7 +37,9 @@ class SearchServiceTest {
   @CsvSource({",0", ",2", "POST,0", "POST,2", "COURSE,0", "COURSE,2", "USER,0", "USER,2"})
   void search_queriesOnlySelectedSections(SearchType type, int page) {
     var pageable = PageRequest.of(page, 3);
-    var condition = new PostSearchCondition("Paris", null, null, null, null, null, null, null);
+    var condition = PostSearchCondition.keywordOnly("Paris");
+    assertThat(condition).isEqualTo(
+        new PostSearchCondition("Paris", null, null, null, null, null, null, null, null));
     var courses = new CourseSearchResult(new CourseListResult(List.of(), page, 3, false), page == 0 ? 8L : null);
     var posts = new PostListResult(List.of(), page, 3, false, 7);
     if (type == null || type == SearchType.COURSE) {

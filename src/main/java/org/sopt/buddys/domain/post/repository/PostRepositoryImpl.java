@@ -8,7 +8,7 @@ import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
-import org.sopt.buddys.domain.post.entity.GenderCondition;
+import org.sopt.buddys.domain.post.entity.AuthorVerification;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.QPost;
@@ -90,6 +90,14 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         .and(companionTypeIn(condition))
         .and(tagEquals(condition.tagId()));
 
+    if (condition.authorVerifications() != null) {
+      if (condition.authorVerifications().contains(AuthorVerification.UNIVERSITY)) {
+        builder.and(post.author.universityVerified.isTrue());
+      }
+      if (condition.authorVerifications().contains(AuthorVerification.EXCHANGE)) {
+        builder.and(post.author.exchangeVerified.isTrue());
+      }
+    }
     return builder;
   }
 

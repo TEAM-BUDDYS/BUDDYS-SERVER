@@ -34,7 +34,7 @@ public class SearchService {
             ? searchUsers(userId, keyword, page, size) : null,
         type == null || type == SearchType.POST ? postService.getPosts(
             userId,
-            new PostSearchCondition(keyword, null, null, null, null, null, null, null),
+            PostSearchCondition.keywordOnly(keyword),
             page,
             size
         ) : null
