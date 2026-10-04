@@ -8,15 +8,14 @@ import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.tag.entity.TagType;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
-import org.sopt.buddys.domain.user.entity.VerificationBadge;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult.OrderedTagResult;
 
 class UserProfileResponseTest {
 
-  @DisplayName("파견교 인증이 되어 있으면 학교 인증 여부와 관계없이 파견교 인증 뱃지를 반환한다")
+  @DisplayName("학교 이메일과 파견교 서류 인증 여부를 각각 반환한다")
   @Test
-  void from_exchangeVerified_returnsExchangeVerifiedBadge() {
+  void from_returnsEachVerificationStatus() {
     // given
     User user = createUser(true, true);
     UserProfileResult result = new UserProfileResult(user, List.of());
@@ -25,12 +24,13 @@ class UserProfileResponseTest {
     UserProfileResponse response = UserProfileResponse.from(result);
 
     // then
-    assertThat(response.verificationBadge()).isEqualTo(VerificationBadge.EXCHANGE_VERIFIED);
+    assertThat(response.universityEmailVerified()).isTrue();
+    assertThat(response.exchangeDocumentVerified()).isTrue();
   }
 
-  @DisplayName("학교 인증만 되어 있으면 학교 인증 뱃지를 반환한다")
+  @DisplayName("학교 이메일만 인증된 경우 각 인증 여부를 반환한다")
   @Test
-  void from_universityVerified_returnsUniversityVerifiedBadge() {
+  void from_universityEmailOnlyVerified_returnsEachVerificationStatus() {
     // given
     User user = createUser(true, false);
     UserProfileResult result = new UserProfileResult(user, List.of());
@@ -39,12 +39,13 @@ class UserProfileResponseTest {
     UserProfileResponse response = UserProfileResponse.from(result);
 
     // then
-    assertThat(response.verificationBadge()).isEqualTo(VerificationBadge.UNIVERSITY_VERIFIED);
+    assertThat(response.universityEmailVerified()).isTrue();
+    assertThat(response.exchangeDocumentVerified()).isFalse();
   }
 
-  @DisplayName("추가 인증이 없으면 소셜 로그인 뱃지를 반환한다")
+  @DisplayName("추가 인증이 없으면 모든 인증 여부를 false로 반환한다")
   @Test
-  void from_notVerified_returnsSocialLoginBadge() {
+  void from_notVerified_returnsFalseVerificationStatuses() {
     // given
     User user = createUser(false, false);
     UserProfileResult result = new UserProfileResult(user, List.of());
@@ -53,7 +54,23 @@ class UserProfileResponseTest {
     UserProfileResponse response = UserProfileResponse.from(result);
 
     // then
-    assertThat(response.verificationBadge()).isEqualTo(VerificationBadge.SOCIAL_LOGIN);
+    assertThat(response.universityEmailVerified()).isFalse();
+    assertThat(response.exchangeDocumentVerified()).isFalse();
+  }
+
+  @DisplayName("타 사용자 프로필도 학교 이메일과 파견교 서류 인증 여부를 각각 반환한다")
+  @Test
+  void publicProfile_returnsEachVerificationStatus() {
+    // given
+    User user = createUser(true, true);
+    UserProfileResult result = new UserProfileResult(user, List.of());
+
+    // when
+    UserPublicProfileResponse response = UserPublicProfileResponse.from(result);
+
+    // then
+    assertThat(response.universityEmailVerified()).isTrue();
+    assertThat(response.exchangeDocumentVerified()).isTrue();
   }
 
   @DisplayName("내 프로필은 전체 태그를 저장 순서대로 반환한다")

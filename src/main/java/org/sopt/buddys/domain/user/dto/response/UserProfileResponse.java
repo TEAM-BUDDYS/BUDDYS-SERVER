@@ -3,7 +3,6 @@ package org.sopt.buddys.domain.user.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import org.sopt.buddys.domain.user.entity.User;
-import org.sopt.buddys.domain.user.entity.VerificationBadge;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
 
 public record UserProfileResponse(
@@ -24,11 +23,18 @@ public record UserProfileResponse(
     String bio,
 
     @Schema(
-        description = "프로필에 표시할 인증 뱃지",
-        example = "SOCIAL_LOGIN",
+        description = "학교 이메일 인증 여부",
+        example = "true",
         requiredMode = Schema.RequiredMode.REQUIRED
     )
-    VerificationBadge verificationBadge,
+    boolean universityEmailVerified,
+
+    @Schema(
+        description = "파견교 서류 인증 여부",
+        example = "true",
+        requiredMode = Schema.RequiredMode.REQUIRED
+    )
+    boolean exchangeDocumentVerified,
 
     @Schema(
         description = "사용자가 지정한 순서대로 정렬된 전체 취향 태그",
@@ -44,7 +50,8 @@ public record UserProfileResponse(
         user.getDisplayNickname(),
         user.getProfileImageUrl(),
         user.getIntroduction(),
-        VerificationBadge.from(user),
+        user.isUniversityVerified(),
+        user.isExchangeVerified(),
         result.orderedTags().stream().map(OrderedTagResponse::from).toList()
     );
   }
