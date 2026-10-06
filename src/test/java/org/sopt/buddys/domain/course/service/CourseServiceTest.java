@@ -1,12 +1,14 @@
 package org.sopt.buddys.domain.course.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -153,9 +155,9 @@ class CourseServiceTest {
                 "대한항공",
                 "KE901",
                 "ICN",
-                LocalDateTime.of(2026, 9, 1, 13, 0),
+                LocalTime.of(13, 0),
                 "CDG",
-                LocalDateTime.of(2026, 9, 1, 18, 30)
+                LocalTime.of(18, 30)
             ))
         )));
 
@@ -182,6 +184,37 @@ class CourseServiceTest {
 
     Place place = placeRepository.findByGooglePlaceId("ChIJ-place-1").orElseThrow();
     assertThat(place.getName()).isEqualTo("루브르 박물관");
+  }
+
+  @DisplayName("도착 시간이 출발 시간보다 이른 야간 항공편도 저장된다")
+  @Test
+  void createCourse_overnightFlight_savesFlightTimes() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null,
+        null, null,
+        List.of(tagId), List.of(),
+        List.of(new CourseDayCommand(
+            (short) 1, null, List.of("https://example.com/a.jpg"), null, null,
+            List.of(),
+            List.of(new CourseFlightCommand(
+                "에어프랑스", "AF264", "CDG", LocalTime.of(21, 0),
+                "ICN", LocalTime.of(15, 30))))));
+
+    // when
+    Course course = courseService.createCourse(author.getId(), command);
+
+    // then
+    List<Long> courseDayIds = courseDayRepository.findAllByCourseIdOrderByDayNumberAsc(course.getId())
+        .stream().map(CourseDay::getId).toList();
+    assertThat(courseFlightRepository.findAllByCourseDayIdIn(courseDayIds))
+        .extracting("departureTime", "arrivalTime")
+        .containsExactly(tuple(LocalTime.of(21, 0), LocalTime.of(15, 30)));
   }
 
   @DisplayName("다른 유저가 이미 등록된 googlePlaceId를 다른 정보로 제출해도 기존 공유 장소 정보는 바뀌지 않는다")
@@ -528,8 +561,8 @@ class CourseServiceTest {
             List.of(new CoursePlaceCommand(
                 "ChIJ-old", "루브르 박물관", "TOURISM", null, null, (short) 0)),
             List.of(new CourseFlightCommand(
-                "대한항공", "KE901", "ICN", LocalDateTime.of(2026, 9, 1, 13, 0),
-                "CDG", LocalDateTime.of(2026, 9, 1, 18, 30))))));
+                "대한항공", "KE901", "ICN", LocalTime.of(13, 0),
+                "CDG", LocalTime.of(18, 30))))));
     Course course = courseService.createCourse(author.getId(), createCommand);
 
     UpdateCourseCommand updateCommand = new UpdateCourseCommand(
@@ -542,8 +575,8 @@ class CourseServiceTest {
             List.of(new CoursePlaceCommand(
                 "ChIJ-new", "콜로세움", "TOURISM", null, null, (short) 0)),
             List.of(new CourseFlightCommand(
-                "아시아나항공", "OZ501", "ICN", LocalDateTime.of(2026, 10, 1, 9, 0),
-                "FCO", LocalDateTime.of(2026, 10, 1, 16, 0))))));
+                "아시아나항공", "OZ501", "ICN", LocalTime.of(9, 0),
+                "FCO", LocalTime.of(16, 0))))));
 
     // when
     courseService.updateCourse(author.getId(), course.getId(), updateCommand);
@@ -729,9 +762,9 @@ class CourseServiceTest {
                 "대한항공",
                 "KE901",
                 "ICN",
-                LocalDateTime.of(2026, 9, 1, 13, 0),
+                LocalTime.of(13, 0),
                 "CDG",
-                LocalDateTime.of(2026, 9, 1, 18, 30)
+                LocalTime.of(18, 30)
             ))
         )));
     Course course = courseService.createCourse(author.getId(), command);
@@ -755,6 +788,8 @@ class CourseServiceTest {
     assertThat(result.days().get(0).places()).hasSize(1);
     assertThat(result.days().get(0).places().get(0).name()).isEqualTo("루브르 박물관");
     assertThat(result.days().get(0).flights()).hasSize(1);
+    assertThat(result.days().get(0).flights().get(0).departureTime()).isEqualTo(LocalTime.of(13, 0));
+    assertThat(result.days().get(0).flights().get(0).arrivalTime()).isEqualTo(LocalTime.of(18, 30));
     assertThat(result.viewCount()).isEqualTo(1L);
     assertThat(result.isBookmarked()).isFalse();
     assertThat(result.commentCount()).isEqualTo(0L);

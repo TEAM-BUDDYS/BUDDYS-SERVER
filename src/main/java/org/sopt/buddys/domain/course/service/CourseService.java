@@ -100,7 +100,7 @@ public class CourseService {
   public Course createCourse(Long userId, CreateCourseCommand command) {
     validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
         command.tagIds(), command.days());
-    validateDateRanges(command.startDate(), command.endDate(), command.days());
+    validateDateRanges(command.startDate(), command.endDate());
     validateDayNumbersUnique(command.days());
 
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
@@ -139,7 +139,7 @@ public class CourseService {
 
     validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
         command.tagIds(), command.days());
-    validateDateRanges(command.startDate(), command.endDate(), command.days());
+    validateDateRanges(command.startDate(), command.endDate());
     validateDayNumbersUnique(command.days());
 
     course.update(
@@ -282,34 +282,20 @@ public class CourseService {
     for (CourseFlightCommand flight : flights) {
       if (flight.airline() == null || flight.airline().isBlank()
           || flight.departureAirport() == null || flight.departureAirport().isBlank()
-          || flight.departureAt() == null
+          || flight.departureTime() == null
           || flight.arrivalAirport() == null || flight.arrivalAirport().isBlank()
-          || flight.arrivalAt() == null) {
+          || flight.arrivalTime() == null) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
     }
   }
 
-  private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseDayCommand> days) {
+  private void validateDateRanges(LocalDate startDate, LocalDate endDate) {
     if (!NullPairValidator.isValidPair(startDate, endDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     if (startDate != null && endDate.isBefore(startDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
-    }
-    for (CourseDayCommand day : days) {
-      validateFlightDateRanges(day.flights());
-    }
-  }
-
-  private void validateFlightDateRanges(List<CourseFlightCommand> flights) {
-    if (flights == null) {
-      return;
-    }
-    for (CourseFlightCommand flight : flights) {
-      if (flight.arrivalAt().isBefore(flight.departureAt())) {
-        throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
-      }
     }
   }
 
@@ -495,9 +481,9 @@ public class CourseService {
               flightCommand.airline().trim(),
               flightCommand.flightNumber() != null ? flightCommand.flightNumber().trim() : null,
               flightCommand.departureAirport().trim(),
-              flightCommand.departureAt(),
+              flightCommand.departureTime(),
               flightCommand.arrivalAirport().trim(),
-              flightCommand.arrivalAt(),
+              flightCommand.arrivalTime(),
               (short) index
           );
         })
@@ -747,9 +733,9 @@ public class CourseService {
         flight.getAirline(),
         flight.getFlightNumber(),
         flight.getDepartureAirport(),
-        flight.getDepartureAt(),
+        flight.getDepartureTime(),
         flight.getArrivalAirport(),
-        flight.getArrivalAt()
+        flight.getArrivalTime()
     );
   }
 

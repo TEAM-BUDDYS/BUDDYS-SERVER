@@ -284,9 +284,9 @@ class CourseControllerTest extends IntegrationTestSupport {
                           "airline": "대한항공",
                           "flightNumber": "KE901",
                           "departureAirport": "ICN",
-                          "departureAt": "2026-09-01T13:00:00",
+                          "departureTime": "13:00",
                           "arrivalAirport": "CDG",
-                          "arrivalAt": "2026-09-01T18:30:00"
+                          "arrivalTime": "18:30"
                         }
                       ]
                     }
