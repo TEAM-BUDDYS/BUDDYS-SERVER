@@ -5,10 +5,11 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.service.CourseService;
 import org.sopt.buddys.domain.post.service.PostService;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.sopt.buddys.domain.search.service.command.SearchType;
 import org.sopt.buddys.domain.search.service.result.SearchResult;
-import org.sopt.buddys.domain.search.service.result.UserSearchResult;
 import org.sopt.buddys.domain.search.service.result.UserSearchResult.UserSummaryResult;
+import org.sopt.buddys.domain.search.service.result.UserSearchResult;
 import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -26,17 +27,18 @@ public class SearchService {
   private final UserRepository userRepository;
   private final PostService postService;
 
-  public SearchResult search(Long userId, String keyword, int page, int size, SearchType type) {
+  public SearchResult search(Long userId, String keyword, int page, int size, SearchType type, SearchSort sort) {
     return new SearchResult(
         type == null || type == SearchType.COURSE
-            ? courseService.searchCourses(userId, keyword, page, size) : null,
+            ? courseService.searchCourses(userId, keyword, page, size, sort) : null,
         type == null || type == SearchType.USER
             ? searchUsers(userId, keyword, page, size) : null,
         type == null || type == SearchType.POST ? postService.getPosts(
             userId,
             PostSearchCondition.keywordOnly(keyword),
             page,
-            size
+            size,
+            sort
         ) : null
     );
   }

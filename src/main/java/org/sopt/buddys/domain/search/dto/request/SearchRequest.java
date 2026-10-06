@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.sopt.buddys.domain.search.service.command.SearchType;
 
 public record SearchRequest(
@@ -24,8 +25,16 @@ public record SearchRequest(
     @Schema(description = "검색 영역. 생략하면 모든 영역을 조회하고 반환합니다. 지정하면 해당 영역만 조회하고 반환합니다. 잘못된 값은 400(GLB-E001)을 반환합니다.",
         allowableValues = {"POST", "COURSE", "USER"})
     @Pattern(regexp = "POST|COURSE|USER", message = "type은 POST, COURSE, USER 중 하나여야 합니다.")
-    String type
+    String type,
+
+    @Schema(description = "정렬 기준. LATEST: 최신순, BOOKMARK: 전체 사용자의 저장 수 순. 생략 시 LATEST. USER는 항상 최신순입니다.",
+        defaultValue = "LATEST", example = "LATEST")
+    SearchSort sort
 ) {
+
+  public SearchSort sortOrDefault() {
+    return sort == null ? SearchSort.LATEST : sort;
+  }
 
   public SearchType searchType() {
     return type == null ? null : SearchType.valueOf(type);

@@ -16,6 +16,7 @@ import com.jayway.jsonpath.JsonPath;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -51,12 +52,15 @@ import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
+import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.support.IntegrationTestSupport;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -380,6 +384,10 @@ class SearchControllerTest extends IntegrationTestSupport {
             .value(false))
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'type')].schema.enum")
             .value(org.hamcrest.Matchers.contains(java.util.List.of("POST", "COURSE", "USER"))))
+        .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'sort')].schema.default")
+            .value("LATEST"))
+        .andExpect(jsonPath("$.paths['/api/v1/search'].get.parameters[?(@.name == 'sort')].schema.enum")
+            .value(org.hamcrest.Matchers.contains(java.util.List.of("LATEST", "BOOKMARK"))))
         .andExpect(jsonPath("$.components.schemas.SearchResponse.required").doesNotExist())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['200']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/search'].get.responses['400']").exists())
@@ -423,7 +431,7 @@ class SearchControllerTest extends IntegrationTestSupport {
       clearInvocations(courseRepository, userRepository, postRepository);
       var request = get("/api/v1/search")
           .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
-          .param("keyword", keyword).param("page", String.valueOf(page)).param("size", "1");
+          .param("sort", "BOOKMARK").param("keyword", keyword).param("page", String.valueOf(page)).param("size", "1");
       if (type != null) {
         request.param("type", type);
       }
@@ -461,16 +469,98 @@ class SearchControllerTest extends IntegrationTestSupport {
     }
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"LATEST", "BOOKMARK"})
+  void search_acceptsSort(String sort) throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "Paris").param("sort", sort))
+        .andExpect(status().isOk());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"INVALID", "latest", "LATEST,BOOKMARK"})
+  void search_invalidSort_returnsBadRequest(String sort) throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "Paris").param("sort", sort))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"POST,LATEST", "POST,BOOKMARK", "COURSE,LATEST", "COURSE,BOOKMARK"})
+  void searchRepository_sortIncludesZeroBookmarksAndPaginatesDeterministically(
+      String type, SearchSort sort) throws Exception {
+    User viewer = saveUser("viewer@test.com", "viewer", "조회자", AccountStatus.ACTIVE);
+    User other = saveUser("other@test.com", "other", "다른 사용자", AccountStatus.ACTIVE);
+    User author = saveUser("author@test.com", "author", "작성자", AccountStatus.ACTIVE);
+    Location location = saveLocation("France", "FR", "Paris", "파리");
+    List<Long> ids = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      Long id = type.equals("POST")
+          ? savePost(author, location, "sort fixture", "content").getId()
+          : saveCourse(author, location, "sort fixture", "content").getId();
+      ids.add(id);
+      String table = type.equals("POST") ? "post" : "course";
+      // Entries 2 and 3 share a timestamp; entry 4 is newest and has no bookmarks.
+      jdbcTemplate.update("UPDATE " + table + " SET created_at = ? WHERE id = ?",
+          LocalDateTime.of(2026, 1, i == 3 ? 3 : i + 1, 0, 0), id);
+      int count = i == 0 ? 3 : i == 4 ? 0 : 1;
+      List<User> bookmarkers = List.of(other, author, viewer);
+      for (int j = 0; j < count; j++) {
+        jdbcTemplate.update("INSERT INTO " + table
+                + "_bookmark (user_id, " + table + "_id, created_at) VALUES (?, ?, ?)",
+            bookmarkers.get(j).getId(), id, LocalDateTime.now());
+      }
+    }
+    List<Long> expected = sort == SearchSort.BOOKMARK
+        ? List.of(ids.get(0), ids.get(3), ids.get(2), ids.get(1), ids.get(4))
+        : List.of(ids.get(4), ids.get(3), ids.get(2), ids.get(1), ids.get(0));
+    List<Long> actual = new ArrayList<>();
+    for (int page = 0; page < 4; page++) {
+      var pageable = PageRequest.of(page, 2);
+      if (type.equals("POST")) {
+        var slice = postRepository.searchPosts(viewer.getId(),
+            PostSearchCondition.keywordOnly("sort fixture"),
+            sort, pageable);
+        actual.addAll(slice.getContent().stream().map(Post::getId).toList());
+        assertThat(slice.hasNext()).isEqualTo(page < 2);
+        assertThat(postRepository.countPosts(
+            PostSearchCondition.keywordOnly("sort fixture")))
+            .isEqualTo(5);
+      } else {
+        var slice = courseRepository.searchCoursesByKeyword("sort fixture", sort, pageable);
+        actual.addAll(slice.getContent().stream().map(Course::getId).toList());
+        assertThat(slice.hasNext()).isEqualTo(page < 2);
+        assertThat(courseRepository.countCoursesByKeyword("sort fixture")).isEqualTo(5);
+      }
+    }
+    assertThat(actual).containsExactlyElementsOf(expected);
+    String section = type.equals("POST") ? "posts" : "courses";
+    String idField = type.equals("POST") ? "postId" : "courseId";
+    mockMvc.perform(get("/api/v1/search")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
+            .param("keyword", "sort fixture").param("type", type).param("sort", sort.name()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data." + section + ".content[*]." + idField)
+            .value(org.hamcrest.Matchers.contains(expected.stream().map(Long::intValue).toArray())))
+        .andExpect(jsonPath("$.data." + section + ".totalElements").value(5));
+
+  }
+
   private void assertSearchQueryScope(String type, int page) {
     int courses = type == null || type.equals("COURSE") ? 1 : 0;
     int users = type == null || type.equals("USER") ? 1 : 0;
     int posts = type == null || type.equals("POST") ? 1 : 0;
-    verify(courseRepository, times(courses)).searchCoursesByKeyword(anyString(), any());
+    verify(courseRepository, times(courses)).searchCoursesByKeyword(anyString(), any(), any());
     verify(courseRepository, times(page == 0 ? courses : 0)).countCoursesByKeyword(anyString());
     verify(userRepository, times(users)).searchActiveUsersByNickname(anyString(), any(), any(), any());
     verify(userRepository, times(page == 0 ? users : 0))
         .countActiveUsersByNickname(anyString(), any(), any());
-    verify(postRepository, times(posts)).searchPosts(any(), any(), any());
+    verify(postRepository, times(posts)).searchPosts(any(), any(), any(), any());
     verify(postRepository, times(posts)).countPosts(any());
   }
 

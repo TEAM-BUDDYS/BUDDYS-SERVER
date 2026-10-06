@@ -29,19 +29,20 @@ import org.sopt.buddys.domain.post.entity.PostTag;
 import org.sopt.buddys.domain.post.repository.PostAgeConditionRepository;
 import org.sopt.buddys.domain.post.repository.PostBookmarkRepository;
 import org.sopt.buddys.domain.post.repository.PostGenderConditionRepository;
-import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostImageRepository.PostThumbnailProjection;
+import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.post.repository.PostTagRepository;
 import org.sopt.buddys.domain.post.service.command.CreatePostCommand;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
 import org.sopt.buddys.domain.post.service.command.UpdatePostCommand;
-import org.sopt.buddys.domain.post.service.result.ClosingSoonPostResult;
 import org.sopt.buddys.domain.post.service.result.ClosingSoonPostResult.ClosingSoonPostSummaryResult;
-import org.sopt.buddys.domain.post.service.result.PostDetailResult;
+import org.sopt.buddys.domain.post.service.result.ClosingSoonPostResult;
 import org.sopt.buddys.domain.post.service.result.PostBookmarkResult;
-import org.sopt.buddys.domain.post.service.result.PostListResult;
+import org.sopt.buddys.domain.post.service.result.PostDetailResult;
 import org.sopt.buddys.domain.post.service.result.PostListResult.PostSummaryResult;
+import org.sopt.buddys.domain.post.service.result.PostListResult;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.tag.service.TagTypeCountValidator;
@@ -240,10 +241,14 @@ public class PostService {
   }
 
   public PostListResult getPosts(Long userId, PostSearchCondition condition, int page, int size) {
+    return getPosts(userId, condition, page, size, SearchSort.LATEST);
+  }
+
+  public PostListResult getPosts(Long userId, PostSearchCondition condition, int page, int size, SearchSort sort) {
     validatePageRequest(page, size);
     validateSearchDateRange(condition);
 
-    Slice<Post> posts = postRepository.searchPosts(userId, condition, PageRequest.of(page, size));
+    Slice<Post> posts = postRepository.searchPosts(userId, condition, sort, PageRequest.of(page, size));
     Map<Long, String> thumbnailImageUrls = getThumbnailImageUrls(posts.getContent());
     Set<Long> bookmarkedPostIds = getBookmarkedPostIds(userId, posts.getContent());
 

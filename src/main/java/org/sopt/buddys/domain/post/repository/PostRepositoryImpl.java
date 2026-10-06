@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.post.repository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
@@ -13,9 +14,11 @@ import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostStatus;
 import org.sopt.buddys.domain.post.entity.QPost;
 import org.sopt.buddys.domain.post.entity.QPostAgeCondition;
+import org.sopt.buddys.domain.post.entity.QPostBookmark;
 import org.sopt.buddys.domain.post.entity.QPostGenderCondition;
 import org.sopt.buddys.domain.post.entity.QPostTag;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -34,13 +37,22 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
   }
 
   @Override
-  public Slice<Post> searchPosts(Long userId, PostSearchCondition condition, Pageable pageable) {
-    List<Post> posts = queryFactory
+  public Slice<Post> searchPosts(Long userId, PostSearchCondition condition, SearchSort sort, Pageable pageable) {
+    JPAQuery<Post> contentQuery = queryFactory
         .selectFrom(post)
-        .distinct()
         .join(post.country).fetchJoin()
-        .where(toPredicate(condition))
-        .orderBy(post.createdAt.desc(), post.id.desc())
+        .where(toPredicate(condition));
+
+    if (sort == SearchSort.BOOKMARK) {
+      QPostBookmark postBookmark = QPostBookmark.postBookmark;
+      contentQuery.leftJoin(postBookmark).on(postBookmark.post.eq(post))
+          .groupBy(post.id, post.country.id)
+          .orderBy(postBookmark.id.userId.count().desc(), post.createdAt.desc(), post.id.desc());
+    } else {
+      contentQuery.distinct().orderBy(post.createdAt.desc(), post.id.desc());
+    }
+
+    List<Post> posts = contentQuery
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + 1L)
         .fetch();
