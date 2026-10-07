@@ -36,6 +36,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                     "gender": "FEMALE",
                     "birthDate": "2004-10-24",
                     "bio": "안녕하세요 김버디입니다~~",
+                    "profileImageUrl": "https://example.com/profile.png",
                     "orderedTags": [
                       { "id": 27, "name": "계획형", "tagType": "TRAVEL_STYLE" },
                       { "id": 1, "name": "여행", "tagType": "ACTIVITY" },

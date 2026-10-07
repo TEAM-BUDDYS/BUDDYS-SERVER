@@ -203,12 +203,14 @@ public class User extends BaseEntity {
       String nickname,
       Gender gender,
       LocalDate birthDate,
-      String introduction
+      String introduction,
+      String profileImageUrl
   ) {
     this.nickname = nickname;
     this.gender = gender;
     this.birthDate = birthDate;
     this.introduction = introduction;
+    this.profileImageUrl = profileImageUrl;
   }
 
   public void verifyUniversity(University university) {

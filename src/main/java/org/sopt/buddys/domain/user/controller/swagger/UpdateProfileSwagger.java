@@ -22,6 +22,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
             모든 필드를 요청에 포함해야 합니다.
             태그는 전달된 orderedTagIds로 전체 교체되며,
             bio를 null로 전달하면 기존 자기소개가 삭제됩니다.
+            profileImageUrl을 null로 전달하면 기존 프로필 이미지가 삭제됩니다.
             태그 배열의 앞 3개가 대표 태그입니다.
             """
 )
@@ -42,6 +43,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                     "gender": "FEMALE",
                     "birthDate": "2004-10-24",
                     "bio": "안녕하세요 김버디입니다~~",
+                    "profileImageUrl": "https://example.com/profile.png",
                     "orderedTags": [
                       { "id": 27, "name": "계획형", "tagType": "TRAVEL_STYLE" },
                       { "id": 1, "name": "여행", "tagType": "ACTIVITY" },

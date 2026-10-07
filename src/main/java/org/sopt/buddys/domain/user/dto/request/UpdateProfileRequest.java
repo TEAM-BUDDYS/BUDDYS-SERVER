@@ -48,6 +48,15 @@ public record UpdateProfileRequest(
         String bio,
 
         @Schema(
+                description = "프로필 이미지 URL. 최대 512자. null이면 기존 프로필 이미지를 삭제합니다.",
+                example = "https://example.com/profile.png",
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                nullable = true
+        )
+        @Size(max = 512)
+        String profileImageUrl,
+
+        @Schema(
                 description = """
             드래그앤드롭으로 정렬한 전체 선택 태그 ID 목록입니다.
             카테고리와 무관하게 상위 3개가 대표 태그로 노출됩니다.
@@ -67,6 +76,7 @@ public record UpdateProfileRequest(
                 gender,
                 birthDate,
                 bio,
+                profileImageUrl,
                 orderedTagIds
         );
     }

@@ -58,7 +58,13 @@ public class UserProfileEditService {
     Map<Long, Tag> tagsById = getAndValidateTags(orderedTagIds);
 
     try {
-      user.updateProfile(command.nickname(), command.gender(), command.birthDate(), command.bio());
+      user.updateProfile(
+          command.nickname(),
+          command.gender(),
+          command.birthDate(),
+          command.bio(),
+          command.profileImageUrl()
+      );
       userRepository.flush();
     } catch (DataIntegrityViolationException exception) {
       if (!isNicknameConflict(exception)) {
