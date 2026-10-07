@@ -34,4 +34,7 @@ public class Country {
 
   @Column(name = "iso_code", nullable = false, columnDefinition = "CHAR(2)")
   private String isoCode;
+
+  @Column(name = "english_name", length = 100)
+  private String englishName;
 }

@@ -78,6 +78,60 @@ class CountryServiceTest {
         .containsExactly("Korea Test");
   }
 
+  @DisplayName("영문 국가명으로도 대소문자 구분 없이 부분 일치 검색된다")
+  @Test
+  void searchCountries_matchesEnglishName() {
+    // given
+    insertCountry("대한민국", "KR", "South Korea");
+    insertCountry("북한", "KP", "North Korea");
+    insertCountry("미국", "US", "United States");
+
+    // when
+    Slice<Country> result = countryService.searchCountries("korea", 0, 20);
+    Slice<Country> upperCaseResult = countryService.searchCountries("UNITED", 0, 20);
+
+    // then
+    assertThat(result.getContent())
+        .extracting(Country::getName)
+        .containsExactly("대한민국", "북한");
+    assertThat(upperCaseResult.getContent())
+        .extracting(Country::getName)
+        .containsExactly("미국");
+  }
+
+  @DisplayName("영문 국가명이 있어도 한글 국가명 검색은 그대로 동작한다")
+  @Test
+  void searchCountries_koreanKeywordStillMatchesWithEnglishName() {
+    // given
+    insertCountry("대한민국", "KR", "South Korea");
+    insertCountry("미국", "US", "United States");
+
+    // when
+    Slice<Country> result = countryService.searchCountries("한", 0, 20);
+
+    // then
+    assertThat(result.getContent())
+        .extracting(Country::getName)
+        .containsExactly("대한민국");
+  }
+
+  @DisplayName("영문 국가명이 없는 국가는 한글 국가명으로만 검색된다")
+  @Test
+  void searchCountries_nullEnglishName_matchesOnlyByName() {
+    // given
+    insertCountry("대한민국", "KR");
+
+    // when
+    Slice<Country> englishResult = countryService.searchCountries("korea", 0, 20);
+    Slice<Country> koreanResult = countryService.searchCountries("대한", 0, 20);
+
+    // then
+    assertThat(englishResult.getContent()).isEmpty();
+    assertThat(koreanResult.getContent())
+        .extracting(Country::getName)
+        .containsExactly("대한민국");
+  }
+
   @DisplayName("일치하는 국가가 없으면 빈 결과를 반환한다")
   @Test
   void searchCountries_noMatch_returnsEmptySlice() {
@@ -204,6 +258,15 @@ class CountryServiceTest {
 
   private void insertCountry(String name, String isoCode) {
     jdbcTemplate.update("INSERT INTO country (name, iso_code) VALUES (?, ?)", name, isoCode);
+  }
+
+  private void insertCountry(String name, String isoCode, String englishName) {
+    jdbcTemplate.update(
+        "INSERT INTO country (name, iso_code, english_name) VALUES (?, ?, ?)",
+        name,
+        isoCode,
+        englishName
+    );
   }
 
   private void cleanUp() {

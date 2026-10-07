@@ -19,9 +19,11 @@ public class CountryService {
 
   public Slice<Country> searchCountries(String keyword, int page, int size) {
     validatePageRequest(page, size);
-    return countryRepository.findByNameContainingIgnoreCaseOrderByNameAsc(
-        keyword.trim(), PageRequest.of(page, size)
-    );
+    String trimmedKeyword = keyword.trim();
+    return countryRepository
+        .findByNameContainingIgnoreCaseOrEnglishNameContainingIgnoreCaseOrderByNameAsc(
+            trimmedKeyword, trimmedKeyword, PageRequest.of(page, size)
+        );
   }
 
   public Slice<Country> getCountries(int page, int size) {
