@@ -266,9 +266,9 @@ class ChatRoomServiceTest {
         assertThat(result.canSendMessage()).isFalse();
     }
 
-    @DisplayName("상대방이 나를 차단했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @DisplayName("상대방이 나를 차단했어도 채팅방 상세 조회 시 메시지를 보낼 수 있다고 응답한다")
     @Test
-    void getChatRoom_blockedByPartner_returnsCanSendMessageFalse() {
+    void getChatRoom_blockedByPartner_returnsCanSendMessageTrue() {
         // given
         User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
         User participant = userRepository.save(
@@ -284,7 +284,7 @@ class ChatRoomServiceTest {
         ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
 
         // then
-        assertThat(result.canSendMessage()).isFalse();
+        assertThat(result.canSendMessage()).isTrue();
     }
 
     @DisplayName("내가 상대방을 신고했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
@@ -308,9 +308,9 @@ class ChatRoomServiceTest {
         assertThat(result.canSendMessage()).isFalse();
     }
 
-    @DisplayName("상대방이 나를 신고했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @DisplayName("상대방이 나를 신고했어도 채팅방 상세 조회 시 메시지를 보낼 수 있다고 응답한다")
     @Test
-    void getChatRoom_reportedByPartner_returnsCanSendMessageFalse() {
+    void getChatRoom_reportedByPartner_returnsCanSendMessageTrue() {
         // given
         User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
         User participant = userRepository.save(
@@ -326,7 +326,7 @@ class ChatRoomServiceTest {
         ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
 
         // then
-        assertThat(result.canSendMessage()).isFalse();
+        assertThat(result.canSendMessage()).isTrue();
     }
 
     @DisplayName("존재하지 않는 채팅방을 조회하면 CHAT-E002 예외가 발생한다")

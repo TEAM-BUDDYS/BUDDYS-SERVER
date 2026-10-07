@@ -133,8 +133,8 @@ public class ChatRoomService {
   }
 
   private boolean canSendMessage(Long userId, Long partnerId) {
-    return !chatUserBlockRepository.existsBlockBetween(userId, partnerId)
-        && !chatUserReportRepository.existsReportBetween(userId, partnerId);
+    return !chatUserBlockRepository.existsByBlockerIdAndBlockedId(userId, partnerId)
+        && !chatUserReportRepository.existsByReporterIdAndReportedId(userId, partnerId);
   }
 
   private void validateUserExists(Long userId) {

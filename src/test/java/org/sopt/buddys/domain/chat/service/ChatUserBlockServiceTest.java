@@ -78,7 +78,7 @@ class ChatUserBlockServiceTest {
     chatUserBlockService.blockChatPartner(user.getId(), chatRoom.getId());
 
     // then
-    assertThat(chatUserBlockRepository.existsBlockBetween(user.getId(), partner.getId())).isTrue();
+    assertThat(chatUserBlockRepository.existsByBlockerIdAndBlockedId(user.getId(), partner.getId())).isTrue();
   }
 
   @DisplayName("이미 차단한 상대방을 다시 차단해도 예외 없이 멱등하게 처리된다")
@@ -127,7 +127,7 @@ class ChatUserBlockServiceTest {
         .isInstanceOf(BaseException.class)
         .extracting(exception -> ((BaseException) exception).getErrorCode())
         .isEqualTo(UserErrorCode.USER_NOT_FOUND);
-    assertThat(chatUserBlockRepository.existsBlockBetween(user.getId(), partner.getId())).isFalse();
+    assertThat(chatUserBlockRepository.existsByBlockerIdAndBlockedId(user.getId(), partner.getId())).isFalse();
   }
 
   @DisplayName("채팅방 멤버가 아닌 사용자가 차단을 시도하면 FORBIDDEN 예외가 발생한다")

@@ -25,17 +25,6 @@ public interface ChatUserBlockRepository extends JpaRepository<ChatUserBlock, Ch
   @Query("""
       select case when count(b) > 0 then true else false end
       from ChatUserBlock b
-      where (b.blocker.id = :userId1 and b.blocked.id = :userId2)
-         or (b.blocker.id = :userId2 and b.blocked.id = :userId1)
-      """)
-  boolean existsBlockBetween(
-      @Param("userId1") Long userId1,
-      @Param("userId2") Long userId2
-  );
-
-  @Query("""
-      select case when count(b) > 0 then true else false end
-      from ChatUserBlock b
       where b.blocker.id = :blockerId
         and b.blocked.id = :blockedId
       """)

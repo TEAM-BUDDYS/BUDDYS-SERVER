@@ -12,17 +12,6 @@ public interface ChatUserReportRepository extends JpaRepository<ChatUserReport, 
   @Query("""
       select case when count(r) > 0 then true else false end
       from ChatUserReport r
-      where (r.reporter.id = :userId1 and r.reported.id = :userId2)
-         or (r.reporter.id = :userId2 and r.reported.id = :userId1)
-      """)
-  boolean existsReportBetween(
-      @Param("userId1") Long userId1,
-      @Param("userId2") Long userId2
-  );
-
-  @Query("""
-      select case when count(r) > 0 then true else false end
-      from ChatUserReport r
       where r.reporter.id = :reporterId
         and r.reported.id = :reportedId
       """)

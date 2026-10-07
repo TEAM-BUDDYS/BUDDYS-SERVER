@@ -109,22 +109,20 @@ class ChatMessageCommandServiceTest {
         .isEqualTo(ChatErrorCode.BLOCKED_CHAT_PARTNER);
   }
 
-  @DisplayName("상대방이 나를 차단했으면 그 상대방에게 메시지를 보낼 수 없다")
+  @DisplayName("상대방이 나를 차단했어도 나는 그 상대방에게 메시지를 보낼 수 있다")
   @Test
-  void sendMessage_blockedByPartner_throwsBlockedChatPartner() {
+  void sendMessage_blockedByPartner_sendsMessage() {
     // given
     User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
     User partner = userRepository.save(createUser("partner@test.com", "provider-partner", "상대방"));
     ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(user.getId(), partner.getId()).chatRoom();
     chatUserBlockService.blockChatPartner(partner.getId(), chatRoom.getId());
 
-    // when, then
-    assertThatThrownBy(() ->
-        chatMessageCommandService.sendMessage(user.getId(), chatRoom.getId(), "안녕하세요")
-    )
-        .isInstanceOf(BaseException.class)
-        .extracting(exception -> ((BaseException) exception).getErrorCode())
-        .isEqualTo(ChatErrorCode.BLOCKED_CHAT_PARTNER);
+    // when
+    chatMessageCommandService.sendMessage(user.getId(), chatRoom.getId(), "안녕하세요");
+
+    // then
+    assertThat(chatMessageRepository.count()).isOne();
   }
 
   @DisplayName("내가 상대방을 신고했으면 그 상대방과의 채팅방에 메시지를 보낼 수 없다")
@@ -145,22 +143,20 @@ class ChatMessageCommandServiceTest {
         .isEqualTo(ChatErrorCode.REPORTED_CHAT_PARTNER);
   }
 
-  @DisplayName("상대방이 나를 신고했으면 그 상대방에게 메시지를 보낼 수 없다")
+  @DisplayName("상대방이 나를 신고했어도 나는 그 상대방에게 메시지를 보낼 수 있다")
   @Test
-  void sendMessage_reportedByPartner_throwsReportedChatPartner() {
+  void sendMessage_reportedByPartner_sendsMessage() {
     // given
     User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
     User partner = userRepository.save(createUser("partner@test.com", "provider-partner", "상대방"));
     ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(user.getId(), partner.getId()).chatRoom();
     chatUserReportRepository.save(new ChatUserReport(chatRoom, partner, user, "부적절한 언행"));
 
-    // when, then
-    assertThatThrownBy(() ->
-        chatMessageCommandService.sendMessage(user.getId(), chatRoom.getId(), "안녕하세요")
-    )
-        .isInstanceOf(BaseException.class)
-        .extracting(exception -> ((BaseException) exception).getErrorCode())
-        .isEqualTo(ChatErrorCode.REPORTED_CHAT_PARTNER);
+    // when
+    chatMessageCommandService.sendMessage(user.getId(), chatRoom.getId(), "안녕하세요");
+
+    // then
+    assertThat(chatMessageRepository.count()).isOne();
   }
 
   @DisplayName("기존 채팅 내역은 차단 이후에도 그대로 유지된다")
