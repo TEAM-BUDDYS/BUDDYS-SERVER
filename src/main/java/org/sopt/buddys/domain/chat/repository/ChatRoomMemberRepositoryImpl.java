@@ -156,7 +156,6 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
         );
   }
 
-  // 내가 상대방을 차단·신고한 이후 상대방이 보낸 메시지는 나에게 보이지 않는다.
   private BooleanExpression isVisibleTo(
       Long userId,
       QChatMessage message,
