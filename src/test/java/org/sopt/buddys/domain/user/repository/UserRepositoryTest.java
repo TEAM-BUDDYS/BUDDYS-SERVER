@@ -5,11 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.auth.entity.RefreshToken;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.location.entity.University;
 import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
@@ -326,6 +328,80 @@ public class UserRepositoryTest {
     assertThat(user.getNickname()).isNotEqualTo(nicknameOwner.getNickname());
     assertThat(user.getDisplayNickname()).isEqualTo("탈퇴한 사용자");
     assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.WITHDRAWN);
+  }
+
+  @DisplayName("관심 국가와 파견 국가를 함께 조회하면 두 국가가 모두 초기화된 상태로 반환된다")
+  @Test
+  void findByIdWithCountries_fetchesBothCountries() {
+    // given
+    Country interestCountry = saveCountry(999101L, "관심 테스트 국가", "XA");
+    Country exchangeCountry = saveCountry(999102L, "파견 테스트 국가", "XB");
+    User user = userRepository.saveAndFlush(User.builder()
+        .email("countries@test.com")
+        .provider(AuthProvider.KAKAO)
+        .providerId("countries")
+        .nickname("countries")
+        .interestCountry(interestCountry)
+        .exchangeCountry(exchangeCountry)
+        .build());
+    entityManager.clear();
+
+    // when
+    User result = userRepository.findByIdWithCountries(user.getId()).orElseThrow();
+
+    // then
+    assertThat(Hibernate.isInitialized(result.getInterestCountry())).isTrue();
+    assertThat(Hibernate.isInitialized(result.getExchangeCountry())).isTrue();
+    assertThat(result.getInterestCountry().getIsoCode()).isEqualTo("XA");
+    assertThat(result.getExchangeCountry().getIsoCode()).isEqualTo("XB");
+  }
+
+  @DisplayName("파견 국가가 없는 사용자도 관심 국가와 함께 조회된다")
+  @Test
+  void findByIdWithCountries_withoutExchangeCountry() {
+    // given
+    Country interestCountry = saveCountry(999103L, "관심 테스트 국가", "XC");
+    User user = userRepository.saveAndFlush(User.builder()
+        .email("no-exchange@test.com")
+        .provider(AuthProvider.KAKAO)
+        .providerId("no-exchange")
+        .nickname("no-exchange")
+        .interestCountry(interestCountry)
+        .build());
+    entityManager.clear();
+
+    // when
+    Optional<User> result = userRepository.findByIdWithCountries(user.getId());
+
+    // then
+    assertThat(result).isPresent();
+    assertThat(result.get().getInterestCountry().getIsoCode()).isEqualTo("XC");
+    assertThat(result.get().getExchangeCountry()).isNull();
+  }
+
+  @DisplayName("탈퇴한 사용자는 국가 정보와 함께 조회되지 않는다")
+  @Test
+  void findByIdWithCountries_excludesDeletedUser() {
+    // given
+    User user = userRepository.saveAndFlush(User.ofKakao("12345", createKakaoUserInfo()));
+    user.withdraw();
+    userRepository.saveAndFlush(user);
+    entityManager.clear();
+
+    // when
+    Optional<User> result = userRepository.findByIdWithCountries(user.getId());
+
+    // then
+    assertThat(result).isEmpty();
+  }
+
+  private Country saveCountry(Long id, String name, String isoCode) {
+    entityManager.createNativeQuery("INSERT INTO country (id, name, iso_code) VALUES (?, ?, ?)")
+        .setParameter(1, id)
+        .setParameter(2, name)
+        .setParameter(3, isoCode)
+        .executeUpdate();
+    return entityManager.find(Country.class, id);
   }
 
   private KakaoUserInfo createKakaoUserInfo() {
