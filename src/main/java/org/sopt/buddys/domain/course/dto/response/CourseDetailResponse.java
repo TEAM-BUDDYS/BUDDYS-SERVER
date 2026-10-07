@@ -1,9 +1,11 @@
 package org.sopt.buddys.domain.course.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
@@ -238,14 +240,16 @@ public record CourseDetailResponse(
       @Schema(description = "출발 공항", example = "ICN", requiredMode = Schema.RequiredMode.REQUIRED)
       String departureAirport,
 
-      @Schema(description = "출발일시", example = "2026-09-01T13:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
-      LocalDateTime departureAt,
+      @Schema(description = "출발 시간 (HH:mm)", type = "string", example = "13:00", requiredMode = Schema.RequiredMode.REQUIRED)
+      @JsonFormat(pattern = "HH:mm")
+      LocalTime departureTime,
 
       @Schema(description = "도착 공항", example = "CDG", requiredMode = Schema.RequiredMode.REQUIRED)
       String arrivalAirport,
 
-      @Schema(description = "도착일시", example = "2026-09-01T18:30:00", requiredMode = Schema.RequiredMode.REQUIRED)
-      LocalDateTime arrivalAt
+      @Schema(description = "도착 시간 (HH:mm)", type = "string", example = "18:30", requiredMode = Schema.RequiredMode.REQUIRED)
+      @JsonFormat(pattern = "HH:mm")
+      LocalTime arrivalTime
   ) {
 
     private static FlightResponse from(CourseDetailResult.FlightResult flight) {
@@ -253,9 +257,9 @@ public record CourseDetailResponse(
           flight.airline(),
           flight.flightNumber(),
           flight.departureAirport(),
-          flight.departureAt(),
+          flight.departureTime(),
           flight.arrivalAirport(),
-          flight.arrivalAt()
+          flight.arrivalTime()
       );
     }
   }

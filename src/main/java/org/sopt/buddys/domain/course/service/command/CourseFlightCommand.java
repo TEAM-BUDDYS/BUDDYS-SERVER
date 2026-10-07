@@ -1,13 +1,13 @@
 package org.sopt.buddys.domain.course.service.command;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public record CourseFlightCommand(
     String airline,
     String flightNumber,
     String departureAirport,
-    LocalDateTime departureAt,
+    LocalTime departureTime,
     String arrivalAirport,
-    LocalDateTime arrivalAt
+    LocalTime arrivalTime
 ) {
 }

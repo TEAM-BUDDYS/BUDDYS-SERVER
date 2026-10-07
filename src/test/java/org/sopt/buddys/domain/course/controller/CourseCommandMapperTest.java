@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,8 +44,8 @@ class CourseCommandMapperTest {
             )),
             List.of(new CourseFlightRequest(
                 "대한항공", "KE901", "ICN",
-                LocalDateTime.of(2026, 9, 1, 13, 0),
-                "CDG", LocalDateTime.of(2026, 9, 1, 18, 30)
+                LocalTime.of(13, 0),
+                "CDG", LocalTime.of(18, 30)
             ))
         ))
     );
@@ -67,6 +67,8 @@ class CourseCommandMapperTest {
     assertThat(dayCommand.cost()).isEqualByComparingTo(BigDecimal.valueOf(22000));
     assertThat(dayCommand.places().get(0).googlePlaceId()).isEqualTo("ChIJ-place");
     assertThat(dayCommand.flights().get(0).airline()).isEqualTo("대한항공");
+    assertThat(dayCommand.flights().get(0).departureTime()).isEqualTo(LocalTime.of(13, 0));
+    assertThat(dayCommand.flights().get(0).arrivalTime()).isEqualTo(LocalTime.of(18, 30));
   }
 
   @DisplayName("days가 null이면 커맨드의 days도 null이다")

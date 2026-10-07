@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,14 +39,14 @@ public class CourseFlight {
   @Column(name = "departure_airport", nullable = false, length = 100)
   private String departureAirport;
 
-  @Column(name = "departure_at", nullable = false)
-  private LocalDateTime departureAt;
+  @Column(name = "departure_time", nullable = false)
+  private LocalTime departureTime;
 
   @Column(name = "arrival_airport", nullable = false, length = 100)
   private String arrivalAirport;
 
-  @Column(name = "arrival_at", nullable = false)
-  private LocalDateTime arrivalAt;
+  @Column(name = "arrival_time", nullable = false)
+  private LocalTime arrivalTime;
 
   @Column(name = "order_no", nullable = false)
   private Short orderNo = 0;
@@ -59,18 +60,18 @@ public class CourseFlight {
       String airline,
       String flightNumber,
       String departureAirport,
-      LocalDateTime departureAt,
+      LocalTime departureTime,
       String arrivalAirport,
-      LocalDateTime arrivalAt,
+      LocalTime arrivalTime,
       Short orderNo
   ) {
     this.courseDay = courseDay;
     this.airline = airline;
     this.flightNumber = flightNumber;
     this.departureAirport = departureAirport;
-    this.departureAt = departureAt;
+    this.departureTime = departureTime;
     this.arrivalAirport = arrivalAirport;
-    this.arrivalAt = arrivalAt;
+    this.arrivalTime = arrivalTime;
     this.orderNo = orderNo;
   }
 }

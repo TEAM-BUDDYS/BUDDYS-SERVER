@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.course.service.result;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.tag.entity.TagType;
@@ -78,9 +79,9 @@ public record CourseDetailResult(
       String airline,
       String flightNumber,
       String departureAirport,
-      LocalDateTime departureAt,
+      LocalTime departureTime,
       String arrivalAirport,
-      LocalDateTime arrivalAt
+      LocalTime arrivalTime
   ) {
   }
 
