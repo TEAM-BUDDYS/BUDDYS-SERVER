@@ -16,6 +16,7 @@ import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.event.UserWithdrawnEvent;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.result.UserCountriesResult;
 import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
 import org.sopt.buddys.domain.user.service.result.UserCoursesResult.CourseResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
@@ -86,6 +87,13 @@ public class UserService {
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
     return getProfileResult(user);
+  }
+
+  public UserCountriesResult getCountries(Long userId) {
+    User user = userRepository.findByIdWithCountries(userId)
+        .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
+
+    return new UserCountriesResult(user.getInterestCountry(), user.getExchangeCountry());
   }
 
   public boolean getNotificationSetting(Long userId) {
