@@ -35,12 +35,9 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
   private static final QChatMessage lastMessage = new QChatMessage("lastMessage");
   private static final QChatMessage newerMessage = new QChatMessage("newerMessage");
   private static final QChatMessage unreadMessage = new QChatMessage("unreadMessage");
-  private static final QChatUserBlock lastMessageBlock = new QChatUserBlock("lastMessageBlock");
-  private static final QChatUserReport lastMessageReport = new QChatUserReport("lastMessageReport");
-  private static final QChatUserBlock newerMessageBlock = new QChatUserBlock("newerMessageBlock");
-  private static final QChatUserReport newerMessageReport = new QChatUserReport("newerMessageReport");
-  private static final QChatUserBlock unreadMessageBlock = new QChatUserBlock("unreadMessageBlock");
-  private static final QChatUserReport unreadMessageReport = new QChatUserReport("unreadMessageReport");
+  private static final QChatUserBlock myBlock = new QChatUserBlock("myBlock");
+  private static final QChatUserReport myFirstReport = new QChatUserReport("myFirstReport");
+  private static final QChatUserReport myEarlierReport = new QChatUserReport("myEarlierReport");
   private static final StringExpression participantDisplayNickname = new CaseBuilder()
       .when(participant.deletedAt.isNotNull())
       .then(User.WITHDRAWN_DISPLAY_NICKNAME)
@@ -122,16 +119,39 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
             participantMember.user.id.ne(userId)
         )
         .join(participantMember.user, participant)
+        .leftJoin(myBlock)
+        .on(
+            myBlock.blocker.id.eq(userId),
+            myBlock.blocked.id.eq(participant.id)
+        )
+        .leftJoin(myFirstReport)
+        .on(
+            myFirstReport.reporter.id.eq(userId),
+            myFirstReport.reported.id.eq(participant.id),
+            JPAExpressions
+                .selectOne()
+                .from(myEarlierReport)
+                .where(
+                    myEarlierReport.reporter.id.eq(userId),
+                    myEarlierReport.reported.id.eq(participant.id),
+                    myEarlierReport.createdAt.lt(myFirstReport.createdAt)
+                        .or(
+                            myEarlierReport.createdAt.eq(myFirstReport.createdAt)
+                                .and(myEarlierReport.id.lt(myFirstReport.id))
+                        )
+                )
+                .notExists()
+        )
         .leftJoin(lastMessage)
         .on(
             lastMessage.chatRoom.eq(chatRoom),
-            isVisibleTo(userId, lastMessage, lastMessageBlock, lastMessageReport),
+            isVisibleToMe(lastMessage),
             JPAExpressions
                 .selectOne()
                 .from(newerMessage)
                 .where(
                     newerMessage.chatRoom.eq(chatRoom),
-                    isVisibleTo(userId, newerMessage, newerMessageBlock, newerMessageReport),
+                    isVisibleToMe(newerMessage),
                     newerMessage.createdAt.gt(lastMessage.createdAt)
                         .or(
                             newerMessage.createdAt.eq(lastMessage.createdAt)
@@ -150,40 +170,20 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
         .where(
             unreadMessage.chatRoom.eq(chatRoom),
             unreadMessage.sender.id.ne(userId),
-            isVisibleTo(userId, unreadMessage, unreadMessageBlock, unreadMessageReport),
+            isVisibleToMe(unreadMessage),
             myMember.lastReadMessageId.isNull()
                 .or(unreadMessage.id.gt(myMember.lastReadMessageId))
         );
   }
 
-  private BooleanExpression isVisibleTo(
-      Long userId,
-      QChatMessage message,
-      QChatUserBlock block,
-      QChatUserReport report
-  ) {
-
+  private BooleanExpression isVisibleToMe(QChatMessage message) {
     return message.sender.id.ne(participant.id)
         .or(
-            JPAExpressions
-                .selectOne()
-                .from(block)
-                .where(
-                    block.blocker.id.eq(userId),
-                    block.blocked.id.eq(participant.id),
-                    block.createdAt.lt(message.createdAt)
-                )
-                .notExists()
+            myBlock.createdAt.isNull()
+                .or(message.createdAt.loe(myBlock.createdAt))
                 .and(
-                    JPAExpressions
-                        .selectOne()
-                        .from(report)
-                        .where(
-                            report.reporter.id.eq(userId),
-                            report.reported.id.eq(participant.id),
-                            report.createdAt.lt(message.createdAt)
-                        )
-                        .notExists()
+                    myFirstReport.createdAt.isNull()
+                        .or(message.createdAt.loe(myFirstReport.createdAt))
                 )
         );
   }
