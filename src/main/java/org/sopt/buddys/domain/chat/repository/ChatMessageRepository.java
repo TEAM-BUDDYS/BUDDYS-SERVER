@@ -18,6 +18,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             join fetch m.sender
             where m.chatRoom.id = :chatRoomId
               and (
+                :partnerMessagesHiddenAfter is null
+                or m.sender.id <> :partnerId
+                or m.createdAt <= :partnerMessagesHiddenAfter
+              )
+              and (
                 :cursorSentAt is null
                 or m.createdAt < :cursorSentAt
                 or (
@@ -31,6 +36,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             @Param("chatRoomId") Long chatRoomId,
             @Param("cursorSentAt") LocalDateTime cursorSentAt,
             @Param("cursorMessageId") Long cursorMessageId,
+            @Param("partnerId") Long partnerId,
+            @Param("partnerMessagesHiddenAfter") LocalDateTime partnerMessagesHiddenAfter,
             Pageable pageable
     );
 }

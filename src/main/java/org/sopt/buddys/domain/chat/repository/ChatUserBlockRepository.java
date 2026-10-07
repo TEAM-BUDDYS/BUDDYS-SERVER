@@ -14,12 +14,13 @@ public interface ChatUserBlockRepository extends JpaRepository<ChatUserBlock, Ch
   @Modifying
   @Query(value = """
       INSERT INTO chat_user_block (blocker_id, blocked_id, created_at)
-      VALUES (:blockerId, :blockedId, CURRENT_TIMESTAMP(6))
+      VALUES (:blockerId, :blockedId, :createdAt)
       ON DUPLICATE KEY UPDATE created_at = created_at
       """, nativeQuery = true)
   int insertOrKeep(
       @Param("blockerId") Long blockerId,
-      @Param("blockedId") Long blockedId
+      @Param("blockedId") Long blockedId,
+      @Param("createdAt") LocalDateTime createdAt
   );
 
   @Query("""

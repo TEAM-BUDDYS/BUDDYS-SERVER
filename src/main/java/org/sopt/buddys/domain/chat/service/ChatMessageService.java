@@ -2,6 +2,8 @@ package org.sopt.buddys.domain.chat.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.code.ChatErrorCode;
@@ -10,6 +12,8 @@ import org.sopt.buddys.domain.chat.entity.ChatRoomMemberId;
 import org.sopt.buddys.domain.chat.repository.ChatMessageRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
+import org.sopt.buddys.domain.chat.repository.ChatUserReportRepository;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
@@ -32,6 +36,8 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChatUserBlockRepository chatUserBlockRepository;
+    private final ChatUserReportRepository chatUserReportRepository;
     private final UserRepository userRepository;
 
     public ChatMessageListResult getMessages(
@@ -47,11 +53,17 @@ public class ChatMessageService {
         validateCursor(cursorSentAt, cursorMessageId);
         validateChatRoomAccess(userId, chatRoomId);
 
+        Long partnerId = chatRoomMemberRepository.findOtherMemberUserId(chatRoomId, userId)
+                .orElse(null);
+        LocalDateTime partnerMessagesHiddenAfter = findPartnerMessagesHiddenAfter(userId, partnerId);
+
         Pageable pageable = PageRequest.of(0, size + 1);
         List<ChatMessage> messages = chatMessageRepository.findMessagesByChatRoomId(
                 chatRoomId,
                 cursorSentAt,
                 cursorMessageId,
+                partnerId,
+                partnerMessagesHiddenAfter,
                 pageable
         );
         boolean hasNext = messages.size() > size;
@@ -85,6 +97,20 @@ public class ChatMessageService {
                 nextCursorMessage == null ? null : nextCursorMessage.getId(),
                 hasNext
         );
+    }
+
+    private LocalDateTime findPartnerMessagesHiddenAfter(Long userId, Long partnerId) {
+        if (partnerId == null) {
+            return null;
+        }
+
+        return Stream.of(
+                        chatUserBlockRepository.findBlockedAt(userId, partnerId),
+                        chatUserReportRepository.findFirstReportedAt(userId, partnerId)
+                )
+                .flatMap(Optional::stream)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
     }
 
     private boolean isRead(
