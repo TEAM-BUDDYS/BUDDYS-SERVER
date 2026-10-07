@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,6 +24,7 @@ import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
 import org.sopt.buddys.domain.post.repository.PostRepository;
 import org.sopt.buddys.domain.tag.entity.TagType;
@@ -34,6 +36,7 @@ import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.event.UserWithdrawnEvent;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.domain.user.repository.UserTagRepository;
+import org.sopt.buddys.domain.user.service.result.UserCountriesResult;
 import org.sopt.buddys.domain.user.service.result.UserCoursesResult;
 import org.sopt.buddys.domain.user.service.result.UserPostsResult;
 import org.sopt.buddys.domain.user.service.result.UserProfileResult;
@@ -337,6 +340,60 @@ class UserServiceTest {
 
     // then
     assertThat(result).isTrue();
+  }
+
+  @DisplayName("국가 조회는 로그인한 사용자의 관심 국가와 파견 국가를 반환한다")
+  @Test
+  void getCountries_returnsInterestAndExchangeCountry() {
+    // given
+    Long userId = 1L;
+    Country france = mock(Country.class);
+    Country germany = mock(Country.class);
+    User user = baseUserBuilder(userId)
+        .interestCountry(france)
+        .exchangeCountry(germany)
+        .build();
+    given(userRepository.findByIdWithCountries(userId)).willReturn(Optional.of(user));
+
+    // when
+    UserCountriesResult result = userService.getCountries(userId);
+
+    // then
+    assertThat(result.interestCountry()).isSameAs(france);
+    assertThat(result.exchangeCountry()).isSameAs(germany);
+  }
+
+  @DisplayName("국가 조회 시 파견 국가가 없으면 파견 국가를 null로 반환한다")
+  @Test
+  void getCountries_withoutExchangeCountry_returnsNullExchangeCountry() {
+    // given
+    Long userId = 1L;
+    Country france = mock(Country.class);
+    User user = baseUserBuilder(userId)
+        .interestCountry(france)
+        .build();
+    given(userRepository.findByIdWithCountries(userId)).willReturn(Optional.of(user));
+
+    // when
+    UserCountriesResult result = userService.getCountries(userId);
+
+    // then
+    assertThat(result.interestCountry()).isSameAs(france);
+    assertThat(result.exchangeCountry()).isNull();
+  }
+
+  @DisplayName("국가 조회 시 사용자가 없거나 탈퇴했으면 USER_NOT_FOUND 예외가 발생한다")
+  @Test
+  void getCountries_userNotFound_throwsException() {
+    // given
+    Long userId = 1L;
+    given(userRepository.findByIdWithCountries(userId)).willReturn(Optional.empty());
+
+    // when & then
+    assertThatThrownBy(() -> userService.getCountries(userId))
+        .isInstanceOf(BaseException.class)
+        .extracting(exception -> ((BaseException) exception).getErrorCode())
+        .isEqualTo(UserErrorCode.USER_NOT_FOUND);
   }
 
   @DisplayName("알림 설정 조회는 로그인한 사용자의 알림 설정 여부를 반환한다")

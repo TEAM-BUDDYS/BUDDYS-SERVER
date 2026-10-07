@@ -48,6 +48,16 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
       """)
   Optional<User> findByIdWithExchangeCountry(@Param("userId") Long userId);
 
+  @Query("""
+      select u
+      from User u
+      left join fetch u.interestCountry
+      left join fetch u.exchangeCountry
+      where u.id = :userId
+        and u.deletedAt is null
+      """)
+  Optional<User> findByIdWithCountries(@Param("userId") Long userId);
+
   boolean existsByIdAndDeletedAtIsNull(Long id);
 
   boolean existsByNicknameAndIdNot(String nickname, Long id);

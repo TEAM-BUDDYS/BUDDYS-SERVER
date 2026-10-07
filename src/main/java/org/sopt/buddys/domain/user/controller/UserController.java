@@ -7,6 +7,7 @@ import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.user.controller.swagger.CheckNicknameAvailabilitySwagger;
 import org.sopt.buddys.domain.user.controller.swagger.CompleteOnboardingSwagger;
+import org.sopt.buddys.domain.user.controller.swagger.GetMyCountriesSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyCoursesSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyPostsSwagger;
 import org.sopt.buddys.domain.user.controller.swagger.GetMyProfileSwagger;
@@ -26,6 +27,7 @@ import org.sopt.buddys.domain.user.dto.request.UpdateNotificationSettingRequest;
 import org.sopt.buddys.domain.user.dto.response.NotificationSettingResponse;
 import org.sopt.buddys.domain.user.dto.response.OnboardingResponse;
 import org.sopt.buddys.domain.user.dto.response.ProfileEditResponse;
+import org.sopt.buddys.domain.user.dto.response.UserCountriesResponse;
 import org.sopt.buddys.domain.user.dto.response.UserCoursesResponse;
 import org.sopt.buddys.domain.user.dto.response.UserPostsResponse;
 import org.sopt.buddys.domain.user.dto.response.UserProfileResponse;
@@ -116,6 +118,18 @@ public class UserController {
         new NicknameAvailabilityResponse(
             userProfileEditService.isNicknameAvailable(userId, nickname)
         )
+    );
+  }
+
+  @GetMyCountriesSwagger
+  @GetMapping("/me/countries")
+  public BaseResponse<UserCountriesResponse> getMyCountries(
+      @Parameter(hidden = true)
+      @LoginUser Long userId
+  ) {
+    return BaseResponse.success(
+        GlobalSuccessCode.OK,
+        UserCountriesResponse.from(userService.getCountries(userId))
     );
   }
 
