@@ -19,6 +19,7 @@ import org.sopt.buddys.domain.course.service.result.CourseSearchResult;
 import org.sopt.buddys.domain.post.service.PostService;
 import org.sopt.buddys.domain.post.service.command.PostSearchCondition;
 import org.sopt.buddys.domain.post.service.result.PostListResult;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.sopt.buddys.domain.search.service.command.SearchType;
 import org.sopt.buddys.domain.user.entity.AccountStatus;
 import org.sopt.buddys.domain.user.repository.UserRepository;
@@ -34,8 +35,13 @@ class SearchServiceTest {
   @Mock private PostService postService;
 
   @ParameterizedTest(name = "type={0}, page={1}: 선택 영역만 조회하고 첫 페이지에서만 사용자 count한다")
-  @CsvSource({",0", ",2", "POST,0", "POST,2", "COURSE,0", "COURSE,2", "USER,0", "USER,2"})
-  void search_queriesOnlySelectedSections(SearchType type, int page) {
+  @CsvSource({
+      ",0,LATEST", ",2,LATEST", "POST,0,LATEST", "POST,2,LATEST",
+      "COURSE,0,LATEST", "COURSE,2,LATEST", "USER,0,LATEST", "USER,2,LATEST",
+      ",0,BOOKMARK", ",2,BOOKMARK", "POST,0,BOOKMARK", "POST,2,BOOKMARK",
+      "COURSE,0,BOOKMARK", "COURSE,2,BOOKMARK", "USER,0,BOOKMARK", "USER,2,BOOKMARK"
+  })
+  void search_queriesOnlySelectedSections(SearchType type, int page, SearchSort sort) {
     var pageable = PageRequest.of(page, 3);
     var condition = PostSearchCondition.keywordOnly("Paris");
     assertThat(condition).isEqualTo(
@@ -43,10 +49,10 @@ class SearchServiceTest {
     var courses = new CourseSearchResult(new CourseListResult(List.of(), page, 3, false), page == 0 ? 8L : null);
     var posts = new PostListResult(List.of(), page, 3, false, 7);
     if (type == null || type == SearchType.COURSE) {
-      given(courseService.searchCourses(1L, "Paris", page, 3)).willReturn(courses);
+      given(courseService.searchCourses(1L, "Paris", page, 3, sort)).willReturn(courses);
     }
     if (type == null || type == SearchType.POST) {
-      given(postService.getPosts(1L, condition, page, 3)).willReturn(posts);
+      given(postService.getPosts(1L, condition, page, 3, sort)).willReturn(posts);
     }
     if (type == null || type == SearchType.USER) {
       given(userRepository.searchActiveUsersByNickname("Paris", 1L, AccountStatus.ACTIVE, pageable))
@@ -57,18 +63,18 @@ class SearchServiceTest {
       }
     }
 
-    var result = searchService.search(1L, "Paris", page, 3, type);
+    var result = searchService.search(1L, "Paris", page, 3, type, sort);
 
     if (type == null || type == SearchType.COURSE) {
       assertThat(result.courses()).isSameAs(courses);
-      verify(courseService).searchCourses(1L, "Paris", page, 3);
+      verify(courseService).searchCourses(1L, "Paris", page, 3, sort);
     } else {
       assertThat(result.courses()).isNull();
       verifyNoInteractions(courseService);
     }
     if (type == null || type == SearchType.POST) {
       assertThat(result.posts()).isSameAs(posts);
-      verify(postService).getPosts(1L, condition, page, 3);
+      verify(postService).getPosts(1L, condition, page, 3, sort);
     } else {
       assertThat(result.posts()).isNull();
       verifyNoInteractions(postService);
