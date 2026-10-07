@@ -113,6 +113,14 @@ public class ChatRoomService {
     return chatRoomMemberRepository.findActiveUserIdsByChatRoomId(chatRoomId);
   }
 
+  public List<Long> getMessageRecipientIds(Long chatRoomId, Long senderId) {
+    // 전송자를 차단·신고한 멤버에게는 전송자의 메시지를 전달하지 않는다.
+    return getChatRoomMemberIds(chatRoomId)
+        .stream()
+        .filter(memberId -> memberId.equals(senderId) || canSendMessage(memberId, senderId))
+        .toList();
+  }
+
   public ChatRoomResult getChatRoom(
       Long userId,
       Long chatRoomId

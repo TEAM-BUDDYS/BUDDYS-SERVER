@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.chat.controller;
 
 import jakarta.validation.Valid;
 import java.security.Principal;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.dto.request.ChatMessageSendRequest;
@@ -30,7 +31,7 @@ import org.springframework.validation.annotation.Validated;
 @RequiredArgsConstructor
 public class ChatMessageWebSocketController {
 
-  private static final String CHAT_ROOM_TOPIC_PREFIX = "/sub/chat-rooms/";
+  private static final String CHAT_ROOM_USER_DESTINATION_PREFIX = "/sub/chat-rooms/";
   private static final String CHAT_ROOM_LIST_USER_DESTINATION = "/sub/chat-room-list";
 
   private final ChatMessageCommandService chatMessageCommandService;
@@ -52,12 +53,9 @@ public class ChatMessageWebSocketController {
         request.content()
     );
 
-    messagingTemplate.convertAndSend(
-        CHAT_ROOM_TOPIC_PREFIX + chatRoomId,
-        ChatMessageEventResponse.from(result)
-    );
-
-    sendChatRoomListUpdateToMembers(chatRoomId);
+    List<Long> recipientIds = chatRoomService.getMessageRecipientIds(chatRoomId, userId);
+    sendToUsers(recipientIds, chatRoomId, ChatMessageEventResponse.from(result));
+    recipientIds.forEach(recipientId -> sendChatRoomListUpdate(recipientId, chatRoomId));
   }
 
   @MessageMapping("/chat-rooms/{chatRoomId}/read")
@@ -74,17 +72,26 @@ public class ChatMessageWebSocketController {
         request.lastReadMessageId()
     );
 
-    messagingTemplate.convertAndSend(
-        CHAT_ROOM_TOPIC_PREFIX + chatRoomId,
+    sendToUsers(
+        chatRoomService.getChatRoomMemberIds(chatRoomId),
+        chatRoomId,
         ChatReadEventResponse.from(result)
     );
 
     sendChatRoomListUpdate(userId, chatRoomId);
   }
 
-  private void sendChatRoomListUpdateToMembers(Long chatRoomId) {
-    chatRoomService.getChatRoomMemberIds(chatRoomId)
-        .forEach(memberId -> sendChatRoomListUpdate(memberId, chatRoomId));
+  private void sendToUsers(
+      List<Long> userIds,
+      Long chatRoomId,
+      Object payload
+  ) {
+
+    userIds.forEach(userId -> messagingTemplate.convertAndSendToUser(
+        userId.toString(),
+        CHAT_ROOM_USER_DESTINATION_PREFIX + chatRoomId,
+        payload
+    ));
   }
 
   private void sendChatRoomListUpdate(
