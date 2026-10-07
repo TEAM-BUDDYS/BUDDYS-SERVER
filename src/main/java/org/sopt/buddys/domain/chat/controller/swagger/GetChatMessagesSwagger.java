@@ -16,7 +16,11 @@ import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Operation(summary = "채팅 메시지 목록 조회", description = "채팅방의 메시지 목록을 커서 기반으로 조회합니다.")
+@Operation(
+    summary = "채팅 메시지 목록 조회",
+    description = "채팅방의 메시지 목록을 커서 기반으로 조회합니다. "
+        + "내가 상대방을 차단했거나 신고한 경우, 그 이후 상대방이 보낸 메시지는 목록에서 제외됩니다."
+)
 @ApiResponses({
     @ApiResponse(responseCode = "200", description = "채팅 메시지 목록 조회 성공"),
     @ApiResponse(
