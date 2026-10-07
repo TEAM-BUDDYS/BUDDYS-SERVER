@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.chat.repository;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.DateTimeExpression;
 import com.querydsl.core.types.dsl.Expressions;
@@ -16,6 +17,8 @@ import java.util.Optional;
 import org.sopt.buddys.domain.chat.entity.QChatMessage;
 import org.sopt.buddys.domain.chat.entity.QChatRoom;
 import org.sopt.buddys.domain.chat.entity.QChatRoomMember;
+import org.sopt.buddys.domain.chat.entity.QChatUserBlock;
+import org.sopt.buddys.domain.chat.entity.QChatUserReport;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository.ChatRoomListProjection;
 import org.sopt.buddys.domain.user.entity.QUser;
 import org.sopt.buddys.domain.user.entity.User;
@@ -32,6 +35,12 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
   private static final QChatMessage lastMessage = new QChatMessage("lastMessage");
   private static final QChatMessage newerMessage = new QChatMessage("newerMessage");
   private static final QChatMessage unreadMessage = new QChatMessage("unreadMessage");
+  private static final QChatUserBlock lastMessageBlock = new QChatUserBlock("lastMessageBlock");
+  private static final QChatUserReport lastMessageReport = new QChatUserReport("lastMessageReport");
+  private static final QChatUserBlock newerMessageBlock = new QChatUserBlock("newerMessageBlock");
+  private static final QChatUserReport newerMessageReport = new QChatUserReport("newerMessageReport");
+  private static final QChatUserBlock unreadMessageBlock = new QChatUserBlock("unreadMessageBlock");
+  private static final QChatUserReport unreadMessageReport = new QChatUserReport("unreadMessageReport");
   private static final StringExpression participantDisplayNickname = new CaseBuilder()
       .when(participant.deletedAt.isNotNull())
       .then(User.WITHDRAWN_DISPLAY_NICKNAME)
@@ -116,11 +125,13 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
         .leftJoin(lastMessage)
         .on(
             lastMessage.chatRoom.eq(chatRoom),
+            isVisibleTo(userId, lastMessage, lastMessageBlock, lastMessageReport),
             JPAExpressions
                 .selectOne()
                 .from(newerMessage)
                 .where(
                     newerMessage.chatRoom.eq(chatRoom),
+                    isVisibleTo(userId, newerMessage, newerMessageBlock, newerMessageReport),
                     newerMessage.createdAt.gt(lastMessage.createdAt)
                         .or(
                             newerMessage.createdAt.eq(lastMessage.createdAt)
@@ -139,8 +150,42 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
         .where(
             unreadMessage.chatRoom.eq(chatRoom),
             unreadMessage.sender.id.ne(userId),
+            isVisibleTo(userId, unreadMessage, unreadMessageBlock, unreadMessageReport),
             myMember.lastReadMessageId.isNull()
                 .or(unreadMessage.id.gt(myMember.lastReadMessageId))
+        );
+  }
+
+  // 내가 상대방을 차단·신고한 이후 상대방이 보낸 메시지는 나에게 보이지 않는다.
+  private BooleanExpression isVisibleTo(
+      Long userId,
+      QChatMessage message,
+      QChatUserBlock block,
+      QChatUserReport report
+  ) {
+
+    return message.sender.id.ne(participant.id)
+        .or(
+            JPAExpressions
+                .selectOne()
+                .from(block)
+                .where(
+                    block.blocker.id.eq(userId),
+                    block.blocked.id.eq(participant.id),
+                    block.createdAt.lt(message.createdAt)
+                )
+                .notExists()
+                .and(
+                    JPAExpressions
+                        .selectOne()
+                        .from(report)
+                        .where(
+                            report.reporter.id.eq(userId),
+                            report.reported.id.eq(participant.id),
+                            report.createdAt.lt(message.createdAt)
+                        )
+                        .notExists()
+                )
         );
   }
 
