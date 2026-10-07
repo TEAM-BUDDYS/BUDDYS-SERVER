@@ -113,6 +113,13 @@ public class ChatRoomService {
     return chatRoomMemberRepository.findActiveUserIdsByChatRoomId(chatRoomId);
   }
 
+  public List<Long> getMessageRecipientIds(Long chatRoomId, Long senderId) {
+    return getChatRoomMemberIds(chatRoomId)
+        .stream()
+        .filter(memberId -> memberId.equals(senderId) || canSendMessage(memberId, senderId))
+        .toList();
+  }
+
   public ChatRoomResult getChatRoom(
       Long userId,
       Long chatRoomId
@@ -133,8 +140,8 @@ public class ChatRoomService {
   }
 
   private boolean canSendMessage(Long userId, Long partnerId) {
-    return !chatUserBlockRepository.existsBlockBetween(userId, partnerId)
-        && !chatUserReportRepository.existsReportBetween(userId, partnerId);
+    return !chatUserBlockRepository.existsByBlockerIdAndBlockedId(userId, partnerId)
+        && !chatUserReportRepository.existsByReporterIdAndReportedId(userId, partnerId);
   }
 
   private void validateUserExists(Long userId) {

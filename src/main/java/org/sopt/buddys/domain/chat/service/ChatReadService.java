@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.chat.service;
 
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoomMember;
@@ -22,6 +23,7 @@ public class ChatReadService {
   private final ChatRoomRepository chatRoomRepository;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
   private final ChatMessageRepository chatMessageRepository;
+  private final ChatMessageVisibilityService chatMessageVisibilityService;
   private final UserRepository userRepository;
 
   @Transactional
@@ -35,7 +37,7 @@ public class ChatReadService {
     validateLastReadMessageId(lastReadMessageId);
 
     ChatRoomMember chatRoomMember = getChatRoomMember(userId, chatRoomId);
-    validateLastReadMessage(chatRoomId, lastReadMessageId);
+    validateLastReadMessage(userId, chatRoomId, lastReadMessageId);
     chatRoomMember.updateLastReadMessageId(lastReadMessageId);
 
     return new ChatReadResult(
@@ -61,11 +63,22 @@ public class ChatReadService {
   }
 
   private void validateLastReadMessage(
+      Long userId,
       Long chatRoomId,
       Long lastReadMessageId
   ) {
 
-    if (!chatMessageRepository.existsByIdAndChatRoomId(lastReadMessageId, chatRoomId)) {
+    Long partnerId = chatRoomMemberRepository.findOtherMemberUserId(chatRoomId, userId)
+        .orElse(null);
+    LocalDateTime partnerMessagesHiddenAfter = chatMessageVisibilityService
+        .findPartnerMessagesHiddenAfter(userId, partnerId);
+
+    if (!chatMessageRepository.existsVisibleMessage(
+        lastReadMessageId,
+        chatRoomId,
+        partnerId,
+        partnerMessagesHiddenAfter
+    )) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
   }

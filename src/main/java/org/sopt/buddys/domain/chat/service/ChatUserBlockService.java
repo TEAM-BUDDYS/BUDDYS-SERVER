@@ -8,6 +8,7 @@ import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
 import org.sopt.buddys.domain.user.code.UserErrorCode;
 import org.sopt.buddys.domain.user.repository.UserRepository;
+import org.sopt.buddys.global.common.TimeConverter;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class ChatUserBlockService {
     Long partnerId = getChatPartnerId(userId, chatRoomId);
     chatRoomRepository.findByIdForUpdate(chatRoomId)
         .orElseThrow(() -> chatRoomAccessException(chatRoomId));
-    chatUserBlockRepository.insertOrKeep(userId, partnerId);
+    chatUserBlockRepository.insertOrKeep(userId, partnerId, TimeConverter.now());
   }
 
   private void validateUserExists(Long userId) {

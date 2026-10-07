@@ -113,7 +113,7 @@ class ChatMessageBlockConcurrencyTest {
       blocker.get(5, TimeUnit.SECONDS);
 
       // then: 락 해제 후에야 차단이 반영된다
-      assertThat(chatUserBlockRepository.existsBlockBetween(user.getId(), partner.getId())).isTrue();
+      assertThat(chatUserBlockRepository.existsByBlockerIdAndBlockedId(partner.getId(), user.getId())).isTrue();
     } finally {
       executorService.shutdownNow();
     }

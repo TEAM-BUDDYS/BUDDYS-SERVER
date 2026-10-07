@@ -55,11 +55,11 @@ public class ChatMessageCommandService {
       return;
     }
 
-    if (chatUserBlockRepository.existsBlockBetween(userId, partnerId)) {
+    if (chatUserBlockRepository.existsByBlockerIdAndBlockedId(userId, partnerId)) {
       throw new BaseException(ChatErrorCode.BLOCKED_CHAT_PARTNER);
     }
 
-    if (chatUserReportRepository.existsReportBetween(userId, partnerId)) {
+    if (chatUserReportRepository.existsByReporterIdAndReportedId(userId, partnerId)) {
       throw new BaseException(ChatErrorCode.REPORTED_CHAT_PARTNER);
     }
   }
