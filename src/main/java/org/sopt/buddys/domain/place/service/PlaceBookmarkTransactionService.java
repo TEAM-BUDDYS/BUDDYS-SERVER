@@ -20,6 +20,12 @@ public class PlaceBookmarkTransactionService {
   }
 
   @Transactional
+  public void updatePlaceAddress(Long placeId, String address) {
+    placeRepository.findById(placeId)
+        .ifPresent(place -> place.updateAddress(address));
+  }
+
+  @Transactional
   public void saveBookmark(Long userId, Long placeId) {
     placeBookmarkRepository.insertOrKeep(userId, placeId);
   }

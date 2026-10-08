@@ -64,6 +64,26 @@ class PlaceBookmarkTransactionServiceTest {
     userRepository.deleteAllInBatch();
   }
 
+  @DisplayName("장소 주소를 갱신하면 캐시된 장소의 주소가 변경된다")
+  @Test
+  void updatePlaceAddress_updatesCachedPlaceAddress() {
+    // given
+    Place place = placeRepository.save(Place.builder()
+        .googlePlaceId("ChIJN1t_tDeuEmsRUsoyG83frY4")
+        .name("루브르 박물관")
+        .category(PlaceCategory.TOURISM)
+        .latitude(new BigDecimal("48.8606"))
+        .longitude(new BigDecimal("2.3376"))
+        .build());
+
+    // when
+    placeBookmarkTransactionService.updatePlaceAddress(place.getId(), "프랑스 파리");
+
+    // then
+    assertThat(placeRepository.findById(place.getId()).orElseThrow().getAddress())
+        .isEqualTo("프랑스 파리");
+  }
+
   @DisplayName("같은 장소를 반복 저장해도 북마크 한 건만 생성된다")
   @Test
   void saveBookmark_repeatedCalls_areIdempotent() {
