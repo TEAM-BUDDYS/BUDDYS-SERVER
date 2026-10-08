@@ -60,7 +60,7 @@ public class ChatRoomService {
     ChatRoom chatRoom = chatRoomRepository.findByDirectChatKey(directChatKey)
         .orElseGet(() -> createChatRoom(userId, participantUserId, directChatKey));
 
-    return new ChatRoomResult(chatRoom, participant, canSendMessage(userId, participantUserId));
+    return toChatRoomResult(userId, chatRoom, participant);
   }
 
   public ChatRoomListResult getChatRooms(
@@ -131,11 +131,20 @@ public class ChatRoomService {
         chatRoomMemberRepository.findChatRoomDetailByIdAndUserId(chatRoomId, userId)
             .orElseThrow(() -> chatRoomAccessException(chatRoomId));
 
-    User participant = chatRoomDetail.getParticipant();
+    return toChatRoomResult(userId, chatRoomDetail.getChatRoom(), chatRoomDetail.getParticipant());
+  }
+
+  private ChatRoomResult toChatRoomResult(
+      Long userId,
+      ChatRoom chatRoom,
+      User participant
+  ) {
+
     return new ChatRoomResult(
-        chatRoomDetail.getChatRoom(),
+        chatRoom,
         participant,
-        canSendMessage(userId, participant.getId())
+        chatUserBlockRepository.existsByBlockerIdAndBlockedId(userId, participant.getId()),
+        chatUserReportRepository.existsByReporterIdAndReportedId(userId, participant.getId())
     );
   }
 

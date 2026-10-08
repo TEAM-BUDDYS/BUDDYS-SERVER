@@ -6,6 +6,11 @@ import org.sopt.buddys.domain.user.entity.User;
 public record ChatRoomResult(
     ChatRoom chatRoom,
     User participant,
-    boolean canSendMessage
+    boolean hasBlocked,
+    boolean hasReported
 ) {
+
+  public boolean canSendMessage() {
+    return !hasBlocked && !hasReported;
+  }
 }
