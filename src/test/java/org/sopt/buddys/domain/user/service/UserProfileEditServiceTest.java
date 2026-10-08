@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -45,6 +46,9 @@ class UserProfileEditServiceTest {
 
   @Mock
   private TagRepository tagRepository;
+
+  @Mock
+  private ProfileImageUrlValidator profileImageUrlValidator;
 
   @DisplayName("프로필과 카테고리별 태그를 함께 수정한다")
   @Test
@@ -133,6 +137,42 @@ class UserProfileEditServiceTest {
     // then
     assertThat(response.nickname()).isEqualTo("기존닉네임");
     assertThat(response.profileImageUrl()).isEqualTo("https://example.com/old-profile.png");
+  }
+
+  @DisplayName("허용되지 않는 프로필 이미지 URL이면 프로필을 수정하지 않는다")
+  @Test
+  void updateProfile_withInvalidProfileImageUrl_rejectsBeforeMutation() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId);
+    Tag activity = createTag(1L, "여행", TagType.ACTIVITY);
+    Tag interest = createTag(13L, "자연", TagType.INTEREST);
+    Tag travelStyle = createTag(27L, "계획형", TagType.TRAVEL_STYLE);
+    UpdateProfileCommand command = new UpdateProfileCommand(
+        "새닉네임",
+        Gender.MALE,
+        LocalDate.of(2001, 2, 3),
+        "새로운 자기소개",
+        "https://attacker.example/pixel.png",
+        List.of(27L, 1L, 13L)
+    );
+
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.of(user));
+    given(tagRepository.findAllById(List.of(27L, 1L, 13L)))
+        .willReturn(List.of(activity, interest, travelStyle));
+    willThrow(new BaseException(UserErrorCode.INVALID_PROFILE_IMAGE_URL))
+        .given(profileImageUrlValidator)
+        .validate("https://attacker.example/pixel.png", "https://example.com/old-profile.png");
+
+    // when & then
+    assertThatThrownBy(() -> userProfileEditService.updateProfile(userId, command))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(UserErrorCode.INVALID_PROFILE_IMAGE_URL));
+    assertThat(user.getNickname()).isEqualTo("기존닉네임");
+    assertThat(user.getProfileImageUrl()).isEqualTo("https://example.com/old-profile.png");
+    verify(userRepository, never()).flush();
+    verify(userTagRepository, never()).deleteAllByUserId(userId);
   }
 
   @DisplayName("필수 카테고리의 태그가 없으면 프로필을 수정하지 않는다")

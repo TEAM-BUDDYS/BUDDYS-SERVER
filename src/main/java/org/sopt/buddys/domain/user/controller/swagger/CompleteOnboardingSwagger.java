@@ -118,6 +118,17 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                           "data": null
                         }
                         """
+                ),
+                @ExampleObject(
+                    name = "허용되지 않는 프로필 이미지 URL",
+                    value = """
+                        {
+                          "success": false,
+                          "code": "USER-E011",
+                          "message": "사용할 수 없는 프로필 이미지 URL입니다.",
+                          "data": null
+                        }
+                        """
                 )
             }
         )

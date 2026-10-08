@@ -23,6 +23,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
             태그는 전달된 orderedTagIds로 전체 교체되며,
             bio를 null로 전달하면 기존 자기소개가 삭제됩니다.
             profileImageUrl을 null로 전달하면 기존 프로필 이미지가 삭제됩니다.
+            profileImageUrl은 이미지 업로드 API(imageDomain=PROFILE)로 발급받은 URL이거나 현재 설정된 값이어야 합니다.
             태그 배열의 앞 3개가 대표 태그입니다.
             """
 )
@@ -82,6 +83,17 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                           "success": false,
                           "code": "USER-E008",
                           "message": "활동과 관심사 태그는 각각 1~3개, 여행 스타일 태그는 1~5개 선택해야 합니다.",
+                          "data": null
+                        }
+                        """
+                ),
+                @ExampleObject(
+                    name = "허용되지 않는 프로필 이미지 URL",
+                    value = """
+                        {
+                          "success": false,
+                          "code": "USER-E011",
+                          "message": "사용할 수 없는 프로필 이미지 URL입니다.",
                           "data": null
                         }
                         """

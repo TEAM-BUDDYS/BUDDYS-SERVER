@@ -40,6 +40,7 @@ public class UserProfileEditService {
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final TagRepository tagRepository;
+  private final ProfileImageUrlValidator profileImageUrlValidator;
 
   public ProfileEditResponse getProfile(Long userId) {
     User user = getActiveUser(userId);
@@ -56,6 +57,7 @@ public class UserProfileEditService {
     User user = getActiveUserForUpdate(userId);
     List<Long> orderedTagIds = command.orderedTagIds();
     Map<Long, Tag> tagsById = getAndValidateTags(orderedTagIds);
+    profileImageUrlValidator.validate(command.profileImageUrl(), user.getProfileImageUrl());
 
     try {
       user.updateProfile(

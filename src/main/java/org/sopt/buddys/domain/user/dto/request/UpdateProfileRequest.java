@@ -48,7 +48,7 @@ public record UpdateProfileRequest(
         String bio,
 
         @Schema(
-                description = "프로필 이미지 URL. 최대 512자. null이면 기존 프로필 이미지를 삭제합니다.",
+                description = "프로필 이미지 URL. 최대 512자. 이미지 업로드 API(imageDomain=PROFILE)로 발급받은 URL 또는 현재 설정된 값만 허용합니다. null이면 기존 프로필 이미지를 삭제합니다.",
                 example = "https://example.com/profile.png",
                 requiredMode = Schema.RequiredMode.REQUIRED,
                 nullable = true

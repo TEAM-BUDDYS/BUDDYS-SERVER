@@ -53,7 +53,7 @@ public record OnboardingRequest(
     @Schema(description = "자기소개. 최대 69자", example = "버디즈 화이팅!", nullable = true)
     @Size(max = 69) String bio,
 
-    @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.png", nullable = true)
+    @Schema(description = "프로필 이미지 URL. 이미지 업로드 API(imageDomain=PROFILE)로 발급받은 URL 또는 현재 설정된 값만 허용합니다.", example = "https://example.com/profile.png", nullable = true)
     @Size(max = 512) String profileImageUrl
 ) {
     public OnboardingCommand toCommand() {
