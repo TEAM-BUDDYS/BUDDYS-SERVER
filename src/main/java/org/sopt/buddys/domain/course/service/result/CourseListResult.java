@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.course.service.result;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record CourseListResult(
@@ -20,7 +21,8 @@ public record CourseListResult(
       boolean isBookmarked,
       List<String> images,
       String countries,
-      String cities
+      String cities,
+      LocalDateTime createdAt
   ) {
 
     public CourseSummaryResult {

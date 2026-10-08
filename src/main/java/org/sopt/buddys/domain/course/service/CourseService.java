@@ -532,7 +532,8 @@ public class CourseService {
             bookmarkedCourseIds.contains(course.getId()),
             dayImagesByCourseId.getOrDefault(course.getId(), List.of()),
             countriesByCourseId.getOrDefault(course.getId(), ""),
-            citiesByCourseId.getOrDefault(course.getId(), "")
+            citiesByCourseId.getOrDefault(course.getId(), ""),
+            course.getCreatedAt()
         ))
         .toList();
 
