@@ -127,7 +127,10 @@ public class GooglePlacesClient {
     headers.set("X-Goog-FieldMask", PLACE_DETAILS_FIELD_MASK);
 
     return execute(() -> {
-      URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/places/" + placeId).build().toUri();
+      URI uri = UriComponentsBuilder.fromUriString(baseUrl + "/places/" + placeId)
+          .queryParam("languageCode", LANGUAGE_CODE_KOREAN)
+          .build()
+          .toUri();
       return restTemplate.exchange(
           uri,
           HttpMethod.GET,

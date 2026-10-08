@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.place.service;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
 import org.sopt.buddys.domain.place.client.dto.GoogleLatLng;
 import org.sopt.buddys.domain.place.client.dto.GooglePlace;
@@ -32,6 +33,7 @@ import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
  * 장소 저장/취소 오케스트레이션. 구글 Places 호출을 DB 트랜잭션 밖에서 수행하고,
  * 실제 DB 쓰기는 {@link PlaceBookmarkTransactionService}에 위임한다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -135,7 +137,29 @@ public class PlaceBookmarkService {
 
   private Place resolvePlace(String googlePlaceId) {
     return placeRepository.findByGooglePlaceId(googlePlaceId)
+        .map(this::fillMissingAddress)
         .orElseGet(() -> createPlaceFromGoogle(googlePlaceId));
+  }
+
+  private Place fillMissingAddress(Place place) {
+    if (place.getAddress() != null) {
+      return place;
+    }
+
+    try {
+      String address = googlePlacesClient.getPlace(place.getGooglePlaceId()).formattedAddress();
+      if (address != null && !address.isBlank()) {
+        placeBookmarkTransactionService.updatePlaceAddress(place.getId(), address);
+      }
+    } catch (BaseException e) {
+      log.warn(
+          "[PlaceBookmarkService] 장소 주소 보충 실패 → placeId={}, googlePlaceId={}, code={}",
+          place.getId(),
+          place.getGooglePlaceId(),
+          e.getErrorCode().getCode()
+      );
+    }
+    return place;
   }
 
   private Place createPlaceFromGoogle(String googlePlaceId) {
