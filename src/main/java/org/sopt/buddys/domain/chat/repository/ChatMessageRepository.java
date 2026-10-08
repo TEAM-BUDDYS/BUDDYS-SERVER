@@ -10,13 +10,34 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
-    boolean existsByIdAndChatRoomId(Long id, Long chatRoomId);
+    @Query("""
+            select case when count(m) > 0 then true else false end
+            from ChatMessage m
+            where m.id = :messageId
+              and m.chatRoom.id = :chatRoomId
+              and (
+                :partnerMessagesHiddenAfter is null
+                or m.sender.id <> :partnerId
+                or m.createdAt <= :partnerMessagesHiddenAfter
+              )
+            """)
+    boolean existsVisibleMessage(
+            @Param("messageId") Long messageId,
+            @Param("chatRoomId") Long chatRoomId,
+            @Param("partnerId") Long partnerId,
+            @Param("partnerMessagesHiddenAfter") LocalDateTime partnerMessagesHiddenAfter
+    );
 
     @Query("""
             select m
             from ChatMessage m
             join fetch m.sender
             where m.chatRoom.id = :chatRoomId
+              and (
+                :partnerMessagesHiddenAfter is null
+                or m.sender.id <> :partnerId
+                or m.createdAt <= :partnerMessagesHiddenAfter
+              )
               and (
                 :cursorSentAt is null
                 or m.createdAt < :cursorSentAt
@@ -31,6 +52,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             @Param("chatRoomId") Long chatRoomId,
             @Param("cursorSentAt") LocalDateTime cursorSentAt,
             @Param("cursorMessageId") Long cursorMessageId,
+            @Param("partnerId") Long partnerId,
+            @Param("partnerMessagesHiddenAfter") LocalDateTime partnerMessagesHiddenAfter,
             Pageable pageable
     );
 }

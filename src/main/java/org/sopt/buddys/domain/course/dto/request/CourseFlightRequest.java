@@ -1,10 +1,11 @@
 package org.sopt.buddys.domain.course.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public record CourseFlightRequest(
     @Schema(description = "항공사", example = "대한항공")
@@ -21,17 +22,19 @@ public record CourseFlightRequest(
     @Size(max = 100)
     String departureAirport,
 
-    @Schema(description = "출발일시", example = "2026-09-01T13:00:00")
+    @Schema(description = "출발 시간 (HH:mm)", type = "string", example = "13:00")
     @NotNull
-    LocalDateTime departureAt,
+    @JsonFormat(pattern = "HH:mm")
+    LocalTime departureTime,
 
     @Schema(description = "도착 공항", example = "CDG")
     @NotBlank
     @Size(max = 100)
     String arrivalAirport,
 
-    @Schema(description = "도착일시", example = "2026-09-01T18:30:00")
+    @Schema(description = "도착 시간 (HH:mm)", type = "string", example = "18:30")
     @NotNull
-    LocalDateTime arrivalAt
+    @JsonFormat(pattern = "HH:mm")
+    LocalTime arrivalTime
 ) {
 }

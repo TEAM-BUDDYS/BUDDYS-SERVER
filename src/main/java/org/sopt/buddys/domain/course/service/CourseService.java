@@ -52,6 +52,7 @@ import org.sopt.buddys.domain.place.code.PlaceErrorCode;
 import org.sopt.buddys.domain.place.entity.Place;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.sopt.buddys.domain.tag.entity.Tag;
 import org.sopt.buddys.domain.tag.repository.TagRepository;
 import org.sopt.buddys.domain.tag.service.TagTypeCountValidator;
@@ -100,7 +101,7 @@ public class CourseService {
   public Course createCourse(Long userId, CreateCourseCommand command) {
     validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
         command.tagIds(), command.days());
-    validateDateRanges(command.startDate(), command.endDate(), command.days());
+    validateDateRanges(command.startDate(), command.endDate());
     validateDayNumbersUnique(command.days());
 
     User author = userRepository.findByIdAndDeletedAtIsNull(userId)
@@ -139,7 +140,7 @@ public class CourseService {
 
     validateRequiredFields(command.countryIds(), command.cityIds(), command.title(),
         command.tagIds(), command.days());
-    validateDateRanges(command.startDate(), command.endDate(), command.days());
+    validateDateRanges(command.startDate(), command.endDate());
     validateDayNumbersUnique(command.days());
 
     course.update(
@@ -172,8 +173,12 @@ public class CourseService {
   }
 
   public CourseSearchResult searchCourses(Long userId, String keyword, int page, int size) {
+    return searchCourses(userId, keyword, page, size, SearchSort.LATEST);
+  }
+
+  public CourseSearchResult searchCourses(Long userId, String keyword, int page, int size, SearchSort sort) {
     validatePageRequest(page, size);
-    Slice<Course> courses = courseRepository.searchCoursesByKeyword(keyword, PageRequest.of(page, size));
+    Slice<Course> courses = courseRepository.searchCoursesByKeyword(keyword, sort, PageRequest.of(page, size));
     return new CourseSearchResult(
         toCourseListResult(userId, courses),
         page == 0 ? courseRepository.countCoursesByKeyword(keyword) : null
@@ -282,34 +287,20 @@ public class CourseService {
     for (CourseFlightCommand flight : flights) {
       if (flight.airline() == null || flight.airline().isBlank()
           || flight.departureAirport() == null || flight.departureAirport().isBlank()
-          || flight.departureAt() == null
+          || flight.departureTime() == null
           || flight.arrivalAirport() == null || flight.arrivalAirport().isBlank()
-          || flight.arrivalAt() == null) {
+          || flight.arrivalTime() == null) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
     }
   }
 
-  private void validateDateRanges(LocalDate startDate, LocalDate endDate, List<CourseDayCommand> days) {
+  private void validateDateRanges(LocalDate startDate, LocalDate endDate) {
     if (!NullPairValidator.isValidPair(startDate, endDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     if (startDate != null && endDate.isBefore(startDate)) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
-    }
-    for (CourseDayCommand day : days) {
-      validateFlightDateRanges(day.flights());
-    }
-  }
-
-  private void validateFlightDateRanges(List<CourseFlightCommand> flights) {
-    if (flights == null) {
-      return;
-    }
-    for (CourseFlightCommand flight : flights) {
-      if (flight.arrivalAt().isBefore(flight.departureAt())) {
-        throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
-      }
     }
   }
 
@@ -495,9 +486,9 @@ public class CourseService {
               flightCommand.airline().trim(),
               flightCommand.flightNumber() != null ? flightCommand.flightNumber().trim() : null,
               flightCommand.departureAirport().trim(),
-              flightCommand.departureAt(),
+              flightCommand.departureTime(),
               flightCommand.arrivalAirport().trim(),
-              flightCommand.arrivalAt(),
+              flightCommand.arrivalTime(),
               (short) index
           );
         })
@@ -747,9 +738,9 @@ public class CourseService {
         flight.getAirline(),
         flight.getFlightNumber(),
         flight.getDepartureAirport(),
-        flight.getDepartureAt(),
+        flight.getDepartureTime(),
         flight.getArrivalAirport(),
-        flight.getArrivalAt()
+        flight.getArrivalTime()
     );
   }
 

@@ -32,6 +32,7 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChatMessageVisibilityService chatMessageVisibilityService;
     private final UserRepository userRepository;
 
     public ChatMessageListResult getMessages(
@@ -47,11 +48,18 @@ public class ChatMessageService {
         validateCursor(cursorSentAt, cursorMessageId);
         validateChatRoomAccess(userId, chatRoomId);
 
+        Long partnerId = chatRoomMemberRepository.findOtherMemberUserId(chatRoomId, userId)
+                .orElse(null);
+        LocalDateTime partnerMessagesHiddenAfter = chatMessageVisibilityService
+                .findPartnerMessagesHiddenAfter(userId, partnerId);
+
         Pageable pageable = PageRequest.of(0, size + 1);
         List<ChatMessage> messages = chatMessageRepository.findMessagesByChatRoomId(
                 chatRoomId,
                 cursorSentAt,
                 cursorMessageId,
+                partnerId,
+                partnerMessagesHiddenAfter,
                 pageable
         );
         boolean hasNext = messages.size() > size;

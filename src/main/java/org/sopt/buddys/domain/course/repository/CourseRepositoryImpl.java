@@ -2,12 +2,14 @@ package org.sopt.buddys.domain.course.repository;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Locale;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.QCourse;
+import org.sopt.buddys.domain.course.entity.QCourseBookmark;
 import org.sopt.buddys.domain.course.entity.QCourseCity;
 import org.sopt.buddys.domain.course.entity.QCourseCountry;
 import org.sopt.buddys.domain.course.entity.QCourseDay;
@@ -15,6 +17,7 @@ import org.sopt.buddys.domain.course.entity.QCoursePlace;
 import org.sopt.buddys.domain.course.entity.QCourseTag;
 import org.sopt.buddys.domain.course.service.command.CourseSearchCondition;
 import org.sopt.buddys.domain.place.entity.QPlace;
+import org.sopt.buddys.domain.search.service.command.SearchSort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
@@ -57,11 +60,21 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
   }
 
   @Override
-  public Slice<Course> searchCoursesByKeyword(String keyword, Pageable pageable) {
-    List<Course> courses = queryFactory
+  public Slice<Course> searchCoursesByKeyword(String keyword, SearchSort sort, Pageable pageable) {
+    JPAQuery<Course> contentQuery = queryFactory
         .selectFrom(course)
-        .where(course.deletedAt.isNull(), keywordContains(keyword))
-        .orderBy(course.createdAt.desc(), course.id.desc())
+        .where(course.deletedAt.isNull(), keywordContains(keyword));
+
+    if (sort == SearchSort.BOOKMARK) {
+      QCourseBookmark courseBookmark = QCourseBookmark.courseBookmark;
+      contentQuery.leftJoin(courseBookmark).on(courseBookmark.course.eq(course))
+          .groupBy(course.id)
+          .orderBy(courseBookmark.id.userId.count().desc(), course.createdAt.desc(), course.id.desc());
+    } else {
+      contentQuery.orderBy(course.createdAt.desc(), course.id.desc());
+    }
+
+    List<Course> courses = contentQuery
         .offset(pageable.getOffset())
         .limit(pageable.getPageSize() + 1L)
         .fetch();

@@ -71,9 +71,9 @@ final class CourseCommandMapper {
         request.airline(),
         request.flightNumber(),
         request.departureAirport(),
-        request.departureAt(),
+        request.departureTime(),
         request.arrivalAirport(),
-        request.arrivalAt()
+        request.arrivalTime()
     );
   }
 }

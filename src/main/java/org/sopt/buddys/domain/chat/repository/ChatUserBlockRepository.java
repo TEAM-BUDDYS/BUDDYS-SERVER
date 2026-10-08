@@ -1,5 +1,7 @@
 package org.sopt.buddys.domain.chat.repository;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
 import org.sopt.buddys.domain.chat.entity.ChatUserBlock;
 import org.sopt.buddys.domain.chat.entity.ChatUserBlockId;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,22 +14,34 @@ public interface ChatUserBlockRepository extends JpaRepository<ChatUserBlock, Ch
   @Modifying
   @Query(value = """
       INSERT INTO chat_user_block (blocker_id, blocked_id, created_at)
-      VALUES (:blockerId, :blockedId, CURRENT_TIMESTAMP(6))
+      VALUES (:blockerId, :blockedId, :createdAt)
       ON DUPLICATE KEY UPDATE created_at = created_at
       """, nativeQuery = true)
   int insertOrKeep(
       @Param("blockerId") Long blockerId,
-      @Param("blockedId") Long blockedId
+      @Param("blockedId") Long blockedId,
+      @Param("createdAt") LocalDateTime createdAt
   );
 
   @Query("""
       select case when count(b) > 0 then true else false end
       from ChatUserBlock b
-      where (b.blocker.id = :userId1 and b.blocked.id = :userId2)
-         or (b.blocker.id = :userId2 and b.blocked.id = :userId1)
+      where b.blocker.id = :blockerId
+        and b.blocked.id = :blockedId
       """)
-  boolean existsBlockBetween(
-      @Param("userId1") Long userId1,
-      @Param("userId2") Long userId2
+  boolean existsByBlockerIdAndBlockedId(
+      @Param("blockerId") Long blockerId,
+      @Param("blockedId") Long blockedId
+  );
+
+  @Query("""
+      select b.createdAt
+      from ChatUserBlock b
+      where b.blocker.id = :blockerId
+        and b.blocked.id = :blockedId
+      """)
+  Optional<LocalDateTime> findBlockedAt(
+      @Param("blockerId") Long blockerId,
+      @Param("blockedId") Long blockedId
   );
 }

@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.chat.repository;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.DateTimeExpression;
 import com.querydsl.core.types.dsl.Expressions;
@@ -16,6 +17,8 @@ import java.util.Optional;
 import org.sopt.buddys.domain.chat.entity.QChatMessage;
 import org.sopt.buddys.domain.chat.entity.QChatRoom;
 import org.sopt.buddys.domain.chat.entity.QChatRoomMember;
+import org.sopt.buddys.domain.chat.entity.QChatUserBlock;
+import org.sopt.buddys.domain.chat.entity.QChatUserReport;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository.ChatRoomListProjection;
 import org.sopt.buddys.domain.user.entity.QUser;
 import org.sopt.buddys.domain.user.entity.User;
@@ -32,6 +35,9 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
   private static final QChatMessage lastMessage = new QChatMessage("lastMessage");
   private static final QChatMessage newerMessage = new QChatMessage("newerMessage");
   private static final QChatMessage unreadMessage = new QChatMessage("unreadMessage");
+  private static final QChatUserBlock myBlock = new QChatUserBlock("myBlock");
+  private static final QChatUserReport myFirstReport = new QChatUserReport("myFirstReport");
+  private static final QChatUserReport myEarlierReport = new QChatUserReport("myEarlierReport");
   private static final StringExpression participantDisplayNickname = new CaseBuilder()
       .when(participant.deletedAt.isNotNull())
       .then(User.WITHDRAWN_DISPLAY_NICKNAME)
@@ -113,14 +119,39 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
             participantMember.user.id.ne(userId)
         )
         .join(participantMember.user, participant)
+        .leftJoin(myBlock)
+        .on(
+            myBlock.blocker.id.eq(userId),
+            myBlock.blocked.id.eq(participant.id)
+        )
+        .leftJoin(myFirstReport)
+        .on(
+            myFirstReport.reporter.id.eq(userId),
+            myFirstReport.reported.id.eq(participant.id),
+            JPAExpressions
+                .selectOne()
+                .from(myEarlierReport)
+                .where(
+                    myEarlierReport.reporter.id.eq(userId),
+                    myEarlierReport.reported.id.eq(participant.id),
+                    myEarlierReport.createdAt.lt(myFirstReport.createdAt)
+                        .or(
+                            myEarlierReport.createdAt.eq(myFirstReport.createdAt)
+                                .and(myEarlierReport.id.lt(myFirstReport.id))
+                        )
+                )
+                .notExists()
+        )
         .leftJoin(lastMessage)
         .on(
             lastMessage.chatRoom.eq(chatRoom),
+            isVisibleToMe(lastMessage),
             JPAExpressions
                 .selectOne()
                 .from(newerMessage)
                 .where(
                     newerMessage.chatRoom.eq(chatRoom),
+                    isVisibleToMe(newerMessage),
                     newerMessage.createdAt.gt(lastMessage.createdAt)
                         .or(
                             newerMessage.createdAt.eq(lastMessage.createdAt)
@@ -139,8 +170,21 @@ public class ChatRoomMemberRepositoryImpl implements ChatRoomMemberRepositoryCus
         .where(
             unreadMessage.chatRoom.eq(chatRoom),
             unreadMessage.sender.id.ne(userId),
+            isVisibleToMe(unreadMessage),
             myMember.lastReadMessageId.isNull()
                 .or(unreadMessage.id.gt(myMember.lastReadMessageId))
+        );
+  }
+
+  private BooleanExpression isVisibleToMe(QChatMessage message) {
+    return message.sender.id.ne(participant.id)
+        .or(
+            myBlock.createdAt.isNull()
+                .or(message.createdAt.loe(myBlock.createdAt))
+                .and(
+                    myFirstReport.createdAt.isNull()
+                        .or(message.createdAt.loe(myFirstReport.createdAt))
+                )
         );
   }
 

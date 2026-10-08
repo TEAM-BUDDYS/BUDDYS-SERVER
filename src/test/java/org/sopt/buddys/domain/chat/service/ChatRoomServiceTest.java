@@ -266,9 +266,9 @@ class ChatRoomServiceTest {
         assertThat(result.canSendMessage()).isFalse();
     }
 
-    @DisplayName("상대방이 나를 차단했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @DisplayName("상대방이 나를 차단했어도 채팅방 상세 조회 시 메시지를 보낼 수 있다고 응답한다")
     @Test
-    void getChatRoom_blockedByPartner_returnsCanSendMessageFalse() {
+    void getChatRoom_blockedByPartner_returnsCanSendMessageTrue() {
         // given
         User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
         User participant = userRepository.save(
@@ -284,7 +284,7 @@ class ChatRoomServiceTest {
         ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
 
         // then
-        assertThat(result.canSendMessage()).isFalse();
+        assertThat(result.canSendMessage()).isTrue();
     }
 
     @DisplayName("내가 상대방을 신고했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
@@ -308,9 +308,9 @@ class ChatRoomServiceTest {
         assertThat(result.canSendMessage()).isFalse();
     }
 
-    @DisplayName("상대방이 나를 신고했으면 채팅방 상세 조회 시 메시지를 보낼 수 없다고 응답한다")
+    @DisplayName("상대방이 나를 신고했어도 채팅방 상세 조회 시 메시지를 보낼 수 있다고 응답한다")
     @Test
-    void getChatRoom_reportedByPartner_returnsCanSendMessageFalse() {
+    void getChatRoom_reportedByPartner_returnsCanSendMessageTrue() {
         // given
         User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
         User participant = userRepository.save(
@@ -326,7 +326,7 @@ class ChatRoomServiceTest {
         ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
 
         // then
-        assertThat(result.canSendMessage()).isFalse();
+        assertThat(result.canSendMessage()).isTrue();
     }
 
     @DisplayName("존재하지 않는 채팅방을 조회하면 CHAT-E002 예외가 발생한다")
@@ -657,6 +657,405 @@ class ChatRoomServiceTest {
                 .containsExactly(tuple(messageId, false, true));
     }
 
+    @DisplayName("내가 상대방을 차단했으면 차단 이후 상대방이 보낸 메시지는 메시지 목록에서 제외된다")
+    @Test
+    void getMessages_blockedPartner_excludesPartnerMessagesAfterBlock() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        Long beforeBlockMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 전 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 10, 0)
+        );
+        Long myMessageId = insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "차단 전 내 메시지",
+                LocalDateTime.of(2026, 7, 9, 10, 30)
+        );
+        insertBlock(user.getId(), participant.getId(), LocalDateTime.of(2026, 7, 9, 11, 0));
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 후 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 12, 0)
+        );
+
+        // when
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                20
+        );
+
+        // then
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(myMessageId, beforeBlockMessageId);
+    }
+
+    @DisplayName("상대방이 나를 차단했어도 나는 상대방이 보낸 메시지를 모두 조회할 수 있다")
+    @Test
+    void getMessages_blockedByPartner_includesAllMessages() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        Long beforeBlockMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 전 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 10, 0)
+        );
+        insertBlock(participant.getId(), user.getId(), LocalDateTime.of(2026, 7, 9, 11, 0));
+        Long myMessageId = insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "차단당한 후 내 메시지",
+                LocalDateTime.of(2026, 7, 9, 12, 0)
+        );
+
+        // when
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                20
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(myMessageId, beforeBlockMessageId);
+    }
+
+    @DisplayName("내가 상대방을 여러 번 신고했으면 첫 신고 이후 상대방이 보낸 메시지는 메시지 목록에서 제외된다")
+    @Test
+    void getMessages_reportedPartner_excludesPartnerMessagesAfterFirstReport() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        Long beforeReportMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "신고 전 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 10, 0)
+        );
+        insertReport(
+                chatRoom.getId(),
+                user.getId(),
+                participant.getId(),
+                LocalDateTime.of(2026, 7, 9, 11, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "첫 신고 후 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 12, 0)
+        );
+        insertReport(
+                chatRoom.getId(),
+                user.getId(),
+                participant.getId(),
+                LocalDateTime.of(2026, 7, 9, 13, 0)
+        );
+
+        // when
+        ChatMessageListResult result = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                20
+        );
+
+        // then
+        assertThat(result.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(beforeReportMessageId);
+    }
+
+    @DisplayName("숨겨진 메시지가 페이지 사이에 있어도 커서 조회 시 보이는 메시지가 누락되지 않는다")
+    @Test
+    void getMessages_withHiddenMessagesBetweenPages_returnsVisibleMessagesWithoutGap() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        Long oldestMessageId = insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "가장 오래된 내 메시지",
+                LocalDateTime.of(2026, 7, 9, 8, 0)
+        );
+        Long beforeBlockMessageId = insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 전 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 9, 0)
+        );
+        insertBlock(user.getId(), participant.getId(), LocalDateTime.of(2026, 7, 9, 10, 0));
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "숨겨질 상대방 메시지 1",
+                LocalDateTime.of(2026, 7, 9, 11, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "숨겨질 상대방 메시지 2",
+                LocalDateTime.of(2026, 7, 9, 12, 0)
+        );
+        Long latestMyMessageId = insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "최신 내 메시지",
+                LocalDateTime.of(2026, 7, 9, 13, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "숨겨질 상대방 메시지 3",
+                LocalDateTime.of(2026, 7, 9, 14, 0)
+        );
+
+        // when
+        ChatMessageListResult firstPage = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                null,
+                null,
+                2
+        );
+
+        // then
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextCursorMessageId()).isEqualTo(beforeBlockMessageId);
+        assertThat(firstPage.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(latestMyMessageId, beforeBlockMessageId);
+
+        // when
+        ChatMessageListResult secondPage = chatMessageService.getMessages(
+                user.getId(),
+                chatRoom.getId(),
+                firstPage.nextCursorSentAt(),
+                firstPage.nextCursorMessageId(),
+                2
+        );
+
+        // then
+        assertThat(secondPage.hasNext()).isFalse();
+        assertThat(secondPage.messages())
+                .extracting(message -> message.message().getId())
+                .containsExactly(oldestMessageId);
+    }
+
+    @DisplayName("내가 상대방을 차단했으면 채팅방 목록의 마지막 메시지와 읽지 않은 수에 차단 이후 메시지가 반영되지 않는다")
+    @Test
+    void getChatRooms_blockedPartner_excludesPartnerMessagesAfterBlock() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 전 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 10, 0)
+        );
+        insertBlock(user.getId(), participant.getId(), LocalDateTime.of(2026, 7, 9, 11, 0));
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 후 상대방 메시지 1",
+                LocalDateTime.of(2026, 7, 9, 12, 0)
+        );
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 후 상대방 메시지 2",
+                LocalDateTime.of(2026, 7, 9, 13, 0)
+        );
+
+        // when
+        ChatRoomListResult result = chatRoomService.getChatRooms(user.getId(), 0, 20);
+        ChatRoomListItemResult notificationItem = chatRoomService.getChatRoomListItemForNotification(
+                user.getId(),
+                chatRoom.getId()
+        );
+
+        // then
+        assertThat(result.chatRooms())
+                .extracting(
+                        ChatRoomListItemResult::lastMessage,
+                        ChatRoomListItemResult::lastMessageSentAt,
+                        ChatRoomListItemResult::unreadMessageCount
+                )
+                .containsExactly(tuple("차단 전 상대방 메시지", LocalDateTime.of(2026, 7, 9, 10, 0), 1L));
+        assertThat(notificationItem).isEqualTo(result.chatRooms().get(0));
+    }
+
+    @DisplayName("내가 차단한 상대방이 메시지를 보내도 채팅방 목록에서 해당 채팅방의 순서가 올라가지 않는다")
+    @Test
+    void getChatRooms_blockedPartnerSendsMessage_doesNotMoveChatRoomUp() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User blockedParticipant = userRepository.save(
+                createUser("blocked@test.com", "provider-blocked", "차단한상대")
+        );
+        User otherParticipant = userRepository.save(
+                createUser("other@test.com", "provider-other", "다른상대")
+        );
+        ChatRoom blockedChatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                blockedParticipant.getId()
+        ).chatRoom();
+        ChatRoom otherChatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                otherParticipant.getId()
+        ).chatRoom();
+        insertMessage(
+                blockedChatRoom.getId(),
+                blockedParticipant.getId(),
+                "차단 전 메시지",
+                LocalDateTime.of(2026, 7, 9, 10, 0)
+        );
+        insertBlock(user.getId(), blockedParticipant.getId(), LocalDateTime.of(2026, 7, 9, 10, 30));
+        insertMessage(
+                otherChatRoom.getId(),
+                otherParticipant.getId(),
+                "다른 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 11, 0)
+        );
+        insertMessage(
+                blockedChatRoom.getId(),
+                blockedParticipant.getId(),
+                "차단 후 메시지",
+                LocalDateTime.of(2026, 7, 9, 12, 0)
+        );
+
+        // when
+        ChatRoomListResult result = chatRoomService.getChatRooms(user.getId(), 0, 20);
+
+        // then
+        assertThat(result.chatRooms())
+                .extracting(ChatRoomListItemResult::chatRoomId)
+                .containsExactly(otherChatRoom.getId(), blockedChatRoom.getId());
+    }
+
+    @DisplayName("상대방이 나를 차단했어도 내 채팅방 목록에는 내가 보낸 마지막 메시지가 그대로 보인다")
+    @Test
+    void getChatRooms_blockedByPartner_showsMyLatestMessage() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        insertMessage(
+                chatRoom.getId(),
+                participant.getId(),
+                "차단 전 상대방 메시지",
+                LocalDateTime.of(2026, 7, 9, 10, 0)
+        );
+        insertBlock(participant.getId(), user.getId(), LocalDateTime.of(2026, 7, 9, 11, 0));
+        insertMessage(
+                chatRoom.getId(),
+                user.getId(),
+                "차단당한 후 내 메시지",
+                LocalDateTime.of(2026, 7, 9, 12, 0)
+        );
+
+        // when
+        ChatRoomListResult result = chatRoomService.getChatRooms(user.getId(), 0, 20);
+
+        // then
+        assertThat(result.chatRooms())
+                .extracting(
+                        ChatRoomListItemResult::lastMessage,
+                        ChatRoomListItemResult::unreadMessageCount
+                )
+                .containsExactly(tuple("차단당한 후 내 메시지", 1L));
+    }
+
+    @DisplayName("전송자를 차단한 멤버는 메시지 수신 대상에서 제외된다")
+    @Test
+    void getMessageRecipientIds_blockedSender_excludesBlocker() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        chatUserBlockService.blockChatPartner(user.getId(), chatRoom.getId());
+
+        // when, then
+        assertThat(chatRoomService.getMessageRecipientIds(chatRoom.getId(), participant.getId()))
+                .containsExactly(participant.getId());
+        assertThat(chatRoomService.getMessageRecipientIds(chatRoom.getId(), user.getId()))
+                .containsExactlyInAnyOrder(user.getId(), participant.getId());
+    }
+
+    @DisplayName("전송자를 신고한 멤버는 메시지 수신 대상에서 제외된다")
+    @Test
+    void getMessageRecipientIds_reportedSender_excludesReporter() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        chatUserReportRepository.save(new ChatUserReport(chatRoom, user, participant, "부적절한 언행"));
+
+        // when, then
+        assertThat(chatRoomService.getMessageRecipientIds(chatRoom.getId(), participant.getId()))
+                .containsExactly(participant.getId());
+    }
+
     private User createUser(
             String email,
             String providerId,
@@ -736,6 +1135,42 @@ class ChatRoomServiceTest {
                         """,
                 createdAt,
                 chatRoomId
+        );
+    }
+
+    private void insertBlock(
+            Long blockerId,
+            Long blockedId,
+            LocalDateTime createdAt
+    ) {
+
+        jdbcTemplate.update(
+                """
+                        INSERT INTO chat_user_block (blocker_id, blocked_id, created_at)
+                        VALUES (?, ?, ?)
+                        """,
+                blockerId,
+                blockedId,
+                createdAt
+        );
+    }
+
+    private void insertReport(
+            Long chatRoomId,
+            Long reporterId,
+            Long reportedId,
+            LocalDateTime createdAt
+    ) {
+
+        jdbcTemplate.update(
+                """
+                        INSERT INTO chat_user_report (chat_room_id, reporter_id, reported_id, created_at)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                chatRoomId,
+                reporterId,
+                reportedId,
+                createdAt
         );
     }
 

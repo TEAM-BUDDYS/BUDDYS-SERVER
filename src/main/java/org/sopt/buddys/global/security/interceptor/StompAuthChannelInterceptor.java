@@ -28,7 +28,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
   private static final String BEARER_PREFIX = "Bearer ";
   private static final Pattern CHAT_ROOM_SUBSCRIBE_DESTINATION = Pattern.compile(
-      "^/sub/chat-rooms/(\\d+)$"
+      "^(?:/user)?/sub/chat-rooms/(\\d+)$"
   );
 
   private final JwtProvider jwtProvider;
