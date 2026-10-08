@@ -110,7 +110,7 @@ public class S3PresignedUrlManager {
     return presigned.url().toString();
   }
 
-  private String buildPublicUrl(String key) {
+  public String buildPublicUrl(String key) {
     return s3Utilities.getUrl(GetUrlRequest.builder()
             .bucket(s3Properties.getBucket())
             .key(key)

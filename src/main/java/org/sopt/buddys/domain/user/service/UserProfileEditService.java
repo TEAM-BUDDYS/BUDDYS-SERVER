@@ -40,6 +40,7 @@ public class UserProfileEditService {
   private final UserRepository userRepository;
   private final UserTagRepository userTagRepository;
   private final TagRepository tagRepository;
+  private final ProfileImageUrlValidator profileImageUrlValidator;
 
   public ProfileEditResponse getProfile(Long userId) {
     User user = getActiveUser(userId);
@@ -56,9 +57,16 @@ public class UserProfileEditService {
     User user = getActiveUserForUpdate(userId);
     List<Long> orderedTagIds = command.orderedTagIds();
     Map<Long, Tag> tagsById = getAndValidateTags(orderedTagIds);
+    profileImageUrlValidator.validate(command.profileImageUrl(), user.getProfileImageUrl());
 
     try {
-      user.updateProfile(command.nickname(), command.gender(), command.birthDate(), command.bio());
+      user.updateProfile(
+          command.nickname(),
+          command.gender(),
+          command.birthDate(),
+          command.bio(),
+          command.profileImageUrl()
+      );
       userRepository.flush();
     } catch (DataIntegrityViolationException exception) {
       if (!isNicknameConflict(exception)) {

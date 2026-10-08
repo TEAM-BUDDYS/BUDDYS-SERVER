@@ -9,5 +9,6 @@ public record UpdateProfileCommand(
     Gender gender,
     LocalDate birthDate,
     String bio,
+    String profileImageUrl,
     List<Long> orderedTagIds
 ) {}

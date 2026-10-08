@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -46,6 +47,9 @@ class UserProfileEditServiceTest {
   @Mock
   private TagRepository tagRepository;
 
+  @Mock
+  private ProfileImageUrlValidator profileImageUrlValidator;
+
   @DisplayName("프로필과 카테고리별 태그를 함께 수정한다")
   @Test
   void updateProfile_updatesProfileAndReplacesTags() {
@@ -62,6 +66,7 @@ class UserProfileEditServiceTest {
         Gender.MALE,
         LocalDate.of(2001, 2, 3),
         "새로운 자기소개",
+        "https://example.com/new-profile.png",
         List.of(27L, 1L, 13L, 28L, 14L)
     );
 
@@ -77,12 +82,97 @@ class UserProfileEditServiceTest {
     assertThat(user.getGender()).isEqualTo(Gender.MALE);
     assertThat(user.getBirthDate()).isEqualTo(LocalDate.of(2001, 2, 3));
     assertThat(user.getIntroduction()).isEqualTo("새로운 자기소개");
+    assertThat(user.getProfileImageUrl()).isEqualTo("https://example.com/new-profile.png");
+    assertThat(response.profileImageUrl()).isEqualTo("https://example.com/new-profile.png");
     assertThat(response.orderedTags())
         .extracting(OrderedTagResponse::id)
         .containsExactly(27L, 1L, 13L, 28L, 14L);
     verify(userTagRepository).deleteAllByUserId(userId);
     verify(userTagRepository).flush();
     verify(userTagRepository).saveAllAndFlush(org.mockito.ArgumentMatchers.anyList());
+  }
+
+  @DisplayName("프로필 이미지 URL을 null로 수정하면 기존 프로필 이미지를 삭제한다")
+  @Test
+  void updateProfile_withNullProfileImageUrl_removesProfileImage() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId);
+    Tag activity = createTag(1L, "여행", TagType.ACTIVITY);
+    Tag interest = createTag(13L, "자연", TagType.INTEREST);
+    Tag travelStyle = createTag(27L, "계획형", TagType.TRAVEL_STYLE);
+    UpdateProfileCommand command = new UpdateProfileCommand(
+        "새닉네임",
+        Gender.MALE,
+        LocalDate.of(2001, 2, 3),
+        "새로운 자기소개",
+        null,
+        List.of(27L, 1L, 13L)
+    );
+
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.of(user));
+    given(tagRepository.findAllById(List.of(27L, 1L, 13L)))
+        .willReturn(List.of(activity, interest, travelStyle));
+
+    // when
+    ProfileEditResponse response = userProfileEditService.updateProfile(userId, command);
+
+    // then
+    assertThat(user.getProfileImageUrl()).isNull();
+    assertThat(response.profileImageUrl()).isNull();
+  }
+
+  @DisplayName("프로필 편집 정보 조회는 프로필 이미지 URL을 함께 반환한다")
+  @Test
+  void getProfile_returnsProfileImageUrl() {
+    // given
+    Long userId = 1L;
+    given(userRepository.findByIdAndDeletedAtIsNull(userId))
+        .willReturn(Optional.of(createUser(userId)));
+    given(userTagRepository.findAllWithTagByUserId(userId)).willReturn(List.of());
+
+    // when
+    ProfileEditResponse response = userProfileEditService.getProfile(userId);
+
+    // then
+    assertThat(response.nickname()).isEqualTo("기존닉네임");
+    assertThat(response.profileImageUrl()).isEqualTo("https://example.com/old-profile.png");
+  }
+
+  @DisplayName("허용되지 않는 프로필 이미지 URL이면 프로필을 수정하지 않는다")
+  @Test
+  void updateProfile_withInvalidProfileImageUrl_rejectsBeforeMutation() {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId);
+    Tag activity = createTag(1L, "여행", TagType.ACTIVITY);
+    Tag interest = createTag(13L, "자연", TagType.INTEREST);
+    Tag travelStyle = createTag(27L, "계획형", TagType.TRAVEL_STYLE);
+    UpdateProfileCommand command = new UpdateProfileCommand(
+        "새닉네임",
+        Gender.MALE,
+        LocalDate.of(2001, 2, 3),
+        "새로운 자기소개",
+        "https://attacker.example/pixel.png",
+        List.of(27L, 1L, 13L)
+    );
+
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.of(user));
+    given(tagRepository.findAllById(List.of(27L, 1L, 13L)))
+        .willReturn(List.of(activity, interest, travelStyle));
+    willThrow(new BaseException(UserErrorCode.INVALID_PROFILE_IMAGE_URL))
+        .given(profileImageUrlValidator)
+        .validate("https://attacker.example/pixel.png", "https://example.com/old-profile.png");
+
+    // when & then
+    assertThatThrownBy(() -> userProfileEditService.updateProfile(userId, command))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(UserErrorCode.INVALID_PROFILE_IMAGE_URL));
+    assertThat(user.getNickname()).isEqualTo("기존닉네임");
+    assertThat(user.getProfileImageUrl()).isEqualTo("https://example.com/old-profile.png");
+    verify(userRepository, never()).flush();
+    verify(userTagRepository, never()).deleteAllByUserId(userId);
   }
 
   @DisplayName("필수 카테고리의 태그가 없으면 프로필을 수정하지 않는다")
@@ -99,6 +189,7 @@ class UserProfileEditServiceTest {
         Gender.MALE,
         LocalDate.of(2001, 2, 3),
         null,
+        null,
         List.of(13L, 14L, 27L)
     );
 
@@ -112,6 +203,7 @@ class UserProfileEditServiceTest {
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(UserErrorCode.INVALID_TAG_SELECTION_COUNT));
     assertThat(user.getNickname()).isEqualTo("기존닉네임");
+    assertThat(user.getProfileImageUrl()).isEqualTo("https://example.com/old-profile.png");
     verify(userRepository, never()).flush();
     verify(userTagRepository, never()).deleteAllByUserId(userId);
   }
@@ -127,6 +219,7 @@ class UserProfileEditServiceTest {
         Gender.MALE,
         LocalDate.of(2001, 2, 3),
         null,
+        null,
         List.of(1L, 13L, 27L, 27L)
     );
 
@@ -138,6 +231,7 @@ class UserProfileEditServiceTest {
         .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
             .isEqualTo(UserErrorCode.DUPLICATE_TAG));
     assertThat(user.getNickname()).isEqualTo("기존닉네임");
+    assertThat(user.getProfileImageUrl()).isEqualTo("https://example.com/old-profile.png");
     verify(userRepository, never()).flush();
     verify(userTagRepository, never()).deleteAllByUserId(userId);
   }
@@ -168,6 +262,7 @@ class UserProfileEditServiceTest {
         .gender(Gender.FEMALE)
         .birthDate(LocalDate.of(2000, 1, 1))
         .introduction("기존 자기소개")
+        .profileImageUrl("https://example.com/old-profile.png")
         .build();
   }
 

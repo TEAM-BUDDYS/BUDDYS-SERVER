@@ -42,6 +42,7 @@ public class UserOnboardingService {
   private final CountryRepository countryRepository;
   private final CityRepository cityRepository;
   private final TagRepository tagRepository;
+  private final ProfileImageUrlValidator profileImageUrlValidator;
 
   @Transactional
   public User completeOnboarding(Long userId, OnboardingCommand request) {
@@ -50,6 +51,7 @@ public class UserOnboardingService {
 
     validateNotAlreadyOnboarded(userId);
     validateNickname(request.nickname());
+    profileImageUrlValidator.validate(request.profileImageUrl(), user.getProfileImageUrl());
     City interestCity = validateAndGetCity(request.interestCountryId(), request.interestCityId());
     Country interestCountry = interestCity.getCountry();
 

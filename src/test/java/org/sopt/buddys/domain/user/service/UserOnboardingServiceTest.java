@@ -66,6 +66,9 @@ public class UserOnboardingServiceTest {
   @Mock
   private TagRepository tagRepository;
 
+  @Mock
+  private ProfileImageUrlValidator profileImageUrlValidator;
+
   @DisplayName("정상적인 온보딩 요청이면 유저 정보와 태그를 저장한다")
   @Test
   void completeOnboarding_validRequest_savesUserAndTags() {

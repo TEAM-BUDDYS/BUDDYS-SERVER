@@ -38,6 +38,14 @@ public record ProfileEditResponse(
         String bio,
 
         @Schema(
+                description = "프로필 이미지 URL",
+                example = "https://example.com/profile.png",
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                nullable = true
+        )
+        String profileImageUrl,
+
+        @Schema(
                 description = "드래그앤드롭으로 지정한 순서대로 정렬된 전체 선택 태그. 앞 3개가 대표 태그",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
@@ -54,7 +62,7 @@ public record ProfileEditResponse(
         .toList();
     return new ProfileEditResponse(
         user.getNickname(), user.getGender(), user.getBirthDate(), user.getIntroduction(),
-        orderedTags
+        user.getProfileImageUrl(), orderedTags
     );
   }
 }
