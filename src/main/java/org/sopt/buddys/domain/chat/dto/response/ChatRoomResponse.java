@@ -17,7 +17,13 @@ public record ChatRoomResponse(
 
     @Schema(description = "상대방에게 메시지를 보낼 수 있는지 여부. "
         + "내가 상대방을 차단했거나 신고한 경우 false입니다.", example = "true")
-    boolean canSendMessage
+    boolean canSendMessage,
+
+    @Schema(description = "내가 상대방을 차단했는지 여부. 상대방이 나를 차단한 경우는 반영되지 않습니다.", example = "false")
+    boolean hasBlocked,
+
+    @Schema(description = "내가 상대방을 신고했는지 여부. 상대방이 나를 신고한 경우는 반영되지 않습니다.", example = "false")
+    boolean hasReported
 ) {
 
   public static ChatRoomResponse from(ChatRoomResult result) {
@@ -25,7 +31,9 @@ public record ChatRoomResponse(
         result.chatRoom().getId(),
         TimeConverter.toCommonTime(result.chatRoom().getCreatedAt()),
         ChatParticipantResponse.from(result.participant()),
-        result.canSendMessage()
+        result.canSendMessage(),
+        result.hasBlocked(),
+        result.hasReported()
     );
   }
 }

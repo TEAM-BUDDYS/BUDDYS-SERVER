@@ -18,7 +18,8 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
 @Operation(
     summary = "채팅방 상세 조회",
     description = "채팅방 ID로 채팅방 기본 정보와 상대방 정보를 조회합니다. "
-        + "내가 상대방을 차단했거나 신고한 경우 canSendMessage가 false로 응답됩니다. "
+        + "내가 상대방을 차단했거나 신고한 경우 canSendMessage가 false로 응답되며, "
+        + "hasBlocked와 hasReported로 그 이유를 구분할 수 있습니다. "
         + "상대방이 나를 차단했거나 신고한 경우에는 영향을 받지 않습니다."
 )
 @ApiResponses({
