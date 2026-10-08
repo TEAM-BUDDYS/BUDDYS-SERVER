@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.course.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.sopt.buddys.domain.course.service.result.CourseListResult;
 
@@ -62,7 +63,11 @@ public record CourseListResponse(
 
       @Schema(description = "여행 도시 목록 (쉼표로 구분)", example = "프라하, 뮌헨, 베를린",
           requiredMode = Schema.RequiredMode.REQUIRED)
-      String cities
+      String cities,
+
+      @Schema(description = "코스 생성일시", example = "2026-08-20T14:30:00",
+          requiredMode = Schema.RequiredMode.REQUIRED)
+      LocalDateTime createdAt
   ) {
 
     public CourseSummaryResponse {
@@ -77,7 +82,8 @@ public record CourseListResponse(
           result.isBookmarked(),
           result.images(),
           result.countries(),
-          result.cities()
+          result.cities(),
+          result.createdAt()
       );
     }
   }
