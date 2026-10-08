@@ -34,4 +34,10 @@ public class Country {
 
   @Column(name = "iso_code", nullable = false, columnDefinition = "CHAR(2)")
   private String isoCode;
+
+  @Column(name = "english_name", length = 100)
+  private String englishName;
+
+  @Column(name = "english_aliases", length = 255)
+  private String englishAliases;
 }

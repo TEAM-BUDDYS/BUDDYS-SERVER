@@ -9,7 +9,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CountryRepository extends JpaRepository<Country, Long> {
-  Slice<Country> findByNameContainingIgnoreCaseOrderByNameAsc(String keyword, Pageable pageable);
+  @Query("""
+      select c
+      from Country c
+      where lower(c.name) like :containsPattern escape '!'
+         or lower(c.englishName) like :containsPattern escape '!'
+         or lower(c.englishAliases) like :containsPattern escape '!'
+      order by c.name asc
+      """)
+  Slice<Country> searchByKeyword(
+      @Param("containsPattern") String containsPattern,
+      Pageable pageable
+  );
 
   Slice<Country> findAllByOrderByNameAsc(Pageable pageable);
 

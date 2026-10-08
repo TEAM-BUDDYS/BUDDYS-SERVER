@@ -17,7 +17,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
 @Retention(RetentionPolicy.RUNTIME)
 @Operation(
     summary = "내 관심 국가 및 파견 국가 조회",
-    description = "로그인한 사용자가 설정한 관심 국가와 파견 국가의 ID, 이름, ISO 코드를 조회합니다. "
+    description = "로그인한 사용자가 설정한 관심 국가와 파견 국가의 ID, 이름, 영문 이름, ISO 코드를 조회합니다. "
         + "설정하지 않은 국가는 null로 반환합니다."
 )
 @ApiResponses({
@@ -37,11 +37,13 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                         "interestCountry": {
                           "id": 31,
                           "name": "프랑스",
+                          "englishName": "France",
                           "code": "FR"
                         },
                         "exchangeCountry": {
                           "id": 71,
                           "name": "독일",
+                          "englishName": "Germany",
                           "code": "DE"
                         }
                       }
@@ -56,6 +58,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                         "interestCountry": {
                           "id": 31,
                           "name": "프랑스",
+                          "englishName": "France",
                           "code": "FR"
                         },
                         "exchangeCountry": null

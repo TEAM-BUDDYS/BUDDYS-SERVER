@@ -12,34 +12,34 @@ import org.sopt.buddys.domain.user.service.result.UserCountriesResult;
 
 class UserCountriesResponseTest {
 
-  @DisplayName("관심 국가와 파견 국가의 ID, 이름, ISO 코드를 반환한다")
+  @DisplayName("관심 국가와 파견 국가의 ID, 이름, 영문 이름, ISO 코드를 반환한다")
   @Test
   void from_returnsBothCountries() {
     // given
-    Country france = createCountry(31L, "프랑스", "FR");
-    Country germany = createCountry(71L, "독일", "DE");
+    Country france = createCountry(31L, "프랑스", "France", "FR");
+    Country germany = createCountry(71L, "독일", "Germany", "DE");
     UserCountriesResult result = new UserCountriesResult(france, germany);
 
     // when
     UserCountriesResponse response = UserCountriesResponse.from(result);
 
     // then
-    assertThat(response.interestCountry()).isEqualTo(new CountryResponse(31L, "프랑스", "FR"));
-    assertThat(response.exchangeCountry()).isEqualTo(new CountryResponse(71L, "독일", "DE"));
+    assertThat(response.interestCountry()).isEqualTo(new CountryResponse(31L, "프랑스", "France", "FR"));
+    assertThat(response.exchangeCountry()).isEqualTo(new CountryResponse(71L, "독일", "Germany", "DE"));
   }
 
   @DisplayName("파견 국가가 없으면 파견 국가를 null로 반환한다")
   @Test
   void from_withoutExchangeCountry_returnsNullExchangeCountry() {
     // given
-    Country france = createCountry(31L, "프랑스", "FR");
+    Country france = createCountry(31L, "프랑스", "France", "FR");
     UserCountriesResult result = new UserCountriesResult(france, null);
 
     // when
     UserCountriesResponse response = UserCountriesResponse.from(result);
 
     // then
-    assertThat(response.interestCountry()).isEqualTo(new CountryResponse(31L, "프랑스", "FR"));
+    assertThat(response.interestCountry()).isEqualTo(new CountryResponse(31L, "프랑스", "France", "FR"));
     assertThat(response.exchangeCountry()).isNull();
   }
 
@@ -57,10 +57,11 @@ class UserCountriesResponseTest {
     assertThat(response.exchangeCountry()).isNull();
   }
 
-  private Country createCountry(Long id, String name, String isoCode) {
+  private Country createCountry(Long id, String name, String englishName, String isoCode) {
     Country country = mock(Country.class);
     given(country.getId()).willReturn(id);
     given(country.getName()).willReturn(name);
+    given(country.getEnglishName()).willReturn(englishName);
     given(country.getIsoCode()).willReturn(isoCode);
     return country;
   }
