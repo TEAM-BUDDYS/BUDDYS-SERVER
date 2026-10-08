@@ -99,6 +99,60 @@ class CountryServiceTest {
         .containsExactly("미국");
   }
 
+  @DisplayName("영문 별칭으로도 대소문자 구분 없이 검색된다")
+  @Test
+  void searchCountries_matchesEnglishAlias() {
+    // given
+    insertCountry("체코", "CZ", "Czechia", "Czech Republic");
+    insertCountry("미국", "US", "United States", "USA, United States of America, America");
+    insertCountry("대한민국", "KR", "South Korea", "Republic of Korea");
+
+    // when
+    Slice<Country> czechResult = countryService.searchCountries("czech republic", 0, 20);
+    Slice<Country> usaResult = countryService.searchCountries("usa", 0, 20);
+
+    // then
+    assertThat(czechResult.getContent())
+        .extracting(Country::getName)
+        .containsExactly("체코");
+    assertThat(usaResult.getContent())
+        .extracting(Country::getName)
+        .containsExactly("미국");
+  }
+
+  @DisplayName("악센트가 있는 영문 국가명은 악센트 없이 입력해도 검색된다")
+  @Test
+  void searchCountries_matchesAccentInsensitively() {
+    // given
+    insertCountry("튀르키예", "TR", "Türkiye", "Turkey");
+    insertCountry("코트디부아르", "CI", "Côte d'Ivoire", "Ivory Coast");
+
+    // when
+    Slice<Country> turkiyeResult = countryService.searchCountries("turkiye", 0, 20);
+    Slice<Country> turkeyResult = countryService.searchCountries("turkey", 0, 20);
+    Slice<Country> coteResult = countryService.searchCountries("cote", 0, 20);
+
+    // then
+    assertThat(turkiyeResult.getContent()).extracting(Country::getName).containsExactly("튀르키예");
+    assertThat(turkeyResult.getContent()).extracting(Country::getName).containsExactly("튀르키예");
+    assertThat(coteResult.getContent()).extracting(Country::getName).containsExactly("코트디부아르");
+  }
+
+  @DisplayName("키워드의 LIKE 와일드카드 문자는 일반 문자로 취급된다")
+  @Test
+  void searchCountries_escapesLikeWildcards() {
+    // given
+    insertCountry("대한민국", "KR", "South Korea");
+
+    // when
+    Slice<Country> percentResult = countryService.searchCountries("%", 0, 20);
+    Slice<Country> underscoreResult = countryService.searchCountries("_", 0, 20);
+
+    // then
+    assertThat(percentResult.getContent()).isEmpty();
+    assertThat(underscoreResult.getContent()).isEmpty();
+  }
+
   @DisplayName("영문 국가명이 있어도 한글 국가명 검색은 그대로 동작한다")
   @Test
   void searchCountries_koreanKeywordStillMatchesWithEnglishName() {
@@ -266,6 +320,16 @@ class CountryServiceTest {
         name,
         isoCode,
         englishName
+    );
+  }
+
+  private void insertCountry(String name, String isoCode, String englishName, String englishAliases) {
+    jdbcTemplate.update(
+        "INSERT INTO country (name, iso_code, english_name, english_aliases) VALUES (?, ?, ?, ?)",
+        name,
+        isoCode,
+        englishName,
+        englishAliases
     );
   }
 

@@ -38,10 +38,15 @@ class CountryEnglishNameMigrationTest {
         "SELECT english_name FROM country WHERE iso_code = 'KR'",
         String.class
     );
+    String czechAliases = jdbcTemplate.queryForObject(
+        "SELECT english_aliases FROM country WHERE iso_code = 'CZ'",
+        String.class
+    );
 
     // then
     assertThat(total).isPositive();
     assertThat(missing).isZero();
     assertThat(korea).isEqualTo("South Korea");
+    assertThat(czechAliases).isEqualTo("Czech Republic");
   }
 }

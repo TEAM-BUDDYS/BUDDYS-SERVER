@@ -1,5 +1,6 @@
 package org.sopt.buddys.domain.location.service;
 
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.location.repository.CountryRepository;
@@ -19,11 +20,18 @@ public class CountryService {
 
   public Slice<Country> searchCountries(String keyword, int page, int size) {
     validatePageRequest(page, size);
-    String trimmedKeyword = keyword.trim();
-    return countryRepository
-        .findByNameContainingIgnoreCaseOrEnglishNameContainingIgnoreCaseOrderByNameAsc(
-            trimmedKeyword, trimmedKeyword, PageRequest.of(page, size)
-        );
+    return countryRepository.searchByKeyword(
+        toContainsPattern(keyword), PageRequest.of(page, size)
+    );
+  }
+
+  private String toContainsPattern(String keyword) {
+    String escapedKeyword = keyword.trim()
+        .toLowerCase(Locale.ROOT)
+        .replace("!", "!!")
+        .replace("%", "!%")
+        .replace("_", "!_");
+    return "%" + escapedKeyword + "%";
   }
 
   public Slice<Country> getCountries(int page, int size) {

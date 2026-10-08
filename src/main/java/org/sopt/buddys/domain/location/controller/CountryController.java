@@ -31,7 +31,7 @@ public class CountryController {
   private final CountryService countryService;
 
   @Operation(summary = "국가 검색", description = "검색 키워드가 한글 국가명 또는 영문 국가명에 포함된 국가를 검색합니다. "
-      + "영문은 대소문자를 구분하지 않으며, 결과는 한글 국가명의 ㄱㄴㄷ순으로 반환되며, 각 국가의 한글명(name)과 영문명(englishName)을 함께 반환합니다.")
+      + "영문은 대소문자를 구분하지 않으며, 결과는 한글 국가명의 ㄱㄴㄷ순으로 각 국가의 한글명(name)과 영문명(englishName)을 함께 반환합니다.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "검색 성공"),
   })

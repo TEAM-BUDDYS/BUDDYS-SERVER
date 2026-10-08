@@ -37,4 +37,7 @@ public class Country {
 
   @Column(name = "english_name", length = 100)
   private String englishName;
+
+  @Column(name = "english_aliases", length = 255)
+  private String englishAliases;
 }
