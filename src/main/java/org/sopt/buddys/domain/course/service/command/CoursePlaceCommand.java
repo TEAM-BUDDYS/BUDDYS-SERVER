@@ -8,6 +8,9 @@ public record CoursePlaceCommand(
     String category,
     BigDecimal latitude,
     BigDecimal longitude,
-    Short orderNo
+    Short orderNo,
+    String address,
+    String country,
+    String city
 ) {
 }

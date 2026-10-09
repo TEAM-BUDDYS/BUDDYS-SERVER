@@ -1,0 +1,3 @@
+ALTER TABLE place
+    ADD COLUMN country_name VARCHAR(100) NULL,
+    ADD COLUMN city_name VARCHAR(100) NULL;

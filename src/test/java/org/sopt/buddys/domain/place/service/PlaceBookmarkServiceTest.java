@@ -22,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
+import org.sopt.buddys.domain.place.client.dto.GoogleAddressComponent;
 import org.sopt.buddys.domain.place.client.dto.GoogleDisplayName;
 import org.sopt.buddys.domain.place.client.dto.GoogleLatLng;
 import org.sopt.buddys.domain.place.client.dto.GooglePlace;
@@ -89,8 +90,35 @@ class PlaceBookmarkServiceTest {
     placeBookmarkService.bookmark(1L, GOOGLE_PLACE_ID);
 
     // then
-    then(placeBookmarkTransactionService).should().updatePlaceAddress(10L, "어딘가");
+    then(placeBookmarkTransactionService).should().fillMissingPlaceLocation(10L, "어딘가", null, null);
     then(placeBookmarkTransactionService).should(never()).savePlace(any());
+    then(placeBookmarkTransactionService).should().saveBookmark(1L, 10L);
+  }
+
+  @DisplayName("캐시된 장소에 주소는 있어도 국가/도시가 없으면 구글 상세 조회로 보충한다")
+  @Test
+  void bookmark_existingPlaceWithoutCountryAndCity_fillsFromGoogle() {
+    // given
+    given(placeRepository.findByGooglePlaceId(GOOGLE_PLACE_ID)).willReturn(Optional.of(Place.builder()
+        .id(10L)
+        .googlePlaceId(GOOGLE_PLACE_ID)
+        .name("장소")
+        .category(PlaceCategory.ETC)
+        .address("주소")
+        .build()));
+    given(googlePlacesClient.getPlace(GOOGLE_PLACE_ID)).willReturn(new GooglePlace(
+        GOOGLE_PLACE_ID, new GoogleDisplayName("어떤 장소", "ko"), "cafe", List.of("cafe"),
+        "어딘가",
+        List.of(
+            new GoogleAddressComponent("프랑스", "FR", List.of("country")),
+            new GoogleAddressComponent("파리", "파리", List.of("locality"))),
+        null, null));
+
+    // when
+    placeBookmarkService.bookmark(1L, GOOGLE_PLACE_ID);
+
+    // then
+    then(placeBookmarkTransactionService).should().fillMissingPlaceLocation(10L, "어딘가", "프랑스", "파리");
     then(placeBookmarkTransactionService).should().saveBookmark(1L, 10L);
   }
 
@@ -107,7 +135,8 @@ class PlaceBookmarkServiceTest {
     placeBookmarkService.bookmark(1L, GOOGLE_PLACE_ID);
 
     // then
-    then(placeBookmarkTransactionService).should(never()).updatePlaceAddress(anyLong(), any());
+    then(placeBookmarkTransactionService).should(never())
+        .fillMissingPlaceLocation(anyLong(), any(), any(), any());
     then(placeBookmarkTransactionService).should().saveBookmark(1L, 10L);
   }
 
@@ -125,7 +154,8 @@ class PlaceBookmarkServiceTest {
     placeBookmarkService.bookmark(1L, GOOGLE_PLACE_ID);
 
     // then
-    then(placeBookmarkTransactionService).should(never()).updatePlaceAddress(anyLong(), any());
+    then(placeBookmarkTransactionService).should(never())
+        .fillMissingPlaceLocation(anyLong(), any(), any(), any());
     then(placeBookmarkTransactionService).should().saveBookmark(1L, 10L);
   }
 
@@ -388,6 +418,8 @@ class PlaceBookmarkServiceTest {
         .name("장소")
         .category(PlaceCategory.ETC)
         .address("주소")
+        .countryName("국가")
+        .cityName("도시")
         .latitude(BigDecimal.ONE)
         .longitude(BigDecimal.ONE)
         .build();

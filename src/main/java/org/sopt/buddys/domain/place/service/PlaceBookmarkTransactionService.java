@@ -20,9 +20,8 @@ public class PlaceBookmarkTransactionService {
   }
 
   @Transactional
-  public void updatePlaceAddress(Long placeId, String address) {
-    placeRepository.findById(placeId)
-        .ifPresent(place -> place.updateAddress(address));
+  public void fillMissingPlaceLocation(Long placeId, String address, String countryName, String cityName) {
+    placeRepository.fillMissingLocation(placeId, address, countryName, cityName);
   }
 
   @Transactional

@@ -149,7 +149,7 @@ class CourseServiceTest {
                 "TOURISM",
                 BigDecimal.valueOf(48.8606),
                 BigDecimal.valueOf(2.3376),
-                (short) 0
+                (short) 0, null, null, null
             )),
             List.of(new CourseFlightCommand(
                 "대한항공",
@@ -235,7 +235,7 @@ class CourseServiceTest {
             (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-shared", "루브르 박물관", "TOURISM",
-                BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0)), null))));
+                BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0, null, null, null)), null))));
 
     // when
     courseService.createCourse(secondAuthor.getId(), new CreateCourseCommand(
@@ -246,7 +246,7 @@ class CourseServiceTest {
             (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-shared", "가짜 이름", "RESTAURANT",
-                BigDecimal.valueOf(0), BigDecimal.valueOf(0), (short) 0)), null))));
+                BigDecimal.valueOf(0), BigDecimal.valueOf(0), (short) 0, null, null, null)), null))));
 
     // then
     Place place = placeRepository.findByGooglePlaceId("ChIJ-shared").orElseThrow();
@@ -254,6 +254,40 @@ class CourseServiceTest {
     assertThat(place.getCategory()).isEqualTo(PlaceCategory.TOURISM);
     assertThat(place.getLatitude()).isEqualByComparingTo(BigDecimal.valueOf(48.8606));
     assertThat(placeRepository.findAll()).hasSize(1);
+  }
+
+  @DisplayName("주소/국가/도시 없이 저장된 기존 장소는 이후 코스 작성 요청 값으로 보충되고, 이미 있는 값은 덮어쓰지 않는다")
+  @Test
+  void createCourse_existingPlaceWithoutLocation_fillsMissingLocationOnly() {
+    // given
+    User author = userRepository.save(createUser("fill@test.com", "provider-fill", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    placeRepository.saveAndFlush(Place.builder()
+        .googlePlaceId("ChIJ-fill")
+        .name("루브르 박물관")
+        .category(PlaceCategory.TOURISM)
+        .countryName("프랑스")
+        .build());
+
+    // when
+    Course course = courseService.createCourse(author.getId(), new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand(
+            (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
+            List.of(new CoursePlaceCommand(
+                "ChIJ-fill", "루브르 박물관", "TOURISM", null, null, (short) 0,
+                "Rue de Rivoli, 75001 Paris", "다른 국가", "파리")), null))));
+
+    // then
+    CourseDetailResult.PlaceResult place =
+        courseService.getCourseDetail(author.getId(), course.getId()).days().get(0).places().get(0);
+    assertThat(place.address()).isEqualTo("Rue de Rivoli, 75001 Paris");
+    assertThat(place.country()).isEqualTo("프랑스");
+    assertThat(place.city()).isEqualTo("파리");
   }
 
   @DisplayName("같은 요청 안에서 동일 googlePlaceId에 서로 다른 이름/카테고리가 섞여 있으면 예외가 발생한다")
@@ -273,11 +307,11 @@ class CourseServiceTest {
             new CourseDayCommand(
                 (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
                 List.of(new CoursePlaceCommand(
-                    "ChIJ-conflict", "루브르 박물관", "TOURISM", null, null, (short) 0)), null),
+                    "ChIJ-conflict", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null, null)), null),
             new CourseDayCommand(
                 (short) 2, null, List.of("https://example.com/day2.jpg"), null, null,
                 List.of(new CoursePlaceCommand(
-                    "ChIJ-conflict", "루브르 카페", "CAFE", null, null, (short) 0)), null)
+                    "ChIJ-conflict", "루브르 카페", "CAFE", null, null, (short) 0, null, null, null)), null)
         ));
 
     // when, then
@@ -559,7 +593,7 @@ class CourseServiceTest {
         List.of(new CourseDayCommand(
             (short) 1, LocalDate.of(2026, 9, 1), List.of("https://example.com/old-day.jpg"), null, null,
             List.of(new CoursePlaceCommand(
-                "ChIJ-old", "루브르 박물관", "TOURISM", null, null, (short) 0)),
+                "ChIJ-old", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null, null)),
             List.of(new CourseFlightCommand(
                 "대한항공", "KE901", "ICN", LocalTime.of(13, 0),
                 "CDG", LocalTime.of(18, 30))))));
@@ -573,7 +607,7 @@ class CourseServiceTest {
             (short) 1, LocalDate.of(2026, 10, 1), List.of("https://example.com/new-day.jpg"),
             "예약 필수", BigDecimal.valueOf(16000),
             List.of(new CoursePlaceCommand(
-                "ChIJ-new", "콜로세움", "TOURISM", null, null, (short) 0)),
+                "ChIJ-new", "콜로세움", "TOURISM", null, null, (short) 0, null, null, null)),
             List.of(new CourseFlightCommand(
                 "아시아나항공", "OZ501", "ICN", LocalTime.of(9, 0),
                 "FCO", LocalTime.of(16, 0))))));
@@ -756,7 +790,10 @@ class CourseServiceTest {
                 "TOURISM",
                 BigDecimal.valueOf(48.8606),
                 BigDecimal.valueOf(2.3376),
-                (short) 0
+                (short) 0,
+                "Rue de Rivoli, 75001 Paris",
+                "프랑스",
+                "파리"
             )),
             List.of(new CourseFlightCommand(
                 "대한항공",
@@ -787,6 +824,9 @@ class CourseServiceTest {
     assertThat(result.days().get(0).cost()).isEqualByComparingTo(BigDecimal.valueOf(22000));
     assertThat(result.days().get(0).places()).hasSize(1);
     assertThat(result.days().get(0).places().get(0).name()).isEqualTo("루브르 박물관");
+    assertThat(result.days().get(0).places().get(0).address()).isEqualTo("Rue de Rivoli, 75001 Paris");
+    assertThat(result.days().get(0).places().get(0).country()).isEqualTo("프랑스");
+    assertThat(result.days().get(0).places().get(0).city()).isEqualTo("파리");
     assertThat(result.days().get(0).flights()).hasSize(1);
     assertThat(result.days().get(0).flights().get(0).departureTime()).isEqualTo(LocalTime.of(13, 0));
     assertThat(result.days().get(0).flights().get(0).arrivalTime()).isEqualTo(LocalTime.of(18, 30));
