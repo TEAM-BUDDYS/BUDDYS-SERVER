@@ -138,23 +138,26 @@ public class PlaceBookmarkService {
 
   private Place resolvePlace(String googlePlaceId) {
     return placeRepository.findByGooglePlaceId(googlePlaceId)
-        .map(this::fillMissingAddress)
+        .map(this::fillMissingLocation)
         .orElseGet(() -> createPlaceFromGoogle(googlePlaceId));
   }
 
-  private Place fillMissingAddress(Place place) {
-    if (place.getAddress() != null) {
+  private Place fillMissingLocation(Place place) {
+    if (!place.hasMissingLocation()) {
       return place;
     }
 
     try {
-      String address = googlePlacesClient.getPlace(place.getGooglePlaceId()).formattedAddress();
-      if (address != null && !address.isBlank()) {
-        placeBookmarkTransactionService.updatePlaceAddress(place.getId(), address);
+      GooglePlace google = googlePlacesClient.getPlace(place.getGooglePlaceId());
+      String address = blankToNull(google.formattedAddress());
+      String countryName = AddressComponentParser.extractCountry(google.addressComponents());
+      String cityName = AddressComponentParser.extractCity(google.addressComponents());
+      if (address != null || countryName != null || cityName != null) {
+        placeBookmarkTransactionService.fillMissingPlaceLocation(place.getId(), address, countryName, cityName);
       }
     } catch (BaseException e) {
       log.warn(
-          "[PlaceBookmarkService] 장소 주소 보충 실패 → placeId={}, googlePlaceId={}, code={}",
+          "[PlaceBookmarkService] 장소 주소/국가/도시 보충 실패 → placeId={}, googlePlaceId={}, code={}",
           place.getId(),
           place.getGooglePlaceId(),
           e.getErrorCode().getCode()
@@ -183,6 +186,10 @@ public class PlaceBookmarkService {
       // 동시에 같은 장소를 저장한 요청이 이미 캐시 행을 만든 경우
       return placeRepository.findByGooglePlaceId(googlePlaceId).orElseThrow(() -> e);
     }
+  }
+
+  private String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value;
   }
 
   private String resolveName(GooglePlace google) {

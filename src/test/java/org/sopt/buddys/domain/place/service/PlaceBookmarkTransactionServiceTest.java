@@ -64,24 +64,27 @@ class PlaceBookmarkTransactionServiceTest {
     userRepository.deleteAllInBatch();
   }
 
-  @DisplayName("장소 주소를 갱신하면 캐시된 장소의 주소가 변경된다")
+  @DisplayName("비어 있는 주소/국가/도시만 채우고 이미 있는 값은 덮어쓰지 않는다")
   @Test
-  void updatePlaceAddress_updatesCachedPlaceAddress() {
+  void fillMissingPlaceLocation_fillsOnlyMissingColumns() {
     // given
     Place place = placeRepository.save(Place.builder()
         .googlePlaceId("ChIJN1t_tDeuEmsRUsoyG83frY4")
         .name("루브르 박물관")
         .category(PlaceCategory.TOURISM)
+        .countryName("프랑스")
         .latitude(new BigDecimal("48.8606"))
         .longitude(new BigDecimal("2.3376"))
         .build());
 
     // when
-    placeBookmarkTransactionService.updatePlaceAddress(place.getId(), "프랑스 파리");
+    placeBookmarkTransactionService.fillMissingPlaceLocation(place.getId(), "프랑스 파리", "다른 국가", null);
 
     // then
-    assertThat(placeRepository.findById(place.getId()).orElseThrow().getAddress())
-        .isEqualTo("프랑스 파리");
+    Place updated = placeRepository.findById(place.getId()).orElseThrow();
+    assertThat(updated.getAddress()).isEqualTo("프랑스 파리");
+    assertThat(updated.getCountryName()).isEqualTo("프랑스");
+    assertThat(updated.getCityName()).isNull();
   }
 
   @DisplayName("같은 장소를 반복 저장해도 북마크 한 건만 생성된다")

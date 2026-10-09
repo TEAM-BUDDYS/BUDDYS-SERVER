@@ -439,9 +439,9 @@ public class CourseService {
       Place existing = resolvedPlaces.get(googlePlaceId);
       if (existing == null) {
         resolvedPlaces.put(googlePlaceId, createPlace(command, parseCategory(command.category())));
-      } else {
+      } else if (existing.hasMissingLocation()) {
         // 주소/국가/도시 없이 저장된 기존 장소는 이번 요청 값으로 보충한다.
-        existing.fillMissingLocation(command.address(), command.country(), command.city());
+        fillMissingLocation(existing, command);
       }
     });
 
@@ -471,6 +471,16 @@ public class CourseService {
       return coursePlaceTransactionService.findByGooglePlaceId(placeCommand.googlePlaceId())
           .orElseThrow(() -> e);
     }
+  }
+
+  private void fillMissingLocation(Place place, CoursePlaceCommand command) {
+    String address = blankToNull(command.address());
+    String countryName = blankToNull(command.country());
+    String cityName = blankToNull(command.city());
+    if (address == null && countryName == null && cityName == null) {
+      return;
+    }
+    placeRepository.fillMissingLocation(place.getId(), address, countryName, cityName);
   }
 
   private String blankToNull(String value) {

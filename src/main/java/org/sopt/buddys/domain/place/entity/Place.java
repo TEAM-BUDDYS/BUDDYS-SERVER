@@ -78,20 +78,8 @@ public class Place {
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
-  public void updateAddress(String address) {
-    this.address = address;
-  }
-
-  public void fillMissingLocation(String address, String countryName, String cityName) {
-    if (isBlank(this.address) && !isBlank(address)) {
-      this.address = address;
-    }
-    if (isBlank(this.countryName) && !isBlank(countryName)) {
-      this.countryName = countryName;
-    }
-    if (isBlank(this.cityName) && !isBlank(cityName)) {
-      this.cityName = cityName;
-    }
+  public boolean hasMissingLocation() {
+    return isBlank(address) || isBlank(countryName) || isBlank(cityName);
   }
 
   private static boolean isBlank(String value) {
