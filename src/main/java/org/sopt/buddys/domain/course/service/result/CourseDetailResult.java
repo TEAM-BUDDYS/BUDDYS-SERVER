@@ -108,7 +108,10 @@ public record CourseDetailResult(
       String name,
       PlaceCategory category,
       BigDecimal latitude,
-      BigDecimal longitude
+      BigDecimal longitude,
+      String address,
+      String country,
+      String city
   ) {
   }
 }

@@ -17,6 +17,7 @@ import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceListResult;
 import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceMarkersResult;
 import org.sopt.buddys.domain.place.service.result.BookmarkedPlaceResult;
+import org.sopt.buddys.domain.place.util.AddressComponentParser;
 import org.sopt.buddys.domain.place.util.GoogleMapsUrlBuilder;
 import org.sopt.buddys.global.common.code.GlobalErrorCode;
 import org.sopt.buddys.global.exception.BaseException;
@@ -170,6 +171,8 @@ public class PlaceBookmarkService {
         .category(PlaceCategoryMapper.resolveCategory(google.primaryType(), google.types())
             .orElse(PlaceCategory.ETC))
         .address(google.formattedAddress())
+        .countryName(AddressComponentParser.extractCountry(google.addressComponents()))
+        .cityName(AddressComponentParser.extractCity(google.addressComponents()))
         .latitude(toBigDecimal(google.location(), true))
         .longitude(toBigDecimal(google.location(), false))
         .build();

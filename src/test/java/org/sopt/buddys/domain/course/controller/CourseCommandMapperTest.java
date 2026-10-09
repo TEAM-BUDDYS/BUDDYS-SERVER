@@ -40,7 +40,8 @@ class CourseCommandMapperTest {
             BigDecimal.valueOf(22000),
             List.of(new CoursePlaceRequest(
                 "ChIJ-place", "루브르 박물관", "TOURISM",
-                BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0
+                BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0,
+                "Rue de Rivoli, 75001 Paris", "프랑스", "파리"
             )),
             List.of(new CourseFlightRequest(
                 "대한항공", "KE901", "ICN",
@@ -66,6 +67,9 @@ class CourseCommandMapperTest {
     assertThat(dayCommand.memo()).isEqualTo("예약 필수");
     assertThat(dayCommand.cost()).isEqualByComparingTo(BigDecimal.valueOf(22000));
     assertThat(dayCommand.places().get(0).googlePlaceId()).isEqualTo("ChIJ-place");
+    assertThat(dayCommand.places().get(0).address()).isEqualTo("Rue de Rivoli, 75001 Paris");
+    assertThat(dayCommand.places().get(0).country()).isEqualTo("프랑스");
+    assertThat(dayCommand.places().get(0).city()).isEqualTo("파리");
     assertThat(dayCommand.flights().get(0).airline()).isEqualTo("대한항공");
     assertThat(dayCommand.flights().get(0).departureTime()).isEqualTo(LocalTime.of(13, 0));
     assertThat(dayCommand.flights().get(0).arrivalTime()).isEqualTo(LocalTime.of(18, 30));

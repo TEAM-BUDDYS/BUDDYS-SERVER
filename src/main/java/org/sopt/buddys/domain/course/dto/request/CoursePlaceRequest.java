@@ -29,6 +29,18 @@ public record CoursePlaceRequest(
 
     @Schema(description = "하루 내 방문 순서", example = "0")
     @PositiveOrZero
-    Short orderNo
+    Short orderNo,
+
+    @Schema(description = "주소. 장소 검색 응답의 address를 그대로 전달", example = "Rue de Rivoli, 75001 Paris", nullable = true)
+    @Size(max = 512)
+    String address,
+
+    @Schema(description = "국가명. 장소 검색 응답의 country를 그대로 전달", example = "프랑스", nullable = true)
+    @Size(max = 100)
+    String country,
+
+    @Schema(description = "도시명. 장소 검색 응답의 city를 그대로 전달", example = "파리", nullable = true)
+    @Size(max = 100)
+    String city
 ) {
 }

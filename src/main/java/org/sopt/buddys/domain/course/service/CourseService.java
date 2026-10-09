@@ -436,8 +436,12 @@ public class CourseService {
         .forEach(place -> resolvedPlaces.put(place.getGooglePlaceId(), place));
 
     firstCommandByGooglePlaceId.forEach((googlePlaceId, command) -> {
-      if (!resolvedPlaces.containsKey(googlePlaceId)) {
+      Place existing = resolvedPlaces.get(googlePlaceId);
+      if (existing == null) {
         resolvedPlaces.put(googlePlaceId, createPlace(command, parseCategory(command.category())));
+      } else {
+        // 주소/국가/도시 없이 저장된 기존 장소는 이번 요청 값으로 보충한다.
+        existing.fillMissingLocation(command.address(), command.country(), command.city());
       }
     });
 
@@ -457,6 +461,9 @@ public class CourseService {
           .googlePlaceId(placeCommand.googlePlaceId())
           .name(placeCommand.name())
           .category(category)
+          .address(blankToNull(placeCommand.address()))
+          .countryName(blankToNull(placeCommand.country()))
+          .cityName(blankToNull(placeCommand.city()))
           .latitude(placeCommand.latitude())
           .longitude(placeCommand.longitude())
           .build());
@@ -464,6 +471,10 @@ public class CourseService {
       return coursePlaceTransactionService.findByGooglePlaceId(placeCommand.googlePlaceId())
           .orElseThrow(() -> e);
     }
+  }
+
+  private String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
   }
 
   private PlaceCategory parseCategory(String categoryRaw) {
@@ -753,7 +764,10 @@ public class CourseService {
         place.getName(),
         place.getCategory(),
         place.getLatitude(),
-        place.getLongitude()
+        place.getLongitude(),
+        place.getAddress(),
+        place.getCountryName(),
+        place.getCityName()
     );
   }
 }

@@ -205,7 +205,7 @@ public record CourseDetailResponse(
       BigDecimal cost,
 
       @Schema(description = "해당 일자에 방문한 장소 목록", requiredMode = Schema.RequiredMode.REQUIRED)
-      List<PlaceResponse> places,
+      List<CoursePlaceResponse> places,
 
       @Schema(description = "해당 일자의 항공편 목록", requiredMode = Schema.RequiredMode.REQUIRED)
       List<FlightResponse> flights
@@ -224,7 +224,7 @@ public record CourseDetailResponse(
           day.imageUrls(),
           day.memo(),
           day.cost(),
-          day.places().stream().map(PlaceResponse::from).toList(),
+          day.places().stream().map(CoursePlaceResponse::from).toList(),
           day.flights().stream().map(FlightResponse::from).toList()
       );
     }
@@ -264,7 +264,7 @@ public record CourseDetailResponse(
     }
   }
 
-  public record PlaceResponse(
+  public record CoursePlaceResponse(
       @Schema(description = "장소 ID", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
       Long placeId,
 
@@ -281,17 +281,29 @@ public record CourseDetailResponse(
       BigDecimal latitude,
 
       @Schema(description = "경도", example = "2.3376", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
-      BigDecimal longitude
+      BigDecimal longitude,
+
+      @Schema(description = "주소. 저장된 값이 없으면 null", example = "Rue de Rivoli, 75001 Paris", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
+      String address,
+
+      @Schema(description = "국가명(구글 표기, 한글). 저장된 값이 없으면 null", example = "프랑스", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
+      String country,
+
+      @Schema(description = "도시명(구글 표기, 한글). 저장된 값이 없으면 null", example = "파리", requiredMode = Schema.RequiredMode.REQUIRED, nullable = true)
+      String city
   ) {
 
-    private static PlaceResponse from(CourseDetailResult.PlaceResult place) {
-      return new PlaceResponse(
+    private static CoursePlaceResponse from(CourseDetailResult.PlaceResult place) {
+      return new CoursePlaceResponse(
           place.placeId(),
           place.googlePlaceId(),
           place.name(),
           place.category(),
           place.latitude(),
-          place.longitude()
+          place.longitude(),
+          place.address(),
+          place.country(),
+          place.city()
       );
     }
   }

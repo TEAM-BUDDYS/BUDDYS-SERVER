@@ -62,7 +62,10 @@ final class CourseCommandMapper {
         request.category(),
         request.latitude(),
         request.longitude(),
-        request.orderNo()
+        request.orderNo(),
+        request.address(),
+        request.country(),
+        request.city()
     );
   }
 

@@ -151,7 +151,7 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
         List.of(tagId), null,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
-                googlePlaceId, "콜로세움", "TOURISM", null, null, (short) 0)), null)));
+                googlePlaceId, "콜로세움", "TOURISM", null, null, (short) 0, null, null, null)), null)));
     readyLatch.countDown();
     assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();
     return courseService.createCourse(authorId, command);

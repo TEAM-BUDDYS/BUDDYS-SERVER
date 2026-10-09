@@ -61,6 +61,13 @@ public class Place {
   @Column(length = 512)
   private String address;
 
+  // 구글 표기(한글) 국가/도시명. country/city 마스터 데이터와 연결되지 않는 표시용 문자열이다.
+  @Column(name = "country_name", length = 100)
+  private String countryName;
+
+  @Column(name = "city_name", length = 100)
+  private String cityName;
+
   @Column(precision = 10, scale = 7)
   private BigDecimal latitude;
 
@@ -73,5 +80,21 @@ public class Place {
 
   public void updateAddress(String address) {
     this.address = address;
+  }
+
+  public void fillMissingLocation(String address, String countryName, String cityName) {
+    if (isBlank(this.address) && !isBlank(address)) {
+      this.address = address;
+    }
+    if (isBlank(this.countryName) && !isBlank(countryName)) {
+      this.countryName = countryName;
+    }
+    if (isBlank(this.cityName) && !isBlank(cityName)) {
+      this.cityName = cityName;
+    }
+  }
+
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
   }
 }

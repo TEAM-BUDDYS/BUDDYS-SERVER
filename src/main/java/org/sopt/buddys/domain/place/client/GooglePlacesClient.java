@@ -41,7 +41,7 @@ public class GooglePlacesClient {
           + "places.addressComponents,places.location,places.photos";
   private static final String SEARCH_TEXT_FIELD_MASK = PLACE_FIELDS + ",nextPageToken";
   private static final String PLACE_DETAILS_FIELD_MASK =
-      "id,displayName,primaryType,types,formattedAddress,location";
+      "id,displayName,primaryType,types,formattedAddress,addressComponents,location";
   private static final double DEFAULT_BIAS_RADIUS_METERS = 20_000.0;
   private static final int NEARBY_MAX_RESULT_COUNT = 20;
   private static final String LANGUAGE_CODE_KOREAN = "ko";
