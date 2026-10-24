@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
+    long countByChatRoomId(Long chatRoomId);
+
     @Query("""
             select case when count(m) > 0 then true else false end
             from ChatMessage m

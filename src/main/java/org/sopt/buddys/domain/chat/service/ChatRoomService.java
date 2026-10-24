@@ -4,6 +4,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.chat.code.ChatErrorCode;
 import org.sopt.buddys.domain.chat.entity.ChatRoom;
+import org.sopt.buddys.domain.chat.repository.ChatMessageRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomMemberRepository;
 import org.sopt.buddys.domain.chat.repository.ChatRoomRepository;
 import org.sopt.buddys.domain.chat.repository.ChatUserBlockRepository;
@@ -35,9 +36,11 @@ public class ChatRoomService {
   private static final int MAX_PAGE_SIZE = 100;
   private static final int DIRECT_CHAT_ROOM_RETRY_COUNT = 3;
   private static final long DIRECT_CHAT_ROOM_RETRY_INTERVAL_MILLIS = 50L;
+  private static final long COURSE_RECORD_MESSAGE_THRESHOLD = 20L;
 
   private final ChatRoomRepository chatRoomRepository;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
+  private final ChatMessageRepository chatMessageRepository;
   private final ChatRoomCommandService chatRoomCommandService;
   private final ChatUserBlockRepository chatUserBlockRepository;
   private final ChatUserReportRepository chatUserReportRepository;
@@ -144,8 +147,14 @@ public class ChatRoomService {
         chatRoom,
         participant,
         chatUserBlockRepository.existsByBlockerIdAndBlockedId(userId, participant.getId()),
-        chatUserReportRepository.existsByReporterIdAndReportedId(userId, participant.getId())
+        chatUserReportRepository.existsByReporterIdAndReportedId(userId, participant.getId()),
+        canRecordCourse(chatRoom.getId())
     );
+  }
+
+  private boolean canRecordCourse(Long chatRoomId) {
+    return chatMessageRepository.countByChatRoomId(chatRoomId)
+        >= COURSE_RECORD_MESSAGE_THRESHOLD;
   }
 
   private boolean canSendMessage(Long userId, Long partnerId) {

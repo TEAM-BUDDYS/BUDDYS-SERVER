@@ -7,7 +7,8 @@ public record ChatRoomResult(
     ChatRoom chatRoom,
     User participant,
     boolean hasBlocked,
-    boolean hasReported
+    boolean hasReported,
+    boolean canRecordCourse
 ) {
 
   public boolean canSendMessage() {

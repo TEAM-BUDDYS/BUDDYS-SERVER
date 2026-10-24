@@ -23,7 +23,11 @@ public record ChatRoomResponse(
     boolean hasBlocked,
 
     @Schema(description = "내가 상대방을 신고했는지 여부. 상대방이 나를 신고한 경우는 반영되지 않습니다.", example = "false")
-    boolean hasReported
+    boolean hasReported,
+
+    @Schema(description = "코스 기록 가능 여부. "
+        + "채팅방에서 양측이 주고받은 메시지가 20개 이상이면 true입니다.", example = "false")
+    boolean canRecordCourse
 ) {
 
   public static ChatRoomResponse from(ChatRoomResult result) {
@@ -33,7 +37,8 @@ public record ChatRoomResponse(
         ChatParticipantResponse.from(result.participant()),
         result.canSendMessage(),
         result.hasBlocked(),
-        result.hasReported()
+        result.hasReported(),
+        result.canRecordCourse()
     );
   }
 }
