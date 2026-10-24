@@ -24,6 +24,7 @@ import org.sopt.buddys.domain.chat.service.ChatUserBlockService;
 import org.sopt.buddys.domain.chat.service.ChatUserReportService;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult;
 import org.sopt.buddys.domain.chat.service.result.ChatMessageListResult.ChatMessageResult;
+import org.sopt.buddys.domain.chat.service.result.ChatRoomResult;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.global.exception.GlobalExceptionHandler;
@@ -43,6 +44,7 @@ class ChatRoomControllerTest {
 
   private static final long LOGIN_USER_ID = 1L;
 
+  private ChatRoomService chatRoomService;
   private ChatMessageService chatMessageService;
   private ChatUserBlockService chatUserBlockService;
   private ChatUserReportService chatUserReportService;
@@ -50,7 +52,7 @@ class ChatRoomControllerTest {
 
   @BeforeEach
   void setUp() {
-    ChatRoomService chatRoomService = mock(ChatRoomService.class);
+    chatRoomService = mock(ChatRoomService.class);
     chatMessageService = mock(ChatMessageService.class);
     chatUserBlockService = mock(ChatUserBlockService.class);
     chatUserReportService = mock(ChatUserReportService.class);
@@ -62,6 +64,32 @@ class ChatRoomControllerTest {
         .setCustomArgumentResolvers(new TestLoginUserArgumentResolver())
         .setControllerAdvice(new GlobalExceptionHandler())
         .build();
+  }
+
+  @DisplayName("채팅방 상세 조회는 코스 기록 가능 여부를 응답에 포함한다")
+  @Test
+  void getChatRoom_returnsCanRecordCourse() throws Exception {
+    // given
+    Long chatRoomId = 1L;
+    ChatRoom chatRoom = createChatRoom(chatRoomId);
+    ReflectionTestUtils.setField(chatRoom, "createdAt", LocalDateTime.of(2026, 7, 7, 14, 30));
+    User participant = createUser(2L);
+
+    when(chatRoomService.getChatRoom(LOGIN_USER_ID, chatRoomId))
+        .thenReturn(new ChatRoomResult(chatRoom, participant, false, false, true));
+
+    // when
+    ResultActions result = mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}", chatRoomId));
+
+    // then
+    result
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.chatRoomId").value(chatRoomId))
+        .andExpect(jsonPath("$.data.participant.userId").value(2L))
+        .andExpect(jsonPath("$.data.canSendMessage").value(true))
+        .andExpect(jsonPath("$.data.canRecordCourse").value(true));
+
+    verify(chatRoomService).getChatRoom(LOGIN_USER_ID, chatRoomId);
   }
 
   @DisplayName("메시지 목록 조회는 UTC offset 커서를 파싱하고 UTC offset 시간으로 응답한다")
@@ -217,22 +245,28 @@ class ChatRoomControllerTest {
       LocalDateTime sentAt
   ) {
 
+    ChatMessage message = new ChatMessage(createChatRoom(chatRoomId), createUser(2L), "안녕하세요!");
+    ReflectionTestUtils.setField(message, "id", messageId);
+    ReflectionTestUtils.setField(message, "createdAt", sentAt);
+    return message;
+  }
+
+  private ChatRoom createChatRoom(Long chatRoomId) {
     ChatRoom chatRoom = ChatRoom.createDirect("1:2");
     ReflectionTestUtils.setField(chatRoom, "id", chatRoomId);
+    return chatRoom;
+  }
 
-    User sender = User.builder()
+  private User createUser(Long userId) {
+    User user = User.builder()
         .email("sender@test.com")
         .provider(AuthProvider.KAKAO)
         .providerId("sender-provider-id")
         .nickname("민지")
         .profileImageUrl("https://example.com/profile.png")
         .build();
-    ReflectionTestUtils.setField(sender, "id", 2L);
-
-    ChatMessage message = new ChatMessage(chatRoom, sender, "안녕하세요!");
-    ReflectionTestUtils.setField(message, "id", messageId);
-    ReflectionTestUtils.setField(message, "createdAt", sentAt);
-    return message;
+    ReflectionTestUtils.setField(user, "id", userId);
+    return user;
   }
 
   private static class TestLoginUserArgumentResolver implements HandlerMethodArgumentResolver {
