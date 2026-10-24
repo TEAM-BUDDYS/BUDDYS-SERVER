@@ -36,7 +36,7 @@ public class ChatRoomService {
   private static final int MAX_PAGE_SIZE = 100;
   private static final int DIRECT_CHAT_ROOM_RETRY_COUNT = 3;
   private static final long DIRECT_CHAT_ROOM_RETRY_INTERVAL_MILLIS = 50L;
-  private static final long COURSE_RECORD_MESSAGE_THRESHOLD = 20L;
+  private static final int COURSE_RECORD_MESSAGE_THRESHOLD = 20;
 
   private final ChatRoomRepository chatRoomRepository;
   private final ChatRoomMemberRepository chatRoomMemberRepository;
@@ -153,8 +153,10 @@ public class ChatRoomService {
   }
 
   private boolean canRecordCourse(Long chatRoomId) {
-    return chatMessageRepository.countByChatRoomId(chatRoomId)
-        >= COURSE_RECORD_MESSAGE_THRESHOLD;
+    return chatMessageRepository.findMessageIdByChatRoomIdAtOffset(
+        chatRoomId,
+        COURSE_RECORD_MESSAGE_THRESHOLD - 1
+    ).isPresent();
   }
 
   private boolean canSendMessage(Long userId, Long partnerId) {
