@@ -109,6 +109,17 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                         """
                 ),
                 @ExampleObject(
+                    name = "태그 선택 개수 오류",
+                    value = """
+                        {
+                          "success": false,
+                          "code": "USER-E008",
+                          "message": "활동 태그는 1~3개, 관심사와 여행 스타일 태그는 각각 1~2개 선택해야 합니다.",
+                          "data": null
+                        }
+                        """
+                ),
+                @ExampleObject(
                     name = "예약된 닉네임",
                     value = """
                         {

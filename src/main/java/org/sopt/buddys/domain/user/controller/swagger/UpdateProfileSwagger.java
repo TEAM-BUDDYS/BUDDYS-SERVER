@@ -82,7 +82,7 @@ import org.sopt.buddys.global.swagger.CommonErrorResponses;
                         {
                           "success": false,
                           "code": "USER-E008",
-                          "message": "활동과 관심사 태그는 각각 1~3개, 여행 스타일 태그는 1~5개 선택해야 합니다.",
+                          "message": "활동 태그는 1~3개, 관심사와 여행 스타일 태그는 각각 1~2개 선택해야 합니다.",
                           "data": null
                         }
                         """
