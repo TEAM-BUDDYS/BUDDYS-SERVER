@@ -72,6 +72,7 @@ public class UserOnboardingService {
     validateTagType(tagsById, request.activityTagIds(), TagType.ACTIVITY);
     validateTagType(tagsById, request.interestTagIds(), TagType.INTEREST);
     validateTagType(tagsById, request.travelStyleTagIds(), TagType.TRAVEL_STYLE);
+    UserTagSelectionValidator.validate(tagsById.values());
 
     try {
       user.completeOnboarding(
