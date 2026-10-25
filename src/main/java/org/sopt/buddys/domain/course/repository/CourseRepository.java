@@ -19,6 +19,22 @@ public interface CourseRepository extends JpaRepository<Course, Long>, CourseRep
   @Query("""
       select c
       from Course c
+      where c.deletedAt is null
+        and (
+          c.author.id = :userId
+          or exists (
+            select 1
+            from CourseCompanion cc
+            where cc.course = c
+              and cc.user.id = :userId
+          )
+        )
+      """)
+  Slice<Course> findParticipatedCoursesByUserId(@Param("userId") Long userId, Pageable pageable);
+
+  @Query("""
+      select c
+      from Course c
       join fetch c.author author
       left join fetch author.exchangeCountry
       where c.id = :courseId
