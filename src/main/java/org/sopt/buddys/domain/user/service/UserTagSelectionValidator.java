@@ -13,9 +13,9 @@ public final class UserTagSelectionValidator {
   private static final int MIN_ACTIVITY_TAG_COUNT = 1;
   private static final int MAX_ACTIVITY_TAG_COUNT = 3;
   private static final int MIN_INTEREST_TAG_COUNT = 1;
-  private static final int MAX_INTEREST_TAG_COUNT = 3;
+  private static final int MAX_INTEREST_TAG_COUNT = 2;
   private static final int MIN_TRAVEL_STYLE_TAG_COUNT = 1;
-  private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 5;
+  private static final int MAX_TRAVEL_STYLE_TAG_COUNT = 2;
 
   private UserTagSelectionValidator() {
   }

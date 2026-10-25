@@ -60,13 +60,13 @@ public record UpdateProfileRequest(
                 description = """
             드래그앤드롭으로 정렬한 전체 선택 태그 ID 목록입니다.
             카테고리와 무관하게 상위 3개가 대표 태그로 노출됩니다.
-            서버에서 활동 1~3개, 관심사 1~3개, 여행 스타일 1~5개인지 검증합니다.
+            서버에서 활동 1~3개, 관심사 1~2개, 여행 스타일 1~2개인지 검증합니다.
             """,
-                example = "[27, 1, 15, 3, 18, 30, 34]",
+                example = "[27, 1, 15, 3, 18, 30, 2]",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         @NotEmpty
-        @Size(min = 3, max = 11)
+        @Size(min = 3, max = 7)
         List<@NotNull Long> orderedTagIds
 ) {
 
