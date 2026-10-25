@@ -14,8 +14,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface CourseRepository extends JpaRepository<Course, Long>, CourseRepositoryCustom {
 
-  Slice<Course> findByAuthorIdAndDeletedAtIsNull(Long authorId, Pageable pageable);
-
   @Query("""
       select c
       from Course c
