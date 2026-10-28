@@ -16,10 +16,15 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -47,6 +52,9 @@ public class UserOnboardingServiceTest {
   private static final Long USER_ID = 1L;
   private static final Long COUNTRY_ID = 31L;
   private static final Long CITY_ID = 20692L;
+  private static final long ACTIVITY_TAG_START_ID = 1L;
+  private static final long INTEREST_TAG_START_ID = 13L;
+  private static final long TRAVEL_STYLE_TAG_START_ID = 27L;
 
   @InjectMocks
   private UserOnboardingService userOnboardingService;
@@ -297,6 +305,36 @@ public class UserOnboardingServiceTest {
         );
   }
 
+  @DisplayName("카테고리별 최대 선택 개수를 하나라도 초과하면 INVALID_TAG_SELECTION_COUNT 예외가 발생한다")
+  @ParameterizedTest(name = "활동 {0}개, 관심사 {1}개, 여행 스타일 {2}개")
+  @MethodSource("tagSelectionCountsExceedingLimit")
+  void completeOnboarding_tagSelectionCountExceeded_throwsException(
+      int activityCount, int interestCount, int travelStyleCount
+  ) {
+    // given
+    Country interestCountry = mockCountry(COUNTRY_ID);
+    City interestCity = mockCity(interestCountry);
+    List<Tag> activityTags = mockTags(ACTIVITY_TAG_START_ID, activityCount, TagType.ACTIVITY);
+    List<Tag> interestTags = mockTags(INTEREST_TAG_START_ID, interestCount, TagType.INTEREST);
+    List<Tag> travelStyleTags = mockTags(TRAVEL_STYLE_TAG_START_ID, travelStyleCount, TagType.TRAVEL_STYLE);
+    OnboardingCommand request = createRequestWithTagIds(
+        tagIdsOf(activityTags), tagIdsOf(interestTags), tagIdsOf(travelStyleTags));
+
+    given(userRepository.findActiveByIdForUpdate(USER_ID)).willReturn(Optional.of(createUser()));
+    given(userTagRepository.existsByUserId(USER_ID)).willReturn(false);
+    given(cityRepository.findById(CITY_ID)).willReturn(Optional.of(interestCity));
+    given(tagRepository.findAllById(any())).willReturn(
+        Stream.of(activityTags, interestTags, travelStyleTags).flatMap(List::stream).toList());
+
+    // when, then
+    assertThatThrownBy(() -> userOnboardingService.completeOnboarding(USER_ID, request))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(UserErrorCode.INVALID_TAG_SELECTION_COUNT)
+        );
+    then(userRepository).should(never()).flush();
+    then(userTagRepository).should(never()).saveAll(any());
+  }
+
   @DisplayName("닉네임이 중복되면 DUPLICATE_NICKNAME 예외로 변환한다")
   @Test
   void completeOnboarding_duplicateNickname_throwsException() {
@@ -458,6 +496,13 @@ public class UserOnboardingServiceTest {
         .isSameAs(otherViolation);
   }
 
+  private static Stream<Arguments> tagSelectionCountsExceedingLimit() {
+    return Stream.of(
+        Arguments.of(1, 3, 1),
+        Arguments.of(1, 1, 3)
+    );
+  }
+
   private User createUser() {
     return User.builder()
         .email("test@test.com")
@@ -502,6 +547,39 @@ public class UserOnboardingServiceTest {
         List.of(2L),
         List.of(3L),
         nickname,
+        Gender.FEMALE,
+        LocalDate.of(2000, 4, 2),
+        "같이 여행 다녀요!",
+        "https://example.com/profile.png"
+    );
+  }
+
+  private List<Tag> mockTags(long startId, int count, TagType tagType) {
+    return LongStream.range(startId, startId + count)
+        .mapToObj(id -> mockTag(id, tagType))
+        .toList();
+  }
+
+  private List<Long> tagIdsOf(List<Tag> tags) {
+    return tags.stream().map(Tag::getId).toList();
+  }
+
+  private OnboardingCommand createRequestWithTagIds(
+      List<Long> activityTagIds,
+      List<Long> interestTagIds,
+      List<Long> travelStyleTagIds
+  ) {
+    return new OnboardingCommand(
+        COUNTRY_ID,
+        CITY_ID,
+        null,
+        null,
+        null,
+        null,
+        activityTagIds,
+        interestTagIds,
+        travelStyleTagIds,
+        "해령",
         Gender.FEMALE,
         LocalDate.of(2000, 4, 2),
         "같이 여행 다녀요!",

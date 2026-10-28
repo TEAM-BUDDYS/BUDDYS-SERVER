@@ -35,11 +35,11 @@ public record OnboardingRequest(
     @Schema(description = "활동 태그 ID 목록. 1~3개", example = "[1, 2, 3]")
     @NotEmpty @Size(min = 1, max = 3) List<Long> activityTagIds,
 
-    @Schema(description = "관심사 태그 ID 목록. 1~3개", example = "[13, 26]")
-    @NotEmpty @Size(min = 1, max = 3) List<Long> interestTagIds,
+    @Schema(description = "관심사 태그 ID 목록. 1~2개", example = "[13, 26]")
+    @NotEmpty @Size(min = 1, max = 2) List<Long> interestTagIds,
 
-    @Schema(description = "여행 스타일 태그 ID 목록. 1~5개", example = "[27, 30]")
-    @NotEmpty @Size(min = 1, max = 5) List<Long> travelStyleTagIds,
+    @Schema(description = "여행 스타일 태그 ID 목록. 1~2개", example = "[27, 30]")
+    @NotEmpty @Size(min = 1, max = 2) List<Long> travelStyleTagIds,
 
     @Schema(description = "닉네임. 최대 14자", example = "버디즈")
     @NotBlank @Size(max = 14) String nickname,

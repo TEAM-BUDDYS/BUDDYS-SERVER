@@ -12,9 +12,14 @@ import static org.mockito.Mockito.verify;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,6 +39,10 @@ import org.sopt.buddys.global.exception.BaseException;
 
 @ExtendWith(MockitoExtension.class)
 class UserProfileEditServiceTest {
+
+  private static final long ACTIVITY_TAG_START_ID = 1L;
+  private static final long INTEREST_TAG_START_ID = 13L;
+  private static final long TRAVEL_STYLE_TAG_START_ID = 27L;
 
   @InjectMocks
   private UserProfileEditService userProfileEditService;
@@ -208,6 +217,37 @@ class UserProfileEditServiceTest {
     verify(userTagRepository, never()).deleteAllByUserId(userId);
   }
 
+  @DisplayName("전체 개수와 무관하게 카테고리별 최대 선택 개수를 하나라도 초과하면 프로필을 수정하지 않는다")
+  @ParameterizedTest(name = "활동 {0}개, 관심사 {1}개, 여행 스타일 {2}개")
+  @MethodSource("tagSelectionCountsExceedingLimit")
+  void updateProfile_withTagSelectionCountExceeded_rejectsBeforeMutation(
+      int activityCount, int interestCount, int travelStyleCount
+  ) {
+    // given
+    Long userId = 1L;
+    User user = createUser(userId);
+    List<Tag> tags = Stream.of(
+            createTags(ACTIVITY_TAG_START_ID, activityCount, TagType.ACTIVITY),
+            createTags(INTEREST_TAG_START_ID, interestCount, TagType.INTEREST),
+            createTags(TRAVEL_STYLE_TAG_START_ID, travelStyleCount, TagType.TRAVEL_STYLE))
+        .flatMap(List::stream)
+        .toList();
+    List<Long> orderedTagIds = tags.stream().map(Tag::getId).toList();
+    UpdateProfileCommand command = createCommandWithTagIds(orderedTagIds);
+
+    given(userRepository.findActiveByIdForUpdate(userId)).willReturn(Optional.of(user));
+    given(tagRepository.findAllById(orderedTagIds)).willReturn(tags);
+
+    // when & then
+    assertThatThrownBy(() -> userProfileEditService.updateProfile(userId, command))
+        .isInstanceOf(BaseException.class)
+        .satisfies(exception -> assertThat(((BaseException) exception).getErrorCode())
+            .isEqualTo(UserErrorCode.INVALID_TAG_SELECTION_COUNT));
+    assertThat(user.getNickname()).isEqualTo("기존닉네임");
+    verify(userRepository, never()).flush();
+    verify(userTagRepository, never()).deleteAllByUserId(userId);
+  }
+
   @DisplayName("orderedTagIds에 중복 태그가 있으면 프로필을 수정하지 않는다")
   @Test
   void updateProfile_withDuplicateTagIds_rejectsBeforeMutation() {
@@ -252,6 +292,13 @@ class UserProfileEditServiceTest {
     assertThat(available).isTrue();
   }
 
+  private static Stream<Arguments> tagSelectionCountsExceedingLimit() {
+    return Stream.of(
+        Arguments.of(1, 3, 1),
+        Arguments.of(1, 1, 3)
+    );
+  }
+
   private User createUser(Long id) {
     return User.builder()
         .id(id)
@@ -264,6 +311,23 @@ class UserProfileEditServiceTest {
         .introduction("기존 자기소개")
         .profileImageUrl("https://example.com/old-profile.png")
         .build();
+  }
+
+  private UpdateProfileCommand createCommandWithTagIds(List<Long> orderedTagIds) {
+    return new UpdateProfileCommand(
+        "새닉네임",
+        Gender.MALE,
+        LocalDate.of(2001, 2, 3),
+        null,
+        null,
+        orderedTagIds
+    );
+  }
+
+  private List<Tag> createTags(long startId, int count, TagType tagType) {
+    return LongStream.range(startId, startId + count)
+        .mapToObj(id -> createTag(id, "태그" + id, tagType))
+        .toList();
   }
 
   private Tag createTag(Long id, String name, TagType tagType) {
