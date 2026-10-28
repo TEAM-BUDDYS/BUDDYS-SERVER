@@ -188,7 +188,7 @@ public class UserService {
         size,
         Sort.by(Sort.Direction.DESC, "createdAt", "id")
     );
-    Slice<Course> courses = courseRepository.findByAuthorIdAndDeletedAtIsNull(userId, pageable);
+    Slice<Course> courses = courseRepository.findParticipatedCoursesByUserId(userId, pageable);
     Map<Long, String> thumbnailImageUrls = getCourseThumbnailImageUrls(courses.getContent());
 
     List<CourseResult> courseResults = courses.getContent()

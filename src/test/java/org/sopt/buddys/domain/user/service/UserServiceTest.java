@@ -216,7 +216,7 @@ class UserServiceTest {
     assertThat(result.hasNext()).isFalse();
   }
 
-  @DisplayName("내가 작성한 코스 목록을 Slice로 조회한다")
+  @DisplayName("내가 작성하거나 동행으로 참여한 코스 목록을 Slice로 조회한다")
   @Test
   void getCourses_returnsCourses() {
     // given
@@ -225,7 +225,7 @@ class UserServiceTest {
     PageRequest pageable = PageRequest.of(0, 12);
 
     given(userRepository.existsByIdAndDeletedAtIsNull(userId)).willReturn(true);
-    given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
+    given(courseRepository.findParticipatedCoursesByUserId(any(Long.class), any(Pageable.class)))
         .willReturn(new SliceImpl<>(List.of(course), pageable, true));
     given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
         .willReturn(List.of(
@@ -243,7 +243,7 @@ class UserServiceTest {
     assertThat(result.page()).isZero();
     assertThat(result.size()).isEqualTo(12);
     assertThat(result.hasNext()).isTrue();
-    then(courseRepository).should().findByAuthorIdAndDeletedAtIsNull(
+    then(courseRepository).should().findParticipatedCoursesByUserId(
         userId,
         PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
     );
@@ -258,7 +258,7 @@ class UserServiceTest {
     PageRequest pageable = PageRequest.of(0, 12);
 
     given(userRepository.existsById(userId)).willReturn(true);
-    given(courseRepository.findByAuthorIdAndDeletedAtIsNull(any(Long.class), any(Pageable.class)))
+    given(courseRepository.findParticipatedCoursesByUserId(any(Long.class), any(Pageable.class)))
         .willReturn(new SliceImpl<>(List.of(course), pageable, false));
     given(courseImageRepository.findThumbnailImageUrlsByCourseIds(List.of(course.getId())))
         .willReturn(List.of(
@@ -274,7 +274,7 @@ class UserServiceTest {
     assertThat(result.courses().get(0).thumbnailImageUrl())
         .isEqualTo("https://example.com/day1-first.jpg");
     assertThat(result.hasNext()).isFalse();
-    then(courseRepository).should().findByAuthorIdAndDeletedAtIsNull(
+    then(courseRepository).should().findParticipatedCoursesByUserId(
         userId,
         PageRequest.of(0, 12, Sort.by(Sort.Direction.DESC, "createdAt", "id"))
     );

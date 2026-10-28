@@ -12,9 +12,9 @@ import org.sopt.buddys.global.swagger.InvalidRequestResponse;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Operation(summary = "타 유저가 작성한 코스 목록 조회", description = "특정 사용자가 작성한 코스 목록을 조회합니다.")
+@Operation(summary = "타 유저 코스 목록 조회", description = "특정 사용자가 작성하거나 동행으로 태그된 코스 목록을 최신순으로 조회합니다.")
 @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "타 유저가 작성한 코스 목록 조회 성공")
+    @ApiResponse(responseCode = "200", description = "타 유저 코스 목록 조회 성공")
 })
 @InvalidRequestResponse
 @UserNotFoundResponse
