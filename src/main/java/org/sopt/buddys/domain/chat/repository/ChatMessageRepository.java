@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.chat.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.sopt.buddys.domain.chat.entity.ChatMessage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
+
+    @Query(value = """
+            select id
+            from chat_message
+            where chat_room_id = :chatRoomId
+            limit 1 offset :offset
+            """, nativeQuery = true)
+    Optional<Long> findMessageIdByChatRoomIdAtOffset(
+            @Param("chatRoomId") Long chatRoomId,
+            @Param("offset") int offset
+    );
 
     @Query("""
             select case when count(m) > 0 then true else false end

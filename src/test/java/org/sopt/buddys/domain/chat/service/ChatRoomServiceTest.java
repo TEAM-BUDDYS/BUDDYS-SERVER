@@ -329,6 +329,80 @@ class ChatRoomServiceTest {
         assertThat(result.canSendMessage()).isTrue();
     }
 
+    @DisplayName("양측이 주고받은 메시지가 20개 미만이면 코스 기록이 불가능하다")
+    @Test
+    void getChatRoom_lessThanTwentyMessages_returnsCanRecordCourseFalse() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        insertExchangedMessages(chatRoom.getId(), user.getId(), participant.getId(), 19);
+
+        // when
+        ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
+
+        // then
+        assertThat(result.canRecordCourse()).isFalse();
+    }
+
+    @DisplayName("양측이 주고받은 메시지가 20개 이상이면 코스 기록이 가능하다")
+    @Test
+    void getChatRoom_twentyMessages_returnsCanRecordCourseTrue() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        insertExchangedMessages(chatRoom.getId(), user.getId(), participant.getId(), 20);
+
+        // when
+        ChatRoomResult userResult = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
+        ChatRoomResult participantResult =
+                chatRoomService.getChatRoom(participant.getId(), chatRoom.getId());
+
+        // then
+        assertThat(userResult.canRecordCourse()).isTrue();
+        assertThat(participantResult.canRecordCourse()).isTrue();
+    }
+
+    @DisplayName("다른 채팅방의 메시지는 코스 기록 가능 여부 계산에 포함되지 않는다")
+    @Test
+    void getChatRoom_messagesInOtherChatRoom_areNotCounted() {
+        // given
+        User user = userRepository.save(createUser("user@test.com", "provider-user", "사용자"));
+        User participant = userRepository.save(
+                createUser("participant@test.com", "provider-participant", "상대방")
+        );
+        User otherParticipant = userRepository.save(
+                createUser("other@test.com", "provider-other", "다른상대방")
+        );
+        ChatRoom chatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                participant.getId()
+        ).chatRoom();
+        ChatRoom otherChatRoom = chatRoomService.createOrGetChatRoom(
+                user.getId(),
+                otherParticipant.getId()
+        ).chatRoom();
+        insertExchangedMessages(chatRoom.getId(), user.getId(), participant.getId(), 19);
+        insertExchangedMessages(otherChatRoom.getId(), user.getId(), otherParticipant.getId(), 20);
+
+        // when
+        ChatRoomResult result = chatRoomService.getChatRoom(user.getId(), chatRoom.getId());
+
+        // then
+        assertThat(result.canRecordCourse()).isFalse();
+    }
+
     @DisplayName("존재하지 않는 채팅방을 조회하면 CHAT-E002 예외가 발생한다")
     @Test
     void getChatRoom_notFoundChatRoom_throwsChatRoomNotFound() {
@@ -1101,6 +1175,20 @@ class ChatRoomServiceTest {
                 .isNotNull();
 
         return key.longValue();
+    }
+
+    private void insertExchangedMessages(
+            Long chatRoomId,
+            Long userId,
+            Long participantId,
+            int count
+    ) {
+
+        LocalDateTime baseTime = LocalDateTime.of(2026, 7, 7, 14, 0);
+        for (int i = 0; i < count; i++) {
+            Long senderId = i % 2 == 0 ? userId : participantId;
+            insertMessage(chatRoomId, senderId, "메시지" + i, baseTime.plusMinutes(i));
+        }
     }
 
     private void updateLastReadMessageId(
