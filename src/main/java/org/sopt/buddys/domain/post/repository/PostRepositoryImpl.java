@@ -82,6 +82,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         .where(
             post.startDate.eq(today),
             post.status.eq(PostStatus.RECRUITING),
+            post.author.deletedAt.isNull(),
             post.deletedAt.isNull()
         )
         .orderBy(post.createdAt.asc())
