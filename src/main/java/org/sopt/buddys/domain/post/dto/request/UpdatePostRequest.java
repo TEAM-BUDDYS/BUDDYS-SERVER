@@ -27,7 +27,7 @@ public class UpdatePostRequest {
   private LocalDate startDate;
   @Schema(description = "전달하면 종료일을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가", example = "2026-09-19")
   private LocalDate endDate;
-  @Schema(description = "전달하면 제목을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가, 최대 120자", example = "주말에 파리 근교 함께 가실 분!")
+  @Schema(description = "전달하면 제목을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가, 최대 40자", example = "주말에 파리 근교 함께 가실 분!")
   private String title;
   @Schema(description = "전달하면 본문을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가", example = "파리 근교 여행 동행을 구합니다.")
   private String content;
