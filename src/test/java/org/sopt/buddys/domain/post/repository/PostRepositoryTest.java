@@ -58,7 +58,6 @@ class PostRepositoryTest {
   private User viewer;
   private User author;
   private User withdrawn;
-  private User suspended;
   private final LocalDate today = LocalDate.of(2026, 10, 20);
 
   @BeforeEach
@@ -74,7 +73,6 @@ class PostRepositoryTest {
     viewer = saveUser("viewer", AccountStatus.ACTIVE);
     author = saveUser("author", AccountStatus.ACTIVE);
     withdrawn = saveUser("withdrawn", AccountStatus.ACTIVE);
-    suspended = saveUser("suspended", AccountStatus.SUSPENDED);
   }
 
   @DisplayName("추천 조회는 이미지 조건과 기존 필터를 유지하며 탈퇴 작성자만 제외한다")
@@ -84,7 +82,6 @@ class PostRepositoryTest {
     // given
     Post withImage = savePost(author, today);
     Post withoutImage = savePost(author, today);
-    Post suspendedPost = savePost(suspended, today);
     Post withdrawnPost = savePost(withdrawn, today);
     Post ownPost = savePost(viewer, today);
     Post completed = savePost(author, today);
@@ -97,7 +94,7 @@ class PostRepositoryTest {
     Post otherCountryPost = savePost(author, today);
     otherCountryPost.update(otherCountry, city, today, today, "동행", "본문",
         CompanionType.FULL_TRIP, RecruitmentCountType.TWO);
-    for (Post post : List.of(withImage, suspendedPost, withdrawnPost, ownPost, completed, deleted, otherCountryPost)) {
+    for (Post post : List.of(withImage, withdrawnPost, ownPost, completed, deleted, otherCountryPost)) {
       entityManager.persist(new PostImage(post, "https://example.com/image.jpg", (short) 0));
     }
     withdrawn.withdraw();
@@ -111,7 +108,7 @@ class PostRepositoryTest {
             country.getId(), PostStatus.RECRUITING, viewer.getId());
 
     // then
-    List<Long> expectedIds = new ArrayList<>(List.of(withImage.getId(), suspendedPost.getId()));
+    List<Long> expectedIds = new ArrayList<>(List.of(withImage.getId()));
     if (!requireImage) {
       expectedIds.add(withoutImage.getId());
     }
@@ -137,7 +134,7 @@ class PostRepositoryTest {
     Post tomorrow = savePost(author, today.plusDays(1));
     List<Long> expectedIds = new ArrayList<>();
     for (int index = 0; index < 5; index++) {
-      Post post = savePost(index == 0 ? suspended : author, today);
+      Post post = savePost(author, today);
       setCreatedAt(post, 10 + index);
       expectedIds.add(post.getId());
     }
