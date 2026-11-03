@@ -39,6 +39,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       where p.country.id = :countryId
         and p.status = :status
         and p.author.id <> :excludeAuthorId
+        and p.author.deletedAt is null
         and p.deletedAt is null
       """)
   List<Post> findByCountryIdAndStatusAndAuthorIdNot(
@@ -54,6 +55,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       where p.country.id = :countryId
         and p.status = :status
         and p.author.id <> :excludeAuthorId
+        and p.author.deletedAt is null
         and p.deletedAt is null
         and exists (select 1 from PostImage pi where pi.post = p)
       """)
