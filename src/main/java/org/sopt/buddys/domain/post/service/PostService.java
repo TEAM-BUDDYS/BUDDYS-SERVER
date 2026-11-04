@@ -409,6 +409,7 @@ public class PostService {
         || command.endDate() == null
         || command.title() == null
         || command.title().isBlank()
+        || Post.isTitleTooLong(command.title())
         || command.content() == null
         || command.content().isBlank()
         || command.ageConditions() == null
@@ -511,7 +512,7 @@ public class PostService {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     if ((command.isProvided(Field.TITLE)
-            && (command.title().isBlank() || command.title().length() > Post.TITLE_MAX_LENGTH))
+            && (command.title().isBlank() || Post.isTitleTooLong(command.title())))
         || (command.isProvided(Field.CONTENT) && command.content().isBlank())
         || (command.isProvided(Field.AGE_CONDITIONS) && (command.ageConditions().isEmpty()
             || command.ageConditions().stream().anyMatch(java.util.Objects::isNull)))

@@ -46,6 +46,13 @@ public class Post extends BaseEntity {
   // 입력 제한은 40자지만, 제한 변경 전 작성된 게시글이 있어 컬럼 길이는 120으로 유지한다.
   public static final int TITLE_MAX_LENGTH = 40;
 
+  // 저장되는 값(앞뒤 공백 제거)을 기준으로, 이모지도 1글자로 센다.
+  // MySQL VARCHAR 길이도 글자(코드 포인트) 단위라 컬럼 길이 계산과도 일치한다.
+  public static boolean isTitleTooLong(String title) {
+    String trimmed = title.trim();
+    return trimmed.codePointCount(0, trimmed.length()) > TITLE_MAX_LENGTH;
+  }
+
   @Column(nullable = false, length = 120)
   private String title;
 

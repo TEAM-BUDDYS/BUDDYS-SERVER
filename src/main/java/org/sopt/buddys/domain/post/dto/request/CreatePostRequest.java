@@ -11,7 +11,6 @@ import java.util.List;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
 import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
-import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 
 public record CreatePostRequest(
@@ -33,9 +32,9 @@ public record CreatePostRequest(
     @FutureOrPresent
     LocalDate endDate,
 
-    @Schema(description = "게시글 제목 (최대 40자)", example = "주말에 파리 근교 함께 가실 분!")
+    @Schema(description = "게시글 제목 (앞뒤 공백 제외 최대 40자, 이모지는 1자로 계산)", example = "주말에 파리 근교 함께 가실 분!")
     @NotBlank
-    @Size(max = Post.TITLE_MAX_LENGTH)
+    @PostTitleLength
     String title,
 
     @Schema(description = "게시글 본문", example = "안녕하세요. 파리 근교 여행 동행을 구합니다.")

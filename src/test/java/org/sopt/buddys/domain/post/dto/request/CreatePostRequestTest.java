@@ -37,4 +37,17 @@ class CreatePostRequestTest {
   void title_41Characters_isInvalid() {
     assertThat(validator.validateValue(CreatePostRequest.class, "title", "가".repeat(41))).isNotEmpty();
   }
+
+  @DisplayName("게시글 제목 길이는 앞뒤 공백을 제외하고 센다")
+  @Test
+  void title_surroundingSpaces_areNotCounted() {
+    assertThat(validator.validateValue(CreatePostRequest.class, "title", "  " + "가".repeat(40) + "  ")).isEmpty();
+  }
+
+  @DisplayName("이모지는 1자로 세어 40개까지 허용한다")
+  @Test
+  void title_emojiCountedAsOneCharacter() {
+    assertThat(validator.validateValue(CreatePostRequest.class, "title", "😀".repeat(40))).isEmpty();
+    assertThat(validator.validateValue(CreatePostRequest.class, "title", "😀".repeat(41))).isNotEmpty();
+  }
 }
