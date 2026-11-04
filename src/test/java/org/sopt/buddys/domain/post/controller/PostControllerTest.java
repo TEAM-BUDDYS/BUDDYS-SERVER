@@ -823,7 +823,7 @@ class PostControllerTest {
         .collect(java.util.stream.Collectors.joining(",", "[", "]"));
 
     assertUpdateError(author, post, "{\"title\":\"   \"}", "GLB-E001", 400);
-    assertUpdateError(author, post, "{\"title\":\"%s\"}".formatted("가".repeat(121)), "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"title\":\"%s\"}".formatted("가".repeat(41)), "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":[\"   \"]}", "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":[\"%s\"]}".formatted("a".repeat(513)), "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":%s}".formatted(elevenImages), "GLB-E001", 400);

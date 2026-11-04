@@ -43,6 +43,9 @@ public class Post extends BaseEntity {
   @JoinColumn(name = "city_id", nullable = false)
   private City city;
 
+  // 입력 제한은 40자지만, 제한 변경 전 작성된 게시글이 있어 컬럼 길이는 120으로 유지한다.
+  public static final int TITLE_MAX_LENGTH = 40;
+
   @Column(nullable = false, length = 120)
   private String title;
 
