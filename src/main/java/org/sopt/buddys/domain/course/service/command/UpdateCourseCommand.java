@@ -11,6 +11,7 @@ public record UpdateCourseCommand(
     LocalDate startDate,
     LocalDate endDate,
     List<Long> tagIds,
+    List<Long> companionUserIds,
     List<CourseDayCommand> days
 ) {
 }

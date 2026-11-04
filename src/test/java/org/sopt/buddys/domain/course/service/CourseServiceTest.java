@@ -602,7 +602,7 @@ class CourseServiceTest {
     UpdateCourseCommand updateCommand = new UpdateCourseCommand(
         List.of(italyId), List.of(romeId), " 로마 코스 ", " 새로운 설명 ",
         LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3),
-        List.of(newActivityTagId),
+        List.of(newActivityTagId), null,
         List.of(new CourseDayCommand(
             (short) 1, LocalDate.of(2026, 10, 1), List.of("https://example.com/new-day.jpg"),
             "예약 필수", BigDecimal.valueOf(16000),
@@ -643,6 +643,135 @@ class CourseServiceTest {
         .extracting(cp -> cp.getPlace().getName()).containsExactly("콜로세움");
     assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
         .extracting(cc -> cc.getUser().getId()).containsExactly(companion.getId());
+  }
+
+  @DisplayName("수정 시 동행 목록을 전달하면 해당 목록으로 추가·삭제가 반영된다")
+  @Test
+  void updateCourse_withCompanionUserIds_replacesCompanions() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User kept = userRepository.save(createUser("kept@test.com", "provider-kept", "유지동행"));
+    User removed = userRepository.save(createUser("removed@test.com", "provider-removed", "삭제동행"));
+    User added = userRepository.save(createUser("added@test.com", "provider-added", "추가동행"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = createCourseWithCompanions(
+        author.getId(), countryId, cityId, tagId, List.of(kept.getId(), removed.getId()));
+
+    // when
+    courseService.updateCourse(author.getId(), course.getId(),
+        createUpdateCommandWithCompanions(countryId, cityId, tagId, List.of(kept.getId(), added.getId())));
+
+    // then
+    assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
+        .extracting(cc -> cc.getUser().getId())
+        .containsExactlyInAnyOrder(kept.getId(), added.getId());
+  }
+
+  @DisplayName("수정 시 동행 목록으로 빈 배열을 전달하면 동행이 모두 삭제된다")
+  @Test
+  void updateCourse_withEmptyCompanionUserIds_removesAllCompanions() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = createCourseWithCompanions(author.getId(), countryId, cityId, tagId, List.of(companion.getId()));
+
+    // when
+    courseService.updateCourse(author.getId(), course.getId(),
+        createUpdateCommandWithCompanions(countryId, cityId, tagId, List.of()));
+
+    // then
+    assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId())).isEmpty();
+  }
+
+  @DisplayName("수정 시 동행 목록에 작성자 본인이 포함되면 예외가 발생하고 기존 동행은 유지된다")
+  @Test
+  void updateCourse_companionIncludesAuthor_throwsException() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = createCourseWithCompanions(author.getId(), countryId, cityId, tagId, List.of(companion.getId()));
+    UpdateCourseCommand updateCommand =
+        createUpdateCommandWithCompanions(countryId, cityId, tagId, List.of(author.getId()));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.updateCourse(author.getId(), course.getId(), updateCommand))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.AUTHOR_CANNOT_BE_COMPANION)
+        );
+    assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
+        .extracting(cc -> cc.getUser().getId())
+        .containsExactly(companion.getId());
+  }
+
+  @DisplayName("수정 시 탈퇴한 유저를 새 동행으로 추가하면 예외가 발생한다")
+  @Test
+  void updateCourse_addWithdrawnUserAsNewCompanion_throwsNotFound() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User withdrawn = userRepository.save(createUser("withdrawn@test.com", "provider-withdrawn", "탈퇴유저"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = createCourseWithCompanions(author.getId(), countryId, cityId, tagId, List.of());
+    jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), withdrawn.getId());
+    UpdateCourseCommand updateCommand =
+        createUpdateCommandWithCompanions(countryId, cityId, tagId, List.of(withdrawn.getId()));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.updateCourse(author.getId(), course.getId(), updateCommand))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COMPANION_USER_NOT_FOUND)
+        );
+  }
+
+  @DisplayName("수정 시 이미 동행인 유저는 탈퇴했더라도 그대로 다시 보내면 유지된다")
+  @Test
+  void updateCourse_keepWithdrawnExistingCompanion_succeeds() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User withdrawn = userRepository.save(createUser("withdrawn@test.com", "provider-withdrawn", "탈퇴동행"));
+    User added = userRepository.save(createUser("added@test.com", "provider-added", "추가동행"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = createCourseWithCompanions(author.getId(), countryId, cityId, tagId, List.of(withdrawn.getId()));
+    jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), withdrawn.getId());
+
+    // when
+    courseService.updateCourse(author.getId(), course.getId(),
+        createUpdateCommandWithCompanions(countryId, cityId, tagId, List.of(withdrawn.getId(), added.getId())));
+
+    // then
+    assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
+        .extracting(cc -> cc.getUser().getId())
+        .containsExactlyInAnyOrder(withdrawn.getId(), added.getId());
+  }
+
+  @DisplayName("코스 작성 시 탈퇴한 유저를 동행으로 추가하면 예외가 발생한다")
+  @Test
+  void createCourse_withWithdrawnCompanion_throwsNotFound() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User withdrawn = userRepository.save(createUser("withdrawn@test.com", "provider-withdrawn", "탈퇴유저"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), withdrawn.getId());
+
+    // when, then
+    assertThatThrownBy(() -> createCourseWithCompanions(
+        author.getId(), countryId, cityId, tagId, List.of(withdrawn.getId())))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COMPANION_USER_NOT_FOUND)
+        );
   }
 
   @DisplayName("출발일과 도착일을 모두 입력하지 않아도 코스가 수정된다")
@@ -726,7 +855,7 @@ class CourseServiceTest {
     UpdateCourseCommand invalidUpdateCommand = new UpdateCourseCommand(
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
-        List.of(tagId),
+        List.of(tagId), null,
         List.of(
             new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null),
             new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)
@@ -1167,7 +1296,27 @@ class CourseServiceTest {
     return new UpdateCourseCommand(
         List.of(countryId), List.of(cityId), "파리 코스", null,
         startDate, endDate,
-        List.of(tagId),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+  }
+
+  private Course createCourseWithCompanions(
+      Long authorId, Long countryId, Long cityId, Long tagId, List<Long> companionUserIds
+  ) {
+    return courseService.createCourse(authorId, new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null,
+        null, null,
+        List.of(tagId), companionUserIds,
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null))));
+  }
+
+  private UpdateCourseCommand createUpdateCommandWithCompanions(
+      Long countryId, Long cityId, Long tagId, List<Long> companionUserIds
+  ) {
+    return new UpdateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null,
+        null, null,
+        List.of(tagId), companionUserIds,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
   }
 

@@ -118,7 +118,7 @@ public class CourseService {
     saveCourseCountries(course, command.countryIds());
     saveCourseCities(course, command.cityIds());
     saveCourseTags(course, command.tagIds());
-    saveCourseCompanions(course, command.companionUserIds());
+    saveCourseCompanions(course, command.companionUserIds(), Set.of());
     saveCourseDays(course, command.days());
 
     return course;
@@ -162,8 +162,19 @@ public class CourseService {
     saveCourseCities(course, command.cityIds());
     saveCourseTags(course, command.tagIds());
     saveCourseDays(course, command.days());
+    replaceCourseCompanions(course, command.companionUserIds());
 
     return course;
+  }
+
+  // null이면 기존 동행을 유지한다. 필드를 보내지 않는 구버전 클라이언트가 동행을 지우지 않도록 하기 위함이다.
+  private void replaceCourseCompanions(Course course, List<Long> companionUserIds) {
+    if (companionUserIds == null) {
+      return;
+    }
+    Set<Long> existingCompanionUserIds = new HashSet<>(courseCompanionRepository.findUserIdsByCourseId(course.getId()));
+    courseCompanionRepository.deleteAllByCourseId(course.getId());
+    saveCourseCompanions(course, companionUserIds, existingCompanionUserIds);
   }
 
   public CourseListResult getCourses(Long userId, CourseSearchCondition condition, int page, int size) {
@@ -348,7 +359,7 @@ public class CourseService {
         .toList());
   }
 
-  private void saveCourseCompanions(Course course, List<Long> companionUserIds) {
+  private void saveCourseCompanions(Course course, List<Long> companionUserIds, Set<Long> existingCompanionUserIds) {
     if (companionUserIds == null || companionUserIds.isEmpty()) {
       return;
     }
@@ -357,7 +368,12 @@ public class CourseService {
       throw new BaseException(CourseErrorCode.AUTHOR_CANNOT_BE_COMPANION);
     }
     List<User> users = userRepository.findAllById(distinctUserIds);
-    if (users.size() != distinctUserIds.size()) {
+    // 새 동행은 탈퇴하지 않은 유저만 허용하고, 이미 동행인 유저는 탈퇴했더라도 유지할 수 있다.
+    // 상세 조회 응답에 탈퇴한 동행도 포함되므로, 그대로 다시 보내도 수정이 막히지 않게 하기 위함이다.
+    boolean allAllowed = users.size() == distinctUserIds.size()
+        && users.stream().allMatch(user ->
+            user.getDeletedAt() == null || existingCompanionUserIds.contains(user.getId()));
+    if (!allAllowed) {
       throw new BaseException(CourseErrorCode.COMPANION_USER_NOT_FOUND);
     }
     courseCompanionRepository.saveAll(users.stream()
