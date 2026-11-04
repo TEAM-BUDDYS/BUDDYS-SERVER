@@ -32,9 +32,9 @@ public record CreatePostRequest(
     @FutureOrPresent
     LocalDate endDate,
 
-    @Schema(description = "게시글 제목 (앞뒤 공백 제외 최대 40자, 이모지는 1자로 계산)", example = "주말에 파리 근교 함께 가실 분!")
+    @Schema(description = "게시글 제목", example = "주말에 파리 근교 함께 가실 분!")
     @NotBlank
-    @PostTitleLength
+    @Size(max = 120)
     String title,
 
     @Schema(description = "게시글 본문", example = "안녕하세요. 파리 근교 여행 동행을 구합니다.")

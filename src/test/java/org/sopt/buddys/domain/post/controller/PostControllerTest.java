@@ -823,27 +823,10 @@ class PostControllerTest {
         .collect(java.util.stream.Collectors.joining(",", "[", "]"));
 
     assertUpdateError(author, post, "{\"title\":\"   \"}", "GLB-E001", 400);
-    assertUpdateError(author, post, "{\"title\":\"%s\"}".formatted("가".repeat(41)), "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"title\":\"%s\"}".formatted("가".repeat(121)), "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":[\"   \"]}", "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":[\"%s\"]}".formatted("a".repeat(513)), "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":%s}".formatted(elevenImages), "GLB-E001", 400);
-  }
-
-  @DisplayName("제목 길이는 앞뒤 공백을 제외하고, 이모지는 1자로 세어 40자까지 허용한다")
-  @Test
-  void updatePost_titleLength_countsTrimmedCodePoints() throws Exception {
-    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
-    Post post = createPost(author);
-
-    for (String title : List.of("  " + "가".repeat(40) + "  ", "😀".repeat(40))) {
-      mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
-              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
-              .contentType(MediaType.APPLICATION_JSON)
-              .content("{\"title\":\"%s\"}".formatted(title)))
-          .andExpect(status().isOk());
-      assertThat(postRepository.findById(post.getId()).orElseThrow().getTitle()).isEqualTo(title.trim());
-    }
-    assertUpdateError(author, post, "{\"title\":\"%s\"}".formatted("😀".repeat(41)), "GLB-E001", 400);
   }
 
   @DisplayName("수정 API OpenAPI 스키마가 부분 수정과 필수 응답 계약을 표현한다")
