@@ -732,6 +732,56 @@ class CourseServiceTest {
         );
   }
 
+  @DisplayName("작성 시 동행 검증에 실패하면 신규 장소를 저장하지 않는다")
+  @Test
+  void createCourse_invalidCompanion_doesNotSaveNewPlace() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null,
+        null, null,
+        List.of(tagId), List.of(999_999L),
+        List.of(dayWithNewPlace("ChIJ-create-invalid-companion")));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COMPANION_USER_NOT_FOUND)
+        );
+    assertThat(placeRepository.findByGooglePlaceId("ChIJ-create-invalid-companion")).isEmpty();
+  }
+
+  @DisplayName("수정 시 동행 검증에 실패하면 신규 장소를 저장하지 않고 기존 코스도 바뀌지 않는다")
+  @Test
+  void updateCourse_invalidCompanion_failsBeforeAnyChange() {
+    // given
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    User companion = userRepository.save(createUser("companion@test.com", "provider-companion", "동행자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    Course course = createCourseWithCompanions(author.getId(), countryId, cityId, tagId, List.of(companion.getId()));
+    UpdateCourseCommand updateCommand = new UpdateCourseCommand(
+        List.of(countryId), List.of(cityId), "바뀌면 안 되는 제목", null,
+        null, null,
+        List.of(tagId), List.of(999_999L),
+        List.of(dayWithNewPlace("ChIJ-update-invalid-companion")));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.updateCourse(author.getId(), course.getId(), updateCommand))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.COMPANION_USER_NOT_FOUND)
+        );
+    assertThat(placeRepository.findByGooglePlaceId("ChIJ-update-invalid-companion")).isEmpty();
+    assertThat(courseRepository.findById(course.getId()).orElseThrow().getTitle()).isEqualTo("파리 코스");
+    assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
+        .extracting(cc -> cc.getUser().getId())
+        .containsExactly(companion.getId());
+  }
+
   @DisplayName("수정 시 이미 동행인 유저는 탈퇴했더라도 그대로 다시 보내면 유지된다")
   @Test
   void updateCourse_keepWithdrawnExistingCompanion_succeeds() {
@@ -1308,6 +1358,16 @@ class CourseServiceTest {
         null, null,
         List.of(tagId), companionUserIds,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null))));
+  }
+
+  private CourseDayCommand dayWithNewPlace(String googlePlaceId) {
+    return new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
+        List.of(new CoursePlaceCommand(
+            googlePlaceId, "새 장소", "TOURISM",
+            BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376),
+            (short) 0, null, null, null
+        )),
+        null);
   }
 
   private UpdateCourseCommand createUpdateCommandWithCompanions(
