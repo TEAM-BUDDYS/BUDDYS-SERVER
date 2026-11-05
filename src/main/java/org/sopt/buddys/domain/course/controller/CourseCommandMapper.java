@@ -39,6 +39,7 @@ final class CourseCommandMapper {
         request.startDate(),
         request.endDate(),
         request.tagIds(),
+        request.companionUserIds(),
         request.days() == null ? null : request.days().stream().map(CourseCommandMapper::toCommand).toList()
     );
   }

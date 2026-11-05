@@ -212,7 +212,7 @@ class CourseServiceConcurrencyTest extends IntegrationTestSupport {
     UpdateCourseCommand command = new UpdateCourseCommand(
         countryIds, List.of(cityId), "수정된 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
-        List.of(tagId),
+        List.of(tagId), null,
         List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
     readyLatch.countDown();
     assertThat(startLatch.await(3, TimeUnit.SECONDS)).isTrue();

@@ -4,6 +4,7 @@ import java.util.List;
 import org.sopt.buddys.domain.course.entity.CourseCompanion;
 import org.sopt.buddys.domain.course.entity.CourseCompanionId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,4 +18,11 @@ public interface CourseCompanionRepository extends JpaRepository<CourseCompanion
       order by cc.user.id asc
       """)
   List<CourseCompanion> findAllByCourseIdWithUser(@Param("courseId") Long courseId);
+
+  @Query("select cc.user.id from CourseCompanion cc where cc.course.id = :courseId")
+  List<Long> findUserIdsByCourseId(@Param("courseId") Long courseId);
+
+  @Modifying
+  @Query("delete from CourseCompanion cc where cc.course.id = :courseId")
+  void deleteAllByCourseId(@Param("courseId") Long courseId);
 }

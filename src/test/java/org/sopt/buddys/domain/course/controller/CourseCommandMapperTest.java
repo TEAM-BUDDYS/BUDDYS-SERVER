@@ -98,7 +98,7 @@ class CourseCommandMapperTest {
     UpdateCourseRequest request = new UpdateCourseRequest(
         List.of(1L), List.of(10L), "수정된 코스", "수정된 설명",
         LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3),
-        List.of(100L),
+        List.of(100L), List.of(7L, 8L),
         List.of(new CourseDayRequest(
             (short) 1, null, List.of("https://example.com/a.jpg"),
             "메모", BigDecimal.valueOf(5000), null, null
@@ -110,6 +110,7 @@ class CourseCommandMapperTest {
 
     // then
     assertThat(command.title()).isEqualTo("수정된 코스");
+    assertThat(command.companionUserIds()).containsExactly(7L, 8L);
     assertThat(command.days().get(0).memo()).isEqualTo("메모");
     assertThat(command.days().get(0).cost()).isEqualByComparingTo(BigDecimal.valueOf(5000));
   }

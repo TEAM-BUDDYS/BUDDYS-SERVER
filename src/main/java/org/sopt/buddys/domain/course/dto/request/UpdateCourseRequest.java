@@ -39,6 +39,16 @@ public record UpdateCourseRequest(
     @Size(max = 10)
     List<@NotNull Long> tagIds,
 
+    @Schema(
+        description = "함께한 유저 ID 목록 (최대 11명). 미전달(null) 시 기존 동행을 유지하고, "
+            + "전달 시 이 목록으로 전체 교체합니다. 빈 배열이면 동행을 모두 삭제합니다. "
+            + "탈퇴한 유저는 기존 동행인 경우에만 유지할 수 있습니다.",
+        example = "[12, 30]",
+        nullable = true
+    )
+    @Size(max = 11)
+    List<@NotNull Long> companionUserIds,
+
     @Schema(description = "일자별 코스 목록 (최대 30일). 기존 일자/장소/사진/항공편 정보를 모두 대체합니다.")
     @NotEmpty
     @Size(max = 30)
