@@ -8,16 +8,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import jakarta.persistence.EntityManager;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.sopt.buddys.domain.user.entity.AuthProvider;
 import org.sopt.buddys.domain.user.entity.User;
 import org.sopt.buddys.domain.user.repository.UserRepository;
 import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
 import org.sopt.buddys.global.security.oauth.dto.GoogleUserInfo;
+import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 import org.sopt.buddys.support.IntegrationTestSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -123,13 +127,33 @@ class ProfileImageUrlIntegrationTest extends IntegrationTestSupport {
     assertStoredUrl(user, null);
   }
 
-  @DisplayName("Google 소셜 로그인 경로의 2048자 이미지 URL도 DB에서 손실 없이 재조회된다")
-  @Test
-  void saveGoogleUser_longImage_roundTrips() {
-    String url = "https://social.example/" + "a".repeat(2048 - "https://social.example/".length());
-    User user = userRepository.saveAndFlush(User.ofGoogle("google-user",
-        new GoogleUserInfo("google-user", "google@test.com", true, "Google", url)));
-    assertStoredUrl(user, url);
+  @DisplayName("소셜 회원 생성은 정상 URL과 null을 보존하고 2048자 초과 URL만 null로 저장한다")
+  @ParameterizedTest
+  @MethodSource("oauthProfileImages")
+  void saveSocialUser_profileImage_normalizesAndRoundTrips(
+      AuthProvider provider, String url, String expectedUrl) {
+    User user = provider == AuthProvider.GOOGLE
+        ? User.ofGoogle("google-user",
+            new GoogleUserInfo("google-user", "google@test.com", true, "Google", url))
+        : User.ofKakao("12345", new KakaoUserInfo(12345L,
+            new KakaoUserInfo.KakaoAccount("kakao@test.com",
+                new KakaoUserInfo.KakaoProfile("Kakao", url))));
+    userRepository.saveAndFlush(user);
+    assertStoredUrl(user, expectedUrl);
+  }
+
+  private static Stream<Arguments> oauthProfileImages() {
+    String prefix = "https://social.example/";
+    String normalUrl = prefix + "profile.jpg";
+    String maxLengthUrl = prefix + "a".repeat(2048 - prefix.length());
+    return Stream.of(AuthProvider.GOOGLE, AuthProvider.KAKAO)
+        .flatMap(provider -> Stream.of(
+            Arguments.of(provider, null, null),
+            Arguments.of(provider, normalUrl, normalUrl),
+            Arguments.of(provider, "", ""),
+            Arguments.of(provider, maxLengthUrl, maxLengthUrl),
+            Arguments.of(provider, prefix + "a".repeat(2049 - prefix.length()), null),
+            Arguments.of(provider, prefix + "a".repeat(4096 - prefix.length()), null)));
   }
 
   @DisplayName("온보딩과 프로필 수정 OpenAPI는 이미지 최대 길이를 2048자로 표시한다")

@@ -44,6 +44,7 @@ import org.sopt.buddys.global.security.oauth.dto.KakaoUserInfo;
 public class User extends BaseEntity {
 
   public static final String WITHDRAWN_DISPLAY_NICKNAME = "탈퇴한 사용자";
+  private static final int MAX_PROFILE_IMAGE_URL_LENGTH = 2048;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,7 +63,7 @@ public class User extends BaseEntity {
   @Column(nullable = false, length = 50)
   private String nickname;
 
-  @Column(name = "profile_image_url", length = 2048)
+  @Column(name = "profile_image_url", length = MAX_PROFILE_IMAGE_URL_LENGTH)
   private String profileImageUrl;
 
   @Column(length = 150)
@@ -142,7 +143,7 @@ public class User extends BaseEntity {
     user.providerId = providerId;
     user.email = account.email();
     user.nickname = nickname;
-    user.profileImageUrl = profileImageUrl;
+    user.profileImageUrl = normalizeOAuthProfileImageUrl(profileImageUrl);
     user.notificationEnabled = true;
     user.accountStatus = AccountStatus.ACTIVE;
     return user;
@@ -163,10 +164,14 @@ public class User extends BaseEntity {
     user.providerId = providerId;
     user.email = info.email();
     user.nickname = nickname;
-    user.profileImageUrl = info.picture();
+    user.profileImageUrl = normalizeOAuthProfileImageUrl(info.picture());
     user.notificationEnabled = true;
     user.accountStatus = AccountStatus.ACTIVE;
     return user;
+  }
+
+  private static String normalizeOAuthProfileImageUrl(String url) {
+    return url != null && url.length() > MAX_PROFILE_IMAGE_URL_LENGTH ? null : url;
   }
 
   public void updateNotificationEnabled(boolean notificationEnabled) {
