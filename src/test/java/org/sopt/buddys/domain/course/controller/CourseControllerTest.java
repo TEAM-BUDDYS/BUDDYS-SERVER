@@ -32,6 +32,35 @@ class CourseControllerTest extends IntegrationTestSupport {
   @Autowired
   private UserRepository userRepository;
 
+  @DisplayName("코스 제목은 기존처럼 120자까지 허용하고 121자는 거부한다")
+  @Test
+  void createCourse_titleLimit_remains120Characters() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    String title = "가".repeat(120);
+
+    createCourseViaApi(author, countryId, cityId, tagId, title);
+    assertThat(courseRepository.findAll()).extracting(Course::getTitle).containsExactly(title);
+
+    mockMvc.perform(post("/api/v1/courses")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "countryIds": [%d],
+                  "cityIds": [%d],
+                  "title": "%s",
+                  "tagIds": [%d],
+                  "days": [{"dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"]}]
+                }
+                """.formatted(countryId, cityId, "가".repeat(121), tagId)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("GLB-E001"));
+    assertThat(courseRepository.findAll()).extracting(Course::getTitle).containsExactly(title);
+  }
+
   @DisplayName("내가 작성한 코스 목록을 프로필에서 조회한다")
   @Test
   void getMyCourses_returnsOk() throws Exception {

@@ -541,6 +541,90 @@ class PostControllerTest {
         .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
+  @DisplayName("동행 제목은 한글 40자까지 생성되고 기존처럼 앞뒤 공백을 제거해 저장한다")
+  @Test
+  void createPost_titleWithinLimit_savesTrimmedTitle() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+
+    for (String title : List.of("가".repeat(40), " " + "나".repeat(38) + " ")) {
+      mockMvc.perform(post("/api/v1/posts")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(createPostBody(countryId, cityId, tagId, title)))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.code").value("GLB-S002"))
+          .andExpect(jsonPath("$.data.postId").isNumber());
+    }
+    assertThat(postRepository.findAll()).extracting(Post::getTitle)
+        .containsExactlyInAnyOrder("가".repeat(40), "나".repeat(38));
+  }
+
+  @DisplayName("동행 생성은 trim 전 41자 제목과 빈 제목을 400으로 거부하고 저장하지 않는다")
+  @Test
+  void createPost_invalidTitle_returnsBadRequestWithoutSaving() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+
+    for (String title : List.of("가".repeat(41), " " + "나".repeat(39) + " ", "", "   ")) {
+      mockMvc.perform(post("/api/v1/posts")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(createPostBody(countryId, cityId, tagId, title)))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.code").value("GLB-E001"));
+      assertThat(postRepository.count()).isZero();
+    }
+  }
+
+  @DisplayName("동행 제목은 한글 40자까지 수정되고 기존처럼 앞뒤 공백을 제거해 저장한다")
+  @Test
+  void updatePost_titleWithinLimit_savesTrimmedTitle() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    for (String title : List.of("가".repeat(40), " " + "나".repeat(38) + " ")) {
+      mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+              .contentType(MediaType.APPLICATION_JSON)
+              .content("{\"title\":\"%s\"}".formatted(title)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.code").value("POST-S004"))
+          .andExpect(jsonPath("$.data.postId").value(post.getId()));
+      assertThat(postRepository.findById(post.getId()).orElseThrow().getTitle())
+          .isEqualTo(title.trim());
+    }
+  }
+
+  @DisplayName("기존 120자 제목은 상세 조회와 본문만 수정할 때 그대로 유지된다")
+  @Test
+  void updatePost_omittedTitle_preservesLegacyLongTitle() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+    String legacyTitle = "가".repeat(120);
+    jdbcTemplate.update("UPDATE post SET title = ? WHERE id = ?", legacyTitle, post.getId());
+    entityManager.clear();
+
+    mockMvc.perform(get("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.title").value(legacyTitle));
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\":\" 새 본문 \"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("POST-S004"));
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getTitle()).isEqualTo(legacyTitle);
+    assertThat(updated.getContent()).isEqualTo("새 본문");
+  }
+
   @DisplayName("제목만 수정하면 다른 게시글 필드는 유지되고 게시글 ID를 반환한다")
   @Test
   void updatePost_titleOnly_updatesTitleAndKeepsOthers() throws Exception {
@@ -679,6 +763,8 @@ class PostControllerTest {
               .content(content))
           .andExpect(status().isBadRequest())
           .andExpect(jsonPath("$.code").value("GLB-E001"));
+      assertThat(postRepository.findById(post.getId()).orElseThrow().getTitle())
+          .isEqualTo(post.getTitle());
     }
   }
 
@@ -822,8 +908,13 @@ class PostControllerTest {
         .mapToObj(index -> "\"https://example.com/" + index + ".png\"")
         .collect(java.util.stream.Collectors.joining(",", "[", "]"));
 
-    assertUpdateError(author, post, "{\"title\":\"   \"}", "GLB-E001", 400);
-    assertUpdateError(author, post, "{\"title\":\"%s\"}".formatted("가".repeat(121)), "GLB-E001", 400);
+    for (String title : List.of("   ", "", "가".repeat(41), " " + "나".repeat(39) + " ")) {
+      assertUpdateError(author, post,
+          "{\"title\":\"%s\",\"content\":\"변경 시도\"}".formatted(title), "GLB-E001", 400);
+      Post unchanged = postRepository.findById(post.getId()).orElseThrow();
+      assertThat(unchanged.getTitle()).isEqualTo(post.getTitle());
+      assertThat(unchanged.getContent()).isEqualTo(post.getContent());
+    }
     assertUpdateError(author, post, "{\"imageUrls\":[\"   \"]}", "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":[\"%s\"]}".formatted("a".repeat(513)), "GLB-E001", 400);
     assertUpdateError(author, post, "{\"imageUrls\":%s}".formatted(elevenImages), "GLB-E001", 400);
@@ -836,6 +927,11 @@ class PostControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].patch.parameters[0].required").value(true))
         .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}'].patch.requestBody.required").value(true))
+        .andExpect(jsonPath("$.components.schemas.CreatePostRequest.properties.title.maxLength").value(40))
+        .andExpect(jsonPath("$.components.schemas.CreatePostRequest.properties.title.description")
+            .value(org.hamcrest.Matchers.containsString("최대 40자")))
+        .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.title.description")
+            .value(org.hamcrest.Matchers.containsString("최대 40자")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.required").doesNotExist())
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.countryId.description")
             .value(org.hamcrest.Matchers.containsString("cityId도 함께 전달")))
@@ -1338,6 +1434,25 @@ class PostControllerTest {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(viewer.getId()))
             .param("authorVerifications", "IDENTITY"))
         .andExpect(status().isBadRequest());
+  }
+
+  private String createPostBody(Long countryId, Long cityId, Long tagId, String title) {
+    return """
+        {
+          "countryId": %d,
+          "cityId": %d,
+          "startDate": "%s",
+          "endDate": "%s",
+          "title": "%s",
+          "content": "본문",
+          "ageConditions": ["EARLY_20S"],
+          "genderConditions": ["MALE", "FEMALE"],
+          "companionType": "FULL_TRIP",
+          "recruitmentCountType": "TWO",
+          "tagIds": [%d]
+        }
+        """.formatted(countryId, cityId, LocalDate.now().plusDays(10),
+        LocalDate.now().plusDays(13), title, tagId);
   }
 
   private Post createPost(User author) {
