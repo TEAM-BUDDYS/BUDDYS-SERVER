@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseBookmark;
+import org.sopt.buddys.domain.course.service.SecondSectionCountryService;
 import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.magazine.entity.Magazine;
@@ -38,7 +39,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
-@Import(UserService.class)
+@Import({UserService.class, SecondSectionCountryService.class})
 class WithdrawalBookmarkRetentionTest {
 
   @Container

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
+import org.sopt.buddys.domain.course.service.SecondSectionCountryService;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
@@ -50,6 +51,7 @@ public class UserService {
   private final ApplicationEventPublisher eventPublisher;
   private final CourseRepository courseRepository;
   private final CourseImageRepository courseImageRepository;
+  private final SecondSectionCountryService secondSectionCountryService;
 
   @Transactional
   public void withdraw(Long userId) {
@@ -93,7 +95,11 @@ public class UserService {
     User user = userRepository.findByIdWithCountries(userId)
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
 
-    return new UserCountriesResult(user.getInterestCountry(), user.getExchangeCountry());
+    return new UserCountriesResult(
+        user.getInterestCountry(),
+        user.getExchangeCountry(),
+        secondSectionCountryService.resolve(user.getInterestCountry(), user.getExchangeCountry())
+    );
   }
 
   public boolean getNotificationSetting(Long userId) {

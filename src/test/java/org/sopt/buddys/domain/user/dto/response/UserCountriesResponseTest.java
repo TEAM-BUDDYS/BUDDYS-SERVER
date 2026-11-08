@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.course.service.result.SecondSectionCountry;
+import org.sopt.buddys.domain.course.service.result.SecondSectionCountryReason;
 import org.sopt.buddys.domain.location.dto.response.CountryResponse;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.user.service.result.UserCountriesResult;
@@ -18,7 +20,7 @@ class UserCountriesResponseTest {
     // given
     Country france = createCountry(31L, "프랑스", "France", "FR");
     Country germany = createCountry(71L, "독일", "Germany", "DE");
-    UserCountriesResult result = new UserCountriesResult(france, germany);
+    UserCountriesResult result = new UserCountriesResult(france, germany, null);
 
     // when
     UserCountriesResponse response = UserCountriesResponse.from(result);
@@ -33,7 +35,7 @@ class UserCountriesResponseTest {
   void from_withoutExchangeCountry_returnsNullExchangeCountry() {
     // given
     Country france = createCountry(31L, "프랑스", "France", "FR");
-    UserCountriesResult result = new UserCountriesResult(france, null);
+    UserCountriesResult result = new UserCountriesResult(france, null, null);
 
     // when
     UserCountriesResponse response = UserCountriesResponse.from(result);
@@ -47,7 +49,7 @@ class UserCountriesResponseTest {
   @Test
   void from_withoutInterestCountry_returnsNullInterestCountry() {
     // given
-    UserCountriesResult result = new UserCountriesResult(null, null);
+    UserCountriesResult result = new UserCountriesResult(null, null, null);
 
     // when
     UserCountriesResponse response = UserCountriesResponse.from(result);
@@ -55,6 +57,25 @@ class UserCountriesResponseTest {
     // then
     assertThat(response.interestCountry()).isNull();
     assertThat(response.exchangeCountry()).isNull();
+  }
+
+  @DisplayName("두 번째 섹션 국가를 국가 정보와 선정 이유로 반환하고, 없으면 null로 반환한다")
+  @Test
+  void from_returnsSecondSectionCountry() {
+    // given
+    Country france = createCountry(31L, "프랑스", "France", "FR");
+    Country spain = createCountry(240L, "스페인", "Spain", "ES");
+    UserCountriesResult result = new UserCountriesResult(france, france,
+        new SecondSectionCountry(spain, SecondSectionCountryReason.MOST_COURSES));
+
+    // when
+    UserCountriesResponse response = UserCountriesResponse.from(result);
+    UserCountriesResponse withoutSecond = UserCountriesResponse.from(new UserCountriesResult(france, france, null));
+
+    // then
+    assertThat(response.secondSectionCountry()).isEqualTo(new UserCountriesResponse.SecondSectionCountryResponse(
+        240L, "스페인", "Spain", "ES", SecondSectionCountryReason.MOST_COURSES));
+    assertThat(withoutSecond.secondSectionCountry()).isNull();
   }
 
   private Country createCountry(Long id, String name, String englishName, String isoCode) {

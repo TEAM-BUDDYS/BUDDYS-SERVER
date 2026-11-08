@@ -23,6 +23,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
 import org.sopt.buddys.domain.course.repository.CourseRepository;
+import org.sopt.buddys.domain.course.service.SecondSectionCountryService;
+import org.sopt.buddys.domain.course.service.result.SecondSectionCountry;
+import org.sopt.buddys.domain.course.service.result.SecondSectionCountryReason;
 import org.sopt.buddys.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.buddys.domain.location.entity.Country;
 import org.sopt.buddys.domain.post.repository.PostImageRepository;
@@ -80,6 +83,9 @@ class UserServiceTest {
 
   @Mock
   private ApplicationEventPublisher eventPublisher;
+
+  @Mock
+  private SecondSectionCountryService secondSectionCountryService;
 
   @DisplayName("회원 탈퇴 시 사용자를 soft delete하고 리프레시 토큰을 폐기한다")
   @Test
@@ -354,6 +360,9 @@ class UserServiceTest {
         .exchangeCountry(germany)
         .build();
     given(userRepository.findByIdWithCountries(userId)).willReturn(Optional.of(user));
+    SecondSectionCountry secondSectionCountry =
+        new SecondSectionCountry(germany, SecondSectionCountryReason.EXCHANGE);
+    given(secondSectionCountryService.resolve(france, germany)).willReturn(secondSectionCountry);
 
     // when
     UserCountriesResult result = userService.getCountries(userId);
@@ -361,6 +370,7 @@ class UserServiceTest {
     // then
     assertThat(result.interestCountry()).isSameAs(france);
     assertThat(result.exchangeCountry()).isSameAs(germany);
+    assertThat(result.secondSectionCountry()).isSameAs(secondSectionCountry);
   }
 
   @DisplayName("국가 조회 시 파견 국가가 없으면 파견 국가를 null로 반환한다")
