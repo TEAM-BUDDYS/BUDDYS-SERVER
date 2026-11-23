@@ -3,6 +3,7 @@ package org.sopt.buddys.domain.course.repository;
 import java.util.Collection;
 import java.util.List;
 import org.sopt.buddys.domain.course.entity.CourseImage;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -35,6 +36,26 @@ public interface CourseImageRepository extends JpaRepository<CourseImage, Long> 
       """)
   List<CourseImageUrlProjection> findThumbnailImageUrlsByCourseIds(
       @Param("courseIds") Collection<Long> courseIds);
+
+  // 장소 사진 대체용: 장소가 그 장소 하나뿐인 일차의 사진만 쓴다. 장소가 여러 개인 일차는 사진이 어느 장소 것인지 알 수 없다.
+  // 삭제되지 않은 코스 중 최근 코스, 일차 내 첫 사진 순이다.
+  @Query("""
+      select ci.imageUrl
+      from CourseImage ci
+      join ci.courseDay cd
+      join cd.course c
+      where c.deletedAt is null
+        and exists (
+          select 1 from CoursePlace cp
+          where cp.courseDay = cd and cp.place.googlePlaceId = :googlePlaceId
+        )
+        and (select count(cp2) from CoursePlace cp2 where cp2.courseDay = cd) = 1
+      order by c.id desc, ci.orderNo asc, ci.id asc
+      """)
+  List<String> findImageUrlsOfSinglePlaceDays(
+      @Param("googlePlaceId") String googlePlaceId,
+      Pageable pageable
+  );
 
   @Modifying
   @Query("""

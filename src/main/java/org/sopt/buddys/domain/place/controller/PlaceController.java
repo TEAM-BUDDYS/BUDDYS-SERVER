@@ -13,8 +13,10 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.place.code.PlaceSuccessCode;
+import org.sopt.buddys.domain.place.config.PlacePhotoProperties;
 import org.sopt.buddys.domain.place.controller.swagger.BookmarkPlaceSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.CancelPlaceBookmarkSwagger;
 import org.sopt.buddys.domain.place.controller.swagger.GetBookmarkedPlaceMarkersSwagger;
@@ -25,12 +27,15 @@ import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceMarkersResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceBookmarkResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceSearchResponse;
 import org.sopt.buddys.domain.place.service.PlaceBookmarkService;
+import org.sopt.buddys.domain.place.service.PlacePhotoService;
 import org.sopt.buddys.domain.place.service.PlaceService;
+import org.sopt.buddys.domain.place.service.result.PlacePhoto;
 import org.sopt.buddys.global.common.code.GlobalSuccessCode;
 import org.sopt.buddys.global.response.BaseResponse;
 import org.sopt.buddys.global.security.annotation.LoginUser;
 import org.sopt.buddys.global.swagger.CommonErrorResponses;
 import org.sopt.buddys.global.swagger.InvalidRequestResponse;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -41,6 +46,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriUtils;
 
 import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 
@@ -51,7 +57,13 @@ import static org.sopt.buddys.global.common.PageConstants.MAX_PAGE_SIZE;
 @Tag(name = "Place", description = "장소 검색 API")
 public class PlaceController {
 
+  private static final String PHOTO_SOURCE_HEADER = "X-Photo-Source";
+  private static final String PHOTO_AUTHOR_NAME_HEADER = "X-Photo-Author-Name";
+  private static final String PHOTO_AUTHOR_URL_HEADER = "X-Photo-Author-Url";
+
   private final PlaceService placeService;
+  private final PlacePhotoService placePhotoService;
+  private final PlacePhotoProperties placePhotoProperties;
   private final PlaceBookmarkService placeBookmarkService;
 
   @Operation(summary = "장소 검색", description = "구글 Places API를 통해 장소를 검색합니다. lat/lng를 함께 주면 해당 좌표 주변 결과를 우선합니다.")
@@ -287,9 +299,26 @@ public class PlaceController {
     );
   }
 
-  @Operation(summary = "장소 사진 프록시", description = "장소의 대표 사진 URL로 302 리다이렉트합니다. 구글 API 키를 클라이언트에 노출하지 않기 위한 프록시입니다.")
+  @Operation(summary = "장소 사진 프록시", description = """
+      장소의 대표 사진 URL로 302 리다이렉트합니다. 구글 API 키를 클라이언트에 노출하지 않기 위한 프록시입니다.
+
+      사진은 아래 순서로 찾습니다.
+      1. GOOGLE: 구글 장소 사진 (캐시 우선, 일일 호출 한도 안에서만 조회)
+      2. USER: 사용자가 코스에 올린 사진 (그 장소 하나만 들어간 일차의 첫 사진). 구글 한도 초과·장애·사진 없음일 때
+      3. UNSPLASH: 장소가 속한 도시로 검색한 Unsplash 사진
+
+      모두 없으면 404(PLACE-E002)를 내려주며, 앱은 기본 이미지를 보여줍니다.
+
+      응답 헤더
+      - X-Photo-Source: USER | GOOGLE | UNSPLASH
+      - X-Photo-Author-Name: (UNSPLASH만) 작가 이름, UTF-8 퍼센트 인코딩
+      - X-Photo-Author-Url: (UNSPLASH만) 작가 Unsplash 프로필 URL
+      - Cache-Control: private, max-age=1800
+
+      UNSPLASH 사진은 Unsplash 가이드라인에 따라 화면에 "Photo by {작가} on Unsplash" 표시가 필요합니다.
+      """)
   @ApiResponses({
-      @ApiResponse(responseCode = "302", description = "리다이렉트 성공"),
+      @ApiResponse(responseCode = "302", description = "리다이렉트 성공. Location 헤더가 이미지 URL입니다."),
       @ApiResponse(
           responseCode = "404",
           description = "사진 없음",
@@ -318,9 +347,17 @@ public class PlaceController {
       @Parameter(description = "최대 가로 픽셀. 1 이상 4800 이하입니다.", example = "400")
       @RequestParam(defaultValue = "400") @Min(1) @Max(4800) int maxWidth
   ) {
-    String photoUri = placeService.getPhotoRedirectUri(placeId, maxWidth);
-    return ResponseEntity.status(HttpStatus.FOUND)
-        .location(URI.create(photoUri))
-        .build();
+    PlacePhoto photo = placePhotoService.getPhoto(placeId, maxWidth);
+    ResponseEntity.HeadersBuilder<?> response = ResponseEntity.status(HttpStatus.FOUND)
+        .location(URI.create(photo.url()))
+        .cacheControl(CacheControl.maxAge(placePhotoProperties.clientCacheMaxAge()).cachePrivate())
+        .header(PHOTO_SOURCE_HEADER, photo.source().name());
+    if (photo.authorName() != null) {
+      response.header(PHOTO_AUTHOR_NAME_HEADER, UriUtils.encode(photo.authorName(), StandardCharsets.UTF_8));
+    }
+    if (photo.authorPageUrl() != null) {
+      response.header(PHOTO_AUTHOR_URL_HEADER, photo.authorPageUrl());
+    }
+    return response.build();
   }
 }
