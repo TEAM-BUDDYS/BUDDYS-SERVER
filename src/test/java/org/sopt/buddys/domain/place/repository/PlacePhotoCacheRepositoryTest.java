@@ -109,8 +109,34 @@ class PlacePhotoCacheRepositoryTest {
       assertThat(brokenRepository.findGooglePhoto("place-1", 400)).isEmpty();
       brokenRepository.saveGooglePhoto("place-1", 400, CachedPhoto.of("uri"), Duration.ofHours(1));
       assertThat(brokenRepository.tryAcquireGoogleQuota(TODAY, 100)).isFalse();
+      assertThat(brokenRepository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20))).isEmpty();
+      brokenRepository.releaseGoogleFetchLock("place-1", 400, "token");
     } finally {
       brokenFactory.destroy();
     }
+  }
+
+  @DisplayName("구글 조회 락은 장소·너비별로 한 요청만 잡을 수 있고 TTL이 걸린다")
+  @Test
+  void tryLockGoogleFetch_onlyOneHolder() {
+    assertThat(repository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20))).isPresent();
+    assertThat(repository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20))).isEmpty();
+    assertThat(repository.tryLockGoogleFetch("place-1", 800, Duration.ofSeconds(20))).isPresent();
+
+    assertThat(redisTemplate.getExpire("place:photo:google-lock:place-1:400"))
+        .isPositive()
+        .isLessThanOrEqualTo(20);
+  }
+
+  @DisplayName("구글 조회 락은 잡은 요청의 토큰으로만 해제된다")
+  @Test
+  void releaseGoogleFetchLock_onlyByOwner() {
+    String token = repository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20)).orElseThrow();
+
+    repository.releaseGoogleFetchLock("place-1", 400, "other-token");
+    assertThat(repository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20))).isEmpty();
+
+    repository.releaseGoogleFetchLock("place-1", 400, token);
+    assertThat(repository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20))).isPresent();
   }
 }

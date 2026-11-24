@@ -47,6 +47,7 @@ class PlacePhotoServiceTest {
   private static final Duration FALLBACK_TTL = Duration.ofDays(7);
   private static final Duration NOT_FOUND_TTL = Duration.ofDays(1);
   private static final String UNSPLASH_RAW = "https://images.unsplash.com/photo-1?ixid=abc";
+  private static final String LOCK_TOKEN = "lock-token";
   private static final String COURSE_UPLOAD_PREFIX = "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/";
   private static final String USER_PHOTO_URL = COURSE_UPLOAD_PREFIX + "0b6f2c1e-7a55-4a52-9d0c-3f1f6f2f9f10.jpg";
 
@@ -75,6 +76,7 @@ class PlacePhotoServiceTest {
     given(cacheRepository.findGooglePhoto(anyString(), anyInt())).willReturn(Optional.empty());
     given(cacheRepository.findFallbackPhoto(anyString())).willReturn(Optional.empty());
     given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(true);
+    given(cacheRepository.tryLockGoogleFetch(anyString(), anyInt(), any())).willReturn(Optional.of(LOCK_TOKEN));
   }
 
   private PlacePhotoService service(boolean unsplashEnabled) {
@@ -332,5 +334,50 @@ class PlacePhotoServiceTest {
     assertThatThrownBy(() -> service().getPhoto(PLACE_ID, WIDTH))
         .isInstanceOfSatisfying(BaseException.class, e ->
             assertThat(e.getErrorCode()).isEqualTo(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
+  }
+
+  @DisplayName("다른 요청이 같은 장소를 구글로 조회 중이면 한도를 쓰지 않고 대체 사진으로 넘어간다")
+  @Test
+  void getPhoto_googleFetchInProgress_skipsGoogleWithoutQuota() {
+    given(cacheRepository.tryLockGoogleFetch(anyString(), anyInt(), any())).willReturn(Optional.empty());
+    given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
+        .willReturn(List.of(USER_PHOTO_URL));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
+
+    assertThat(photo).isEqualTo(PlacePhoto.user(USER_PHOTO_URL));
+    then(cacheRepository).should(never()).tryAcquireGoogleQuota(any(), anyInt());
+    then(googlePlacesClient).shouldHaveNoInteractions();
+    then(cacheRepository).should(never()).releaseGoogleFetchLock(anyString(), anyInt(), anyString());
+  }
+
+  @DisplayName("락을 잡은 뒤 캐시가 채워져 있으면 구글을 호출하지 않고 캐시를 쓴다")
+  @Test
+  void getPhoto_cacheFilledWhileLocking_usesCache() {
+    given(cacheRepository.findGooglePhoto(PLACE_ID, WIDTH))
+        .willReturn(Optional.empty())
+        .willReturn(Optional.of(CachedPhoto.of("https://google/filled")));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
+
+    assertThat(photo).isEqualTo(PlacePhoto.google("https://google/filled"));
+    then(cacheRepository).should(never()).tryAcquireGoogleQuota(any(), anyInt());
+    then(googlePlacesClient).shouldHaveNoInteractions();
+    then(cacheRepository).should().releaseGoogleFetchLock(PLACE_ID, WIDTH, LOCK_TOKEN);
+  }
+
+  @DisplayName("구글 조회가 성공하든 실패하든 락을 해제한다")
+  @Test
+  void getPhoto_googleFetch_releasesLockOnSuccessAndFailure() {
+    givenGooglePhoto("https://google/new");
+    service().getPhoto(PLACE_ID, WIDTH);
+    then(cacheRepository).should().releaseGoogleFetchLock(PLACE_ID, WIDTH, LOCK_TOKEN);
+
+    given(googlePlacesClient.getPlaceDetails(PLACE_ID))
+        .willThrow(new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE));
+    given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
+        .willReturn(List.of(USER_PHOTO_URL));
+    service().getPhoto(PLACE_ID, WIDTH);
+    then(cacheRepository).should(org.mockito.Mockito.times(2)).releaseGoogleFetchLock(PLACE_ID, WIDTH, LOCK_TOKEN);
   }
 }

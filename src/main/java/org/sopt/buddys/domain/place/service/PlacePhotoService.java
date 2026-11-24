@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.place.service;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.net.URI;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -50,6 +51,9 @@ public class PlacePhotoService {
   private static final ZoneId GOOGLE_QUOTA_ZONE = ZoneId.of("America/Los_Angeles");
   private static final String METRIC_RESOLVED = "place.photo.resolved";
   private static final String METRIC_GOOGLE_QUOTA_EXCEEDED = "place.photo.google.quota.exceeded";
+  private static final String METRIC_GOOGLE_FETCH_IN_PROGRESS = "place.photo.google.fetch.in-progress";
+  // 구글 호출 2번(GetPlace + GetPhotoMedia)의 최대 소요 시간(연결 3초 + 응답 5초씩)보다 길게 잡는다.
+  private static final Duration GOOGLE_FETCH_LOCK_TTL = Duration.ofSeconds(20);
   private static final String SOURCE_TAG = "source";
   private static final String SOURCE_NONE = "NONE";
   // 업로드 경로가 아닌 예전 URL이 섞여 있을 수 있어 후보를 몇 개 더 가져와 거른다.
@@ -93,6 +97,26 @@ public class PlacePhotoService {
       return cached.filter(CachedPhoto::exists).map(c -> PlacePhoto.google(c.url()));
     }
 
+    // 같은 장소를 동시에 요청하면 한 요청만 구글을 호출한다. 나머지는 한도를 쓰지 않고 대체 사진으로 넘어간다.
+    Optional<String> lockToken = placePhotoCacheRepository.tryLockGoogleFetch(
+        googlePlaceId, maxWidth, GOOGLE_FETCH_LOCK_TTL);
+    if (lockToken.isEmpty()) {
+      meterRegistry.counter(METRIC_GOOGLE_FETCH_IN_PROGRESS).increment();
+      return Optional.empty();
+    }
+    try {
+      // 캐시를 확인한 뒤 락을 잡기 전에, 앞선 요청이 조회를 끝내고 캐시를 채웠을 수 있다.
+      Optional<CachedPhoto> cachedAfterLock = placePhotoCacheRepository.findGooglePhoto(googlePlaceId, maxWidth);
+      if (cachedAfterLock.isPresent()) {
+        return cachedAfterLock.filter(CachedPhoto::exists).map(c -> PlacePhoto.google(c.url()));
+      }
+      return fetchGooglePhoto(googlePlaceId, maxWidth);
+    } finally {
+      placePhotoCacheRepository.releaseGoogleFetchLock(googlePlaceId, maxWidth, lockToken.get());
+    }
+  }
+
+  private Optional<PlacePhoto> fetchGooglePhoto(String googlePlaceId, int maxWidth) {
     LocalDate today = LocalDate.now(GOOGLE_QUOTA_ZONE);
     if (!placePhotoCacheRepository.tryAcquireGoogleQuota(today, placePhotoProperties.googleDailyLimit())) {
       meterRegistry.counter(METRIC_GOOGLE_QUOTA_EXCEEDED).increment();

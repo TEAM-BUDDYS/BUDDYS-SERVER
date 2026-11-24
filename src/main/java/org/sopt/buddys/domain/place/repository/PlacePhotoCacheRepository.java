@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -30,6 +31,7 @@ public class PlacePhotoCacheRepository {
   private static final String GOOGLE_PHOTO_KEY_PREFIX = "place:photo:google:";
   private static final String FALLBACK_PHOTO_KEY_PREFIX = "place:photo:unsplash:";
   private static final String GOOGLE_DAILY_COUNT_KEY_PREFIX = "place:photo:google-count:";
+  private static final String GOOGLE_FETCH_LOCK_KEY_PREFIX = "place:photo:google-lock:";
   private static final Duration DAILY_COUNT_TTL = Duration.ofDays(2);
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
   // INCR와 첫 증가 시 EXPIRE를 한 번에 처리해 TTL 없는 카운터 키가 남지 않게 한다.
@@ -37,6 +39,11 @@ public class PlacePhotoCacheRepository {
       "local count = redis.call('INCR', KEYS[1]); "
           + "if count == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end; "
           + "return count",
+      Long.class
+  );
+  // 내가 잡은 락(토큰 일치)일 때만 지운다. TTL이 지나 다른 요청이 잡은 락을 지우지 않기 위함이다.
+  private static final DefaultRedisScript<Long> RELEASE_IF_OWNER = new DefaultRedisScript<>(
+      "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
       Long.class
   );
 
@@ -77,6 +84,31 @@ public class PlacePhotoCacheRepository {
     }
   }
 
+  /**
+   * 같은 장소·너비의 구글 조회를 한 요청만 하도록 락을 잡는다. 성공하면 해제에 쓸 토큰을 반환한다.
+   * 이미 다른 요청이 조회 중이거나 Valkey 장애면 빈 값을 반환한다(구글 호출을 하지 않는다).
+   */
+  public Optional<String> tryLockGoogleFetch(String googlePlaceId, int maxWidth, Duration ttl) {
+    String token = UUID.randomUUID().toString();
+    try {
+      Boolean acquired = redisTemplate.opsForValue()
+          .setIfAbsent(googleFetchLockKey(googlePlaceId, maxWidth), token, ttl);
+      return Boolean.TRUE.equals(acquired) ? Optional.of(token) : Optional.empty();
+    } catch (DataAccessException e) {
+      log.warn("[PlacePhotoCache] 구글 조회 락 획득 실패, 구글 호출을 막습니다.", e);
+      return Optional.empty();
+    }
+  }
+
+  public void releaseGoogleFetchLock(String googlePlaceId, int maxWidth, String token) {
+    try {
+      redisTemplate.execute(RELEASE_IF_OWNER, List.of(googleFetchLockKey(googlePlaceId, maxWidth)), token);
+    } catch (DataAccessException e) {
+      // 해제에 실패해도 TTL이 지나면 풀린다.
+      log.warn("[PlacePhotoCache] 구글 조회 락 해제 실패", e);
+    }
+  }
+
   private Optional<CachedPhoto> find(String key) {
     try {
       String value = redisTemplate.opsForValue().get(key);
@@ -96,6 +128,10 @@ public class PlacePhotoCacheRepository {
     } catch (DataAccessException | JacksonException e) {
       log.warn("[PlacePhotoCache] 캐시 저장 실패 → key={}", key, e);
     }
+  }
+
+  private String googleFetchLockKey(String googlePlaceId, int maxWidth) {
+    return GOOGLE_FETCH_LOCK_KEY_PREFIX + googlePlaceId + ":" + maxWidth;
   }
 
   private String googlePhotoKey(String googlePlaceId, int maxWidth) {
