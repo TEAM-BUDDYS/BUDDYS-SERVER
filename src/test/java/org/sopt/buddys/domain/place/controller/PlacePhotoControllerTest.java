@@ -64,4 +64,47 @@ class PlacePhotoControllerTest extends IntegrationTestSupport {
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("PLACE-E002"));
   }
+
+  @DisplayName("사진 정보 API는 Unsplash 사진의 URL·출처·작가 정보를 JSON으로 내려준다 (로그인 불필요)")
+  @Test
+  void getPlacePhotoInfo_unsplash_returnsJson() throws Exception {
+    given(placePhotoService.getPhoto("place-1", 400))
+        .willReturn(PlacePhoto.unsplash(
+            "https://images.unsplash.com/photo-1?w=400",
+            "홍 길동",
+            "https://unsplash.com/@hong?utm_source=buddys&utm_medium=referral"));
+
+    mockMvc.perform(get("/api/v1/places/place-1/photo/info"))
+        .andExpect(status().isOk())
+        .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "max-age=1800, private"))
+        .andExpect(jsonPath("$.data.url").value("https://images.unsplash.com/photo-1?w=400"))
+        .andExpect(jsonPath("$.data.source").value("UNSPLASH"))
+        .andExpect(jsonPath("$.data.authorName").value("홍 길동"))
+        .andExpect(jsonPath("$.data.authorPageUrl")
+            .value("https://unsplash.com/@hong?utm_source=buddys&utm_medium=referral"));
+  }
+
+  @DisplayName("사진 정보 API에서 구글 사진은 작가 정보가 null이다")
+  @Test
+  void getPlacePhotoInfo_google_authorIsNull() throws Exception {
+    given(placePhotoService.getPhoto("place-1", 800))
+        .willReturn(PlacePhoto.google("https://lh3.googleusercontent.com/signed-url"));
+
+    mockMvc.perform(get("/api/v1/places/place-1/photo/info").param("maxWidth", "800"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.source").value("GOOGLE"))
+        .andExpect(jsonPath("$.data.authorName").doesNotExist())
+        .andExpect(jsonPath("$.data.authorPageUrl").doesNotExist());
+  }
+
+  @DisplayName("사진 정보 API도 사진이 없으면 404를 내려준다")
+  @Test
+  void getPlacePhotoInfo_notFound_returns404() throws Exception {
+    given(placePhotoService.getPhoto("place-1", 400))
+        .willThrow(new BaseException(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
+
+    mockMvc.perform(get("/api/v1/places/place-1/photo/info"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("PLACE-E002"));
+  }
 }

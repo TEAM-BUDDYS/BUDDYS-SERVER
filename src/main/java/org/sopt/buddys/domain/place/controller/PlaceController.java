@@ -25,6 +25,7 @@ import org.sopt.buddys.domain.place.controller.swagger.GooglePlacesUnavailableRe
 import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceListResponse;
 import org.sopt.buddys.domain.place.dto.response.BookmarkedPlaceMarkersResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceBookmarkResponse;
+import org.sopt.buddys.domain.place.dto.response.PlacePhotoResponse;
 import org.sopt.buddys.domain.place.dto.response.PlaceSearchResponse;
 import org.sopt.buddys.domain.place.service.PlaceBookmarkService;
 import org.sopt.buddys.domain.place.service.PlacePhotoService;
@@ -309,6 +310,8 @@ public class PlaceController {
 
       모두 없으면 404(PLACE-E002)를 내려주며, 앱은 기본 이미지를 보여줍니다.
 
+      웹에서는 리다이렉트 응답 헤더를 읽을 수 없으므로, Unsplash 작가 표기가 필요하면 GET /api/v1/places/{placeId}/photo/info를 사용하세요.
+
       응답 헤더
       - X-Photo-Source: USER | GOOGLE | UNSPLASH
       - X-Photo-Author-Name: (UNSPLASH만) 작가 이름, UTF-8 퍼센트 인코딩
@@ -359,5 +362,48 @@ public class PlaceController {
       response.header(PHOTO_AUTHOR_URL_HEADER, photo.authorPageUrl());
     }
     return response.build();
+  }
+
+  @Operation(summary = "장소 사진 정보 조회", description = """
+      장소 대표 사진의 URL과 출처, 작가 정보를 JSON으로 내려줍니다. 사진을 찾는 순서와 규칙은 장소 사진 프록시 API와 같습니다.
+
+      웹은 리다이렉트 응답 헤더를 읽을 수 없으므로, 사진을 화면에 표시할 때 이 API로 url을 받아 img src에 넣어 주세요.
+      source가 UNSPLASH면 Unsplash 가이드라인에 따라 "Photo by {authorName} on Unsplash" 표기가 필요합니다.
+
+      모두 없으면 404(PLACE-E002)를 내려주며, 앱은 기본 이미지를 보여줍니다.
+      """)
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(
+          responseCode = "404",
+          description = "사진 없음",
+          content = @Content(
+              mediaType = "application/json",
+              schema = @Schema(implementation = BaseResponse.class),
+              examples = @ExampleObject(value = """
+                  {
+                    "success": false,
+                    "code": "PLACE-E002",
+                    "message": "장소 사진을 찾을 수 없습니다.",
+                    "data": null
+                  }
+                  """)
+          )
+      )
+  })
+  @InvalidRequestResponse
+  @GetMapping("/{placeId}/photo/info")
+  public ResponseEntity<BaseResponse<PlacePhotoResponse>> getPlacePhotoInfo(
+      @Parameter(description = "구글 place_id", example = "ChIJN1t_tDeuEmsRUsoyG83frY4")
+      @PathVariable
+      @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "placeId 형식이 올바르지 않습니다.")
+      String placeId,
+      @Parameter(description = "최대 가로 픽셀. 1 이상 4800 이하이며, 400/800/1600/4800 중 요청 이상인 가장 작은 값으로 올려 조회합니다.", example = "400")
+      @RequestParam(defaultValue = "400") @Min(1) @Max(4800) int maxWidth
+  ) {
+    PlacePhoto photo = placePhotoService.getPhoto(placeId, maxWidth);
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.maxAge(placePhotoProperties.clientCacheMaxAge()).cachePrivate())
+        .body(BaseResponse.success(GlobalSuccessCode.OK, PlacePhotoResponse.from(photo)));
   }
 }
