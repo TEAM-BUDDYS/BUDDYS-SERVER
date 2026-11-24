@@ -33,6 +33,7 @@ public class PlacePhotoCacheRepository {
   private static final String GOOGLE_PHOTO_KEY_PREFIX = "place:photo:google:";
   private static final String FALLBACK_PHOTO_KEY_PREFIX = "place:photo:unsplash:";
   private static final String GOOGLE_DAILY_COUNT_KEY_PREFIX = "place:photo:google-count:";
+  private static final String UNSPLASH_SUSPENDED_KEY = "place:photo:unsplash-suspended";
   private static final String FALLBACK_RESULT_KEY_PREFIX = "place:photo:fallback-result:";
   private static final String GOOGLE_FETCH_LOCK_KEY_PREFIX = "place:photo:google-lock:";
   private static final Duration DAILY_COUNT_TTL = Duration.ofDays(2);
@@ -75,6 +76,29 @@ public class PlacePhotoCacheRepository {
 
   public void saveFallbackResult(String googlePlaceId, int maxWidth, CachedFallbackResult result, Duration ttl) {
     save(fallbackResultKey(googlePlaceId, maxWidth), result, ttl);
+  }
+
+  /**
+   * Unsplash 호출이 일시 중단 상태인지 확인한다. Valkey 장애면 중단하지 않은 것으로 본다(Unsplash는 무료라 막을 이유가 없다).
+   */
+  public boolean isUnsplashSuspended() {
+    try {
+      return Boolean.TRUE.equals(redisTemplate.hasKey(UNSPLASH_SUSPENDED_KEY));
+    } catch (DataAccessException e) {
+      log.warn("[PlacePhotoCache] Unsplash 중단 여부 확인 실패", e);
+      return false;
+    }
+  }
+
+  /**
+   * Unsplash 호출을 일정 시간 중단한다(서킷 브레이커). 한도 초과·장애 시 요청마다 재호출하지 않기 위함이다.
+   */
+  public void suspendUnsplash(Duration duration) {
+    try {
+      redisTemplate.opsForValue().set(UNSPLASH_SUSPENDED_KEY, "1", duration);
+    } catch (DataAccessException e) {
+      log.warn("[PlacePhotoCache] Unsplash 중단 설정 실패", e);
+    }
   }
 
   /**

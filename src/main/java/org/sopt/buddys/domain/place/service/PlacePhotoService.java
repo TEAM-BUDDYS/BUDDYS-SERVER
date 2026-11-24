@@ -55,6 +55,9 @@ public class PlacePhotoService {
   private static final String METRIC_GOOGLE_FETCH_IN_PROGRESS = "place.photo.google.fetch.in-progress";
   // 구글 호출 2번(GetPlace + GetPhotoMedia)의 최대 소요 시간(연결 3초 + 응답 5초씩)보다 길게 잡는다.
   private static final Duration GOOGLE_FETCH_LOCK_TTL = Duration.ofSeconds(20);
+  private static final String METRIC_UNSPLASH_SUSPENDED = "place.photo.unsplash.suspended";
+  // Unsplash 호출이 실패하면(한도 초과 403·429, 장애, 타임아웃) 이 시간 동안 Unsplash를 부르지 않는다.
+  private static final Duration UNSPLASH_SUSPEND_DURATION = Duration.ofMinutes(5);
   private static final String SOURCE_TAG = "source";
   // 너비를 몇 단계로만 나눠 캐시 키를 줄인다. 너비를 바꿔가며 캐시를 우회해 구글 한도를 쓰는 것을 막는다.
   private static final int[] WIDTH_BUCKETS = {400, 800, 1600, 4800};
@@ -189,6 +192,11 @@ public class PlacePhotoService {
       return cached.filter(CachedPhoto::exists).map(c -> toUnsplashPhoto(c, maxWidth));
     }
 
+    if (placePhotoCacheRepository.isUnsplashSuspended()) {
+      meterRegistry.counter(METRIC_UNSPLASH_SUSPENDED).increment();
+      return Optional.empty();
+    }
+
     try {
       Optional<UnsplashImage> image = unsplashClient.searchFirstLandscape(keyword.get());
       if (image.isEmpty()) {
@@ -200,7 +208,9 @@ public class PlacePhotoService {
       placePhotoCacheRepository.saveFallbackPhoto(cacheKey, photo, placePhotoProperties.fallbackCacheTtl());
       return Optional.of(toUnsplashPhoto(photo, maxWidth));
     } catch (RestClientException e) {
-      log.warn("[PlacePhoto] Unsplash 사진 조회 실패 → keyword={}", keyword.get(), e);
+      log.warn("[PlacePhoto] Unsplash 사진 조회 실패, {}분간 Unsplash 호출을 중단합니다. keyword={}",
+          UNSPLASH_SUSPEND_DURATION.toMinutes(), keyword.get(), e);
+      placePhotoCacheRepository.suspendUnsplash(UNSPLASH_SUSPEND_DURATION);
       return Optional.empty();
     }
   }

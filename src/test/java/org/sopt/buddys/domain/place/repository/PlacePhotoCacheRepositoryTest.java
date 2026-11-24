@@ -113,6 +113,8 @@ class PlacePhotoCacheRepositoryTest {
       assertThat(brokenRepository.tryAcquireGoogleQuota(TODAY, 100)).isFalse();
       assertThat(brokenRepository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20))).isEmpty();
       brokenRepository.releaseGoogleFetchLock("place-1", 400, "token");
+      assertThat(brokenRepository.isUnsplashSuspended()).isFalse();
+      brokenRepository.suspendUnsplash(Duration.ofMinutes(5));
     } finally {
       brokenFactory.destroy();
     }
@@ -157,5 +159,18 @@ class PlacePhotoCacheRepositoryTest {
     assertThat(redisTemplate.getExpire("place:photo:fallback-result:place-1:400"))
         .isPositive()
         .isLessThanOrEqualTo(Duration.ofMinutes(10).toSeconds());
+  }
+
+  @DisplayName("Unsplash 중단 상태는 TTL 동안만 유지된다")
+  @Test
+  void suspendUnsplash_expiresWithTtl() {
+    assertThat(repository.isUnsplashSuspended()).isFalse();
+
+    repository.suspendUnsplash(Duration.ofMinutes(5));
+
+    assertThat(repository.isUnsplashSuspended()).isTrue();
+    assertThat(redisTemplate.getExpire("place:photo:unsplash-suspended"))
+        .isPositive()
+        .isLessThanOrEqualTo(Duration.ofMinutes(5).toSeconds());
   }
 }

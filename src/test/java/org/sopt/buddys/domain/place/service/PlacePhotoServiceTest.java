@@ -479,4 +479,45 @@ class PlacePhotoServiceTest {
     then(cacheRepository).should(never()).findFallbackResult(anyString(), anyInt());
     then(cacheRepository).should(never()).saveFallbackResult(anyString(), anyInt(), any(), any());
   }
+
+  @DisplayName("Unsplash 호출이 실패하면 5분간 Unsplash 호출을 중단한다")
+  @Test
+  void getPhoto_unsplashFails_suspendsUnsplash() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    givenUnsplashKeyword("Paris");
+    given(unsplashClient.searchFirstLandscape("Paris")).willThrow(new RestClientException("403 Rate Limit Exceeded"));
+
+    assertThatThrownBy(() -> service().getPhoto(PLACE_ID, WIDTH)).isInstanceOf(BaseException.class);
+
+    then(cacheRepository).should().suspendUnsplash(Duration.ofMinutes(5));
+    then(cacheRepository).should(never()).saveFallbackPhoto(anyString(), any(), any());
+  }
+
+  @DisplayName("Unsplash 호출이 중단된 동안에는 Unsplash를 호출하지 않는다")
+  @Test
+  void getPhoto_unsplashSuspended_skipsUnsplash() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    given(cacheRepository.isUnsplashSuspended()).willReturn(true);
+    givenUnsplashKeyword("Paris");
+
+    assertThatThrownBy(() -> service().getPhoto(PLACE_ID, WIDTH))
+        .isInstanceOfSatisfying(BaseException.class, e ->
+            assertThat(e.getErrorCode()).isEqualTo(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
+    then(unsplashClient).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("Unsplash가 중단돼도 캐시된 Unsplash 사진은 쓴다")
+  @Test
+  void getPhoto_unsplashSuspended_stillUsesKeywordCache() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    given(cacheRepository.isUnsplashSuspended()).willReturn(true);
+    givenUnsplashKeyword("Paris");
+    given(cacheRepository.findFallbackPhoto("paris"))
+        .willReturn(Optional.of(CachedPhoto.of(UNSPLASH_RAW, "Author", "https://unsplash.com/@a")));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
+
+    assertThat(photo.source()).isEqualTo(PlacePhotoSource.UNSPLASH);
+    then(unsplashClient).shouldHaveNoInteractions();
+  }
 }
