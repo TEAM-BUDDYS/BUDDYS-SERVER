@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sopt.buddys.domain.place.service.result.PlacePhoto;
+import org.sopt.buddys.domain.place.service.result.PlacePhotoSource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -31,6 +33,7 @@ public class PlacePhotoCacheRepository {
   private static final String GOOGLE_PHOTO_KEY_PREFIX = "place:photo:google:";
   private static final String FALLBACK_PHOTO_KEY_PREFIX = "place:photo:unsplash:";
   private static final String GOOGLE_DAILY_COUNT_KEY_PREFIX = "place:photo:google-count:";
+  private static final String FALLBACK_RESULT_KEY_PREFIX = "place:photo:fallback-result:";
   private static final String GOOGLE_FETCH_LOCK_KEY_PREFIX = "place:photo:google-lock:";
   private static final Duration DAILY_COUNT_TTL = Duration.ofDays(2);
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
@@ -51,7 +54,7 @@ public class PlacePhotoCacheRepository {
   private final ObjectMapper objectMapper;
 
   public Optional<CachedPhoto> findGooglePhoto(String googlePlaceId, int maxWidth) {
-    return find(googlePhotoKey(googlePlaceId, maxWidth));
+    return find(googlePhotoKey(googlePlaceId, maxWidth), CachedPhoto.class);
   }
 
   public void saveGooglePhoto(String googlePlaceId, int maxWidth, CachedPhoto photo, Duration ttl) {
@@ -59,11 +62,19 @@ public class PlacePhotoCacheRepository {
   }
 
   public Optional<CachedPhoto> findFallbackPhoto(String keyword) {
-    return find(FALLBACK_PHOTO_KEY_PREFIX + keyword);
+    return find(FALLBACK_PHOTO_KEY_PREFIX + keyword, CachedPhoto.class);
   }
 
   public void saveFallbackPhoto(String keyword, CachedPhoto photo, Duration ttl) {
     save(FALLBACK_PHOTO_KEY_PREFIX + keyword, photo, ttl);
+  }
+
+  public Optional<CachedFallbackResult> findFallbackResult(String googlePlaceId, int maxWidth) {
+    return find(fallbackResultKey(googlePlaceId, maxWidth), CachedFallbackResult.class);
+  }
+
+  public void saveFallbackResult(String googlePlaceId, int maxWidth, CachedFallbackResult result, Duration ttl) {
+    save(fallbackResultKey(googlePlaceId, maxWidth), result, ttl);
   }
 
   /**
@@ -109,25 +120,29 @@ public class PlacePhotoCacheRepository {
     }
   }
 
-  private Optional<CachedPhoto> find(String key) {
+  private <T> Optional<T> find(String key, Class<T> type) {
     try {
       String value = redisTemplate.opsForValue().get(key);
       if (value == null) {
         return Optional.empty();
       }
-      return Optional.of(objectMapper.readValue(value, CachedPhoto.class));
+      return Optional.of(objectMapper.readValue(value, type));
     } catch (DataAccessException | JacksonException e) {
       log.warn("[PlacePhotoCache] 캐시 조회 실패 → key={}", key, e);
       return Optional.empty();
     }
   }
 
-  private void save(String key, CachedPhoto photo, Duration ttl) {
+  private void save(String key, Object value, Duration ttl) {
     try {
-      redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(photo), ttl);
+      redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(value), ttl);
     } catch (DataAccessException | JacksonException e) {
       log.warn("[PlacePhotoCache] 캐시 저장 실패 → key={}", key, e);
     }
+  }
+
+  private String fallbackResultKey(String googlePlaceId, int maxWidth) {
+    return FALLBACK_RESULT_KEY_PREFIX + googlePlaceId + ":" + maxWidth;
   }
 
   private String googleFetchLockKey(String googlePlaceId, int maxWidth) {
@@ -157,6 +172,27 @@ public class PlacePhotoCacheRepository {
 
     public boolean exists() {
       return url != null;
+    }
+  }
+
+  /**
+   * 장소별 대체 사진 결과. source가 null이면 "대체 사진 없음"을 캐시한 것이다.
+   */
+  public record CachedFallbackResult(PlacePhotoSource source, String url, String authorName, String authorPageUrl) {
+
+    public static CachedFallbackResult of(PlacePhoto photo) {
+      return new CachedFallbackResult(photo.source(), photo.url(), photo.authorName(), photo.authorPageUrl());
+    }
+
+    public static CachedFallbackResult notFound() {
+      return new CachedFallbackResult(null, null, null, null);
+    }
+
+    public Optional<PlacePhoto> toPlacePhoto() {
+      if (source == null || url == null) {
+        return Optional.empty();
+      }
+      return Optional.of(new PlacePhoto(url, source, authorName, authorPageUrl));
     }
   }
 }

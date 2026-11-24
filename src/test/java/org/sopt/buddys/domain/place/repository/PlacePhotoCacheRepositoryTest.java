@@ -8,7 +8,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository.CachedFallbackResult;
 import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository.CachedPhoto;
+import org.sopt.buddys.domain.place.service.result.PlacePhoto;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -138,5 +140,22 @@ class PlacePhotoCacheRepositoryTest {
 
     repository.releaseGoogleFetchLock("place-1", 400, token);
     assertThat(repository.tryLockGoogleFetch("place-1", 400, Duration.ofSeconds(20))).isPresent();
+  }
+
+  @DisplayName("대체 사진 결과를 출처·작가 정보와 함께 장소·너비별로 저장하고 조회한다")
+  @Test
+  void fallbackResult_saveAndFind() {
+    PlacePhoto unsplash = PlacePhoto.unsplash("https://images.unsplash.com/raw?w=400", "홍길동", "https://unsplash.com/@hong");
+    repository.saveFallbackResult("place-1", 400, CachedFallbackResult.of(unsplash), Duration.ofMinutes(10));
+    repository.saveFallbackResult("place-2", 400, CachedFallbackResult.notFound(), Duration.ofMinutes(10));
+
+    assertThat(repository.findFallbackResult("place-1", 400))
+        .hasValueSatisfying(result -> assertThat(result.toPlacePhoto()).hasValue(unsplash));
+    assertThat(repository.findFallbackResult("place-2", 400))
+        .hasValueSatisfying(result -> assertThat(result.toPlacePhoto()).isEmpty());
+    assertThat(repository.findFallbackResult("place-1", 800)).isEmpty();
+    assertThat(redisTemplate.getExpire("place:photo:fallback-result:place-1:400"))
+        .isPositive()
+        .isLessThanOrEqualTo(Duration.ofMinutes(10).toSeconds());
   }
 }

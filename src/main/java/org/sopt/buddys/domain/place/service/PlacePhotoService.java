@@ -21,6 +21,7 @@ import org.sopt.buddys.domain.place.code.PlaceErrorCode;
 import org.sopt.buddys.domain.place.config.PlacePhotoProperties;
 import org.sopt.buddys.domain.place.config.UnsplashProperties;
 import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository;
+import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository.CachedFallbackResult;
 import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository.CachedPhoto;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.place.service.result.PlacePhoto;
@@ -76,8 +77,7 @@ public class PlacePhotoService {
     // 리다이렉트 Location으로 쓸 수 없는 URL은 건너뛰고 다음 소스로 넘어간다(컨트롤러의 URI 변환 실패로 500이 나지 않게).
     Optional<PlacePhoto> photo = findGooglePhoto(googlePlaceId, maxWidth)
         .filter(p -> isRedirectable(p.url()))
-        .or(() -> findUserPhoto(googlePlaceId))
-        .or(() -> findUnsplashPhoto(googlePlaceId, maxWidth).filter(p -> isRedirectable(p.url())));
+        .or(() -> findFallbackPhoto(googlePlaceId, maxWidth));
 
     meterRegistry.counter(METRIC_RESOLVED, SOURCE_TAG, photo.map(p -> p.source().name()).orElse(SOURCE_NONE))
         .increment();
@@ -92,6 +92,24 @@ public class PlacePhotoService {
       }
     }
     return WIDTH_BUCKETS[WIDTH_BUCKETS.length - 1];
+  }
+
+  // 구글을 못 쓸 때의 대체 사진(사용자 사진 → Unsplash). 결과를 장소별로 짧게 캐시해 한도 초과 후 DB 조회 반복을 막는다.
+  private Optional<PlacePhoto> findFallbackPhoto(String googlePlaceId, int maxWidth) {
+    Optional<CachedFallbackResult> cached = placePhotoCacheRepository.findFallbackResult(googlePlaceId, maxWidth);
+    if (cached.isPresent()) {
+      return cached.get().toPlacePhoto();
+    }
+
+    Optional<PlacePhoto> photo = findUserPhoto(googlePlaceId)
+        .or(() -> findUnsplashPhoto(googlePlaceId, maxWidth).filter(p -> isRedirectable(p.url())));
+    placePhotoCacheRepository.saveFallbackResult(
+        googlePlaceId,
+        maxWidth,
+        photo.map(CachedFallbackResult::of).orElseGet(CachedFallbackResult::notFound),
+        placePhotoProperties.fallbackResultCacheTtl()
+    );
+    return photo;
   }
 
   private Optional<PlacePhoto> findUserPhoto(String googlePlaceId) {

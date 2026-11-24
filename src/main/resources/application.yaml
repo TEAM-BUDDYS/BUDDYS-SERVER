@@ -56,6 +56,7 @@ place:
     google-uri-cache-ttl: ${PLACE_PHOTO_GOOGLE_URI_CACHE_TTL:6h}
     fallback-cache-ttl: ${PLACE_PHOTO_FALLBACK_CACHE_TTL:7d}
     not-found-cache-ttl: ${PLACE_PHOTO_NOT_FOUND_CACHE_TTL:1d}
+    fallback-result-cache-ttl: ${PLACE_PHOTO_FALLBACK_RESULT_CACHE_TTL:10m}
     client-cache-max-age: ${PLACE_PHOTO_CLIENT_CACHE_MAX_AGE:30m}
 
 unsplash:

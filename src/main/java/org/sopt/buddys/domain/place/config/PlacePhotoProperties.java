@@ -14,6 +14,8 @@ import org.springframework.validation.annotation.Validated;
  * @param googleUriCacheTtl    구글 photoUri 캐시 유지 시간
  * @param fallbackCacheTtl     Unsplash 검색 결과 캐시 유지 시간
  * @param notFoundCacheTtl     "사진 없음" 결과 캐시 유지 시간 (같은 장소로 외부 API를 반복 호출하지 않기 위함)
+ * @param fallbackResultCacheTtl 구글을 쓰지 못할 때 장소별 대체 사진 결과(사용자 사진/Unsplash/없음) 캐시 유지 시간.
+ *                             구글 한도 초과 후 요청마다 DB 조회가 반복되지 않게 한다.
  * @param clientCacheMaxAge    사진 리다이렉트 응답의 Cache-Control max-age
  */
 @Validated
@@ -23,6 +25,7 @@ public record PlacePhotoProperties(
     @NotNull Duration googleUriCacheTtl,
     @NotNull Duration fallbackCacheTtl,
     @NotNull Duration notFoundCacheTtl,
+    @NotNull Duration fallbackResultCacheTtl,
     @NotNull Duration clientCacheMaxAge
 ) {
 
@@ -30,6 +33,7 @@ public record PlacePhotoProperties(
     requirePositive(googleUriCacheTtl, "googleUriCacheTtl");
     requirePositive(fallbackCacheTtl, "fallbackCacheTtl");
     requirePositive(notFoundCacheTtl, "notFoundCacheTtl");
+    requirePositive(fallbackResultCacheTtl, "fallbackResultCacheTtl");
     requirePositive(clientCacheMaxAge, "clientCacheMaxAge");
   }
 

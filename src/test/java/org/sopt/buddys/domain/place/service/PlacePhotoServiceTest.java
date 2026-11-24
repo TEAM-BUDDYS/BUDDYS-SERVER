@@ -31,6 +31,7 @@ import org.sopt.buddys.domain.place.code.PlaceErrorCode;
 import org.sopt.buddys.domain.place.config.PlacePhotoProperties;
 import org.sopt.buddys.domain.place.config.UnsplashProperties;
 import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository;
+import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository.CachedFallbackResult;
 import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository.CachedPhoto;
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.place.service.result.PlacePhoto;
@@ -48,6 +49,7 @@ class PlacePhotoServiceTest {
   private static final Duration GOOGLE_TTL = Duration.ofHours(6);
   private static final Duration FALLBACK_TTL = Duration.ofDays(7);
   private static final Duration NOT_FOUND_TTL = Duration.ofDays(1);
+  private static final Duration FALLBACK_RESULT_TTL = Duration.ofMinutes(10);
   private static final String UNSPLASH_RAW = "https://images.unsplash.com/photo-1?ixid=abc";
   private static final String LOCK_TOKEN = "lock-token";
   private static final String COURSE_UPLOAD_PREFIX = "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/";
@@ -89,7 +91,7 @@ class PlacePhotoServiceTest {
         googlePlacesClient,
         unsplashClient,
         uploadedImageUrlMatcher,
-        new PlacePhotoProperties(DAILY_LIMIT, GOOGLE_TTL, FALLBACK_TTL, NOT_FOUND_TTL, Duration.ofMinutes(30)),
+        new PlacePhotoProperties(DAILY_LIMIT, GOOGLE_TTL, FALLBACK_TTL, NOT_FOUND_TTL, FALLBACK_RESULT_TTL, Duration.ofMinutes(30)),
         new UnsplashProperties(unsplashEnabled ? "access-key" : "", "https://api.unsplash.com/search/photos", "buddys"),
         meterRegistry
     );
@@ -413,5 +415,68 @@ class PlacePhotoServiceTest {
 
     assertThat(photo).isEqualTo(PlacePhoto.google("https://google/1600"));
     then(cacheRepository).should().saveGooglePhoto(eq(PLACE_ID), eq(1600), any(), any());
+  }
+
+  @DisplayName("캐시된 대체 사진 결과가 있으면 DB와 Unsplash를 조회하지 않는다")
+  @Test
+  void getPhoto_fallbackResultCached_skipsDbAndUnsplash() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    given(cacheRepository.findFallbackResult(PLACE_ID, WIDTH))
+        .willReturn(Optional.of(CachedFallbackResult.of(PlacePhoto.user(USER_PHOTO_URL))));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
+
+    assertThat(photo).isEqualTo(PlacePhoto.user(USER_PHOTO_URL));
+    then(courseImageRepository).shouldHaveNoInteractions();
+    then(placeRepository).shouldHaveNoInteractions();
+    then(unsplashClient).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("캐시된 '대체 사진 없음' 결과가 있으면 DB를 조회하지 않고 404를 던진다")
+  @Test
+  void getPhoto_fallbackNotFoundCached_throwsWithoutDb() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    given(cacheRepository.findFallbackResult(PLACE_ID, WIDTH))
+        .willReturn(Optional.of(CachedFallbackResult.notFound()));
+
+    assertThatThrownBy(() -> service().getPhoto(PLACE_ID, WIDTH))
+        .isInstanceOfSatisfying(BaseException.class, e ->
+            assertThat(e.getErrorCode()).isEqualTo(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
+    then(courseImageRepository).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("대체 사진을 찾으면 장소·너비별로 결과를 캐시한다")
+  @Test
+  void getPhoto_fallbackResolved_savesResult() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
+        .willReturn(List.of(USER_PHOTO_URL));
+
+    service().getPhoto(PLACE_ID, WIDTH);
+
+    then(cacheRepository).should().saveFallbackResult(
+        PLACE_ID, WIDTH, CachedFallbackResult.of(PlacePhoto.user(USER_PHOTO_URL)), FALLBACK_RESULT_TTL);
+  }
+
+  @DisplayName("대체 사진도 없으면 '없음'을 캐시한다")
+  @Test
+  void getPhoto_noFallback_savesNotFound() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+
+    assertThatThrownBy(() -> service(false).getPhoto(PLACE_ID, WIDTH)).isInstanceOf(BaseException.class);
+
+    then(cacheRepository).should().saveFallbackResult(
+        PLACE_ID, WIDTH, CachedFallbackResult.notFound(), FALLBACK_RESULT_TTL);
+  }
+
+  @DisplayName("구글 사진을 쓰면 대체 사진 결과는 조회하지도 저장하지도 않는다")
+  @Test
+  void getPhoto_googleAvailable_doesNotTouchFallbackResult() {
+    givenGooglePhoto("https://google/new");
+
+    service().getPhoto(PLACE_ID, WIDTH);
+
+    then(cacheRepository).should(never()).findFallbackResult(anyString(), anyInt());
+    then(cacheRepository).should(never()).saveFallbackResult(anyString(), anyInt(), any(), any());
   }
 }

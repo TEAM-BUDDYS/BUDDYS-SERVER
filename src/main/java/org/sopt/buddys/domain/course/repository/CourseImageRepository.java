@@ -39,16 +39,17 @@ public interface CourseImageRepository extends JpaRepository<CourseImage, Long> 
 
   // 장소 사진 대체용: 장소가 그 장소 하나뿐인 일차의 사진만 쓴다. 장소가 여러 개인 일차는 사진이 어느 장소 것인지 알 수 없다.
   // 삭제되지 않은 코스 중 최근 코스, 일차 내 첫 사진 순이다.
+  // place(google_place_id 유니크) → course_place(place_id FK 인덱스) → course_day → course_image(course_day_id 인덱스) 순으로 좁힌다.
+  // 일차에 장소가 하나뿐이라는 조건 때문에 같은 사진이 중복으로 나오지 않는다.
   @Query("""
       select ci.imageUrl
-      from CourseImage ci
-      join ci.courseDay cd
+      from CoursePlace cp
+      join cp.place p
+      join cp.courseDay cd
       join cd.course c
-      where c.deletedAt is null
-        and exists (
-          select 1 from CoursePlace cp
-          where cp.courseDay = cd and cp.place.googlePlaceId = :googlePlaceId
-        )
+      join CourseImage ci on ci.courseDay = cd
+      where p.googlePlaceId = :googlePlaceId
+        and c.deletedAt is null
         and (select count(cp2) from CoursePlace cp2 where cp2.courseDay = cd) = 1
       order by c.id desc, ci.orderNo asc, ci.id asc
       """)
