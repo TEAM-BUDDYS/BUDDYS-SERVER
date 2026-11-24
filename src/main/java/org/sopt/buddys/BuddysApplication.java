@@ -1,5 +1,7 @@
 package org.sopt.buddys;
 
+import org.sopt.buddys.domain.place.config.PlacePhotoProperties;
+import org.sopt.buddys.domain.place.config.UnsplashProperties;
 import org.sopt.buddys.domain.verification.config.UniversityVerificationProperties;
 import org.sopt.buddys.global.config.RedisConnectionProperties;
 import org.sopt.buddys.global.mail.MailProperties;
@@ -12,7 +14,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @EnableConfigurationProperties({
     JwtProperties.class, KakaoOAuthProperties.class, GoogleOAuthProperties.class,
-    MailProperties.class, UniversityVerificationProperties.class, RedisConnectionProperties.class
+    MailProperties.class, UniversityVerificationProperties.class, RedisConnectionProperties.class,
+    PlacePhotoProperties.class, UnsplashProperties.class
 })
 @SpringBootApplication
 public class BuddysApplication {

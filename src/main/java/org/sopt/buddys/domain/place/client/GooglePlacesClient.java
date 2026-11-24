@@ -143,6 +143,8 @@ public class GooglePlacesClient {
   public GooglePlaceDetailsResponse getPlaceDetails(String placeId) {
     HttpHeaders headers = new HttpHeaders();
     headers.set("X-Goog-Api-Key", apiKey);
+    // 주의: 필드 마스크를 "photos"에서 바꾸지 말 것. photos만 요청하면 무료(Place Details Essentials IDs Only) SKU다.
+    // 다른 필드를 추가하면 유료 SKU로 바뀌고, 장소 사진 일일 한도(place.photo.google-daily-limit)의 비용 계산이 어긋난다.
     headers.set("X-Goog-FieldMask", "photos");
 
     return execute(() -> {

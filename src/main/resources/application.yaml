@@ -49,6 +49,22 @@ google:
     search-nearby-url: https://places.googleapis.com/v1/places:searchNearby
     base-url: https://places.googleapis.com/v1
 
+place:
+  photo:
+    # 하루에 구글로 사진을 새로 조회하는 최대 횟수(1회 = GetPlace + GetPhotoMedia). 월 무료 건수 ÷ 30 이하로 잡는다.
+    google-daily-limit: ${PLACE_PHOTO_GOOGLE_DAILY_LIMIT:30}
+    google-uri-cache-ttl: ${PLACE_PHOTO_GOOGLE_URI_CACHE_TTL:6h}
+    fallback-cache-ttl: ${PLACE_PHOTO_FALLBACK_CACHE_TTL:7d}
+    not-found-cache-ttl: ${PLACE_PHOTO_NOT_FOUND_CACHE_TTL:1d}
+    fallback-result-cache-ttl: ${PLACE_PHOTO_FALLBACK_RESULT_CACHE_TTL:10m}
+    client-cache-max-age: ${PLACE_PHOTO_CLIENT_CACHE_MAX_AGE:30m}
+
+unsplash:
+  # 비어 있으면 Unsplash 대체 사진을 쓰지 않는다.
+  access-key: ${UNSPLASH_ACCESS_KEY:}
+  search-url: https://api.unsplash.com/search/photos
+  app-name: buddys
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 

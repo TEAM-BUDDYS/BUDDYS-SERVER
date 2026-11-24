@@ -6,7 +6,6 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
 import org.sopt.buddys.domain.place.client.dto.GoogleAddressComponent;
-import org.sopt.buddys.domain.place.client.dto.GooglePhoto;
 import org.sopt.buddys.domain.place.client.dto.GooglePlace;
 import org.sopt.buddys.domain.place.code.PlaceErrorCode;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
@@ -99,17 +98,6 @@ public class PlaceService {
         .toList();
 
     return new PlaceSearchResult(items, nextPageToken);
-  }
-
-  @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public String getPhotoRedirectUri(String placeId, int maxWidth) {
-    List<GooglePhoto> photos = googlePlacesClient.getPlaceDetails(placeId).photosOrEmpty();
-
-    GooglePhoto firstPhoto = photos.stream()
-        .findFirst()
-        .orElseThrow(() -> new BaseException(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
-
-    return googlePlacesClient.getPhotoMediaUri(firstPhoto.name(), maxWidth);
   }
 
   private Set<String> findBookmarkedGooglePlaceIds(Long userId, List<GooglePlace> places) {

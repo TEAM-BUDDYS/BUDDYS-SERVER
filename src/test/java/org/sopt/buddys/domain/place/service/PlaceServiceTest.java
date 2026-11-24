@@ -25,7 +25,6 @@ import org.sopt.buddys.domain.place.client.dto.GoogleDisplayName;
 import org.sopt.buddys.domain.place.client.dto.GoogleLatLng;
 import org.sopt.buddys.domain.place.client.dto.GooglePhoto;
 import org.sopt.buddys.domain.place.client.dto.GooglePlace;
-import org.sopt.buddys.domain.place.client.dto.GooglePlaceDetailsResponse;
 import org.sopt.buddys.domain.place.client.dto.GooglePlacesSearchResponse;
 import org.sopt.buddys.domain.place.code.PlaceErrorCode;
 import org.sopt.buddys.domain.place.entity.PlaceCategory;
@@ -470,38 +469,6 @@ class PlaceServiceTest {
     assertThatCode(() ->
         placeService.nearby(1L, BigDecimal.valueOf(-90), BigDecimal.valueOf(-180), null, null))
         .doesNotThrowAnyException();
-  }
-
-  @DisplayName("장소에 사진이 있으면 리다이렉트용 URI를 반환한다")
-  @Test
-  void getPhotoRedirectUri_photoExists_returnsUri() {
-    // given
-    GooglePhoto photo = new GooglePhoto("places/place-1/photos/photo-1");
-    given(googlePlacesClient.getPlaceDetails("place-1"))
-        .willReturn(new GooglePlaceDetailsResponse(List.of(photo)));
-    given(googlePlacesClient.getPhotoMediaUri("places/place-1/photos/photo-1", 400))
-        .willReturn("https://lh3.googleusercontent.com/signed-url");
-
-    // when
-    String uri = placeService.getPhotoRedirectUri("place-1", 400);
-
-    // then
-    assertThat(uri).isEqualTo("https://lh3.googleusercontent.com/signed-url");
-  }
-
-  @DisplayName("장소에 사진이 없으면 예외가 발생한다")
-  @Test
-  void getPhotoRedirectUri_noPhotos_throwsPhotoNotFound() {
-    // given
-    given(googlePlacesClient.getPlaceDetails("place-1"))
-        .willReturn(new GooglePlaceDetailsResponse(List.of()));
-
-    // when, then
-    assertThatThrownBy(() -> placeService.getPhotoRedirectUri("place-1", 400))
-        .isInstanceOf(BaseException.class)
-        .extracting(exception -> ((BaseException) exception).getErrorCode())
-        .isEqualTo(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND);
-    then(googlePlacesClient).should(never()).getPhotoMediaUri(any(), anyInt());
   }
 
   private GooglePlace createGooglePlace(String id, String primaryType) {

@@ -34,7 +34,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     registry.addInterceptor(originValidationInterceptor)
         .addPathPatterns("/api/v1/auth/reissue");
     registry.addInterceptor(placePhotoRateLimitInterceptor)
-        .addPathPatterns("/api/v1/places/*/photo");
+        .addPathPatterns("/api/v1/places/*/photo", "/api/v1/places/*/photo/info");
   }
 
   @Override
