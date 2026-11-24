@@ -1,6 +1,7 @@
 package org.sopt.buddys.domain.place.service;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import java.net.URI;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -65,9 +66,11 @@ public class PlacePhotoService {
   private final MeterRegistry meterRegistry;
 
   public PlacePhoto getPhoto(String googlePlaceId, int maxWidth) {
+    // 리다이렉트 Location으로 쓸 수 없는 URL은 건너뛰고 다음 소스로 넘어간다(컨트롤러의 URI 변환 실패로 500이 나지 않게).
     Optional<PlacePhoto> photo = findGooglePhoto(googlePlaceId, maxWidth)
+        .filter(p -> isRedirectable(p.url()))
         .or(() -> findUserPhoto(googlePlaceId))
-        .or(() -> findUnsplashPhoto(googlePlaceId, maxWidth));
+        .or(() -> findUnsplashPhoto(googlePlaceId, maxWidth).filter(p -> isRedirectable(p.url())));
 
     meterRegistry.counter(METRIC_RESOLVED, SOURCE_TAG, photo.map(p -> p.source().name()).orElse(SOURCE_NONE))
         .increment();
@@ -79,6 +82,7 @@ public class PlacePhotoService {
     return courseImageRepository.findImageUrlsOfSinglePlaceDays(googlePlaceId, PageRequest.of(0, USER_PHOTO_CANDIDATES))
         .stream()
         .filter(url -> uploadedImageUrlMatcher.matches(url, ImageDomain.COURSE))
+        .filter(this::isRedirectable)
         .findFirst()
         .map(PlacePhoto::user);
   }
@@ -144,6 +148,19 @@ public class PlacePhotoService {
       log.warn("[PlacePhoto] Unsplash 사진 조회 실패 → keyword={}", keyword.get(), e);
       return Optional.empty();
     }
+  }
+
+  private boolean isRedirectable(String url) {
+    try {
+      URI uri = URI.create(url);
+      if (uri.isAbsolute() && "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null) {
+        return true;
+      }
+    } catch (IllegalArgumentException | NullPointerException e) {
+      // 아래에서 로그를 남기고 건너뛴다.
+    }
+    log.warn("[PlacePhoto] 리다이렉트할 수 없는 사진 URL이라 건너뜁니다. url={}", url);
+    return false;
   }
 
   private PlacePhoto toUnsplashPhoto(CachedPhoto photo, int maxWidth) {

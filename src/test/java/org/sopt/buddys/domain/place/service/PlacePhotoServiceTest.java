@@ -298,4 +298,39 @@ class PlacePhotoServiceTest {
 
     assertThat(photo.source()).isEqualTo(PlacePhotoSource.UNSPLASH);
   }
+
+  @DisplayName("구글 사진 URI를 리다이렉트할 수 없으면 사용자 사진으로 넘어간다")
+  @Test
+  void getPhoto_googleUriNotRedirectable_fallsBackToUserPhoto() {
+    givenGooglePhoto("https://google/has space");
+    given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
+        .willReturn(List.of(USER_PHOTO_URL));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
+
+    assertThat(photo).isEqualTo(PlacePhoto.user(USER_PHOTO_URL));
+  }
+
+  @DisplayName("https가 아닌 구글 사진 URI는 쓰지 않는다")
+  @Test
+  void getPhoto_googleUriNotHttps_skipsGoogle() {
+    givenGooglePhoto("javascript:alert(1)");
+
+    assertThatThrownBy(() -> service(false).getPhoto(PLACE_ID, WIDTH))
+        .isInstanceOfSatisfying(BaseException.class, e ->
+            assertThat(e.getErrorCode()).isEqualTo(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
+  }
+
+  @DisplayName("Unsplash 사진 URL을 리다이렉트할 수 없으면 404를 던진다")
+  @Test
+  void getPhoto_unsplashUrlNotRedirectable_throwsNotFound() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    givenUnsplashKeyword("Paris");
+    given(unsplashClient.searchFirstLandscape("Paris"))
+        .willReturn(Optional.of(new UnsplashImage("https://images.unsplash.com/has space", "Author", "https://unsplash.com/@a")));
+
+    assertThatThrownBy(() -> service().getPhoto(PLACE_ID, WIDTH))
+        .isInstanceOfSatisfying(BaseException.class, e ->
+            assertThat(e.getErrorCode()).isEqualTo(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
+  }
 }
