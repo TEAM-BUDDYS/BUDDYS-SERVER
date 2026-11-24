@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
+import org.sopt.buddys.domain.image.service.UploadedImageUrlMatcher;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
 import org.sopt.buddys.domain.place.client.UnsplashClient;
 import org.sopt.buddys.domain.place.client.dto.GooglePhoto;
@@ -32,6 +33,7 @@ import org.sopt.buddys.domain.place.repository.PlacePhotoCacheRepository.CachedP
 import org.sopt.buddys.domain.place.repository.PlaceRepository;
 import org.sopt.buddys.domain.place.service.result.PlacePhoto;
 import org.sopt.buddys.domain.place.service.result.PlacePhotoSource;
+import org.sopt.buddys.global.aws.s3.S3PresignedUrlManager;
 import org.sopt.buddys.global.exception.BaseException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.client.RestClientException;
@@ -45,12 +47,15 @@ class PlacePhotoServiceTest {
   private static final Duration FALLBACK_TTL = Duration.ofDays(7);
   private static final Duration NOT_FOUND_TTL = Duration.ofDays(1);
   private static final String UNSPLASH_RAW = "https://images.unsplash.com/photo-1?ixid=abc";
+  private static final String COURSE_UPLOAD_PREFIX = "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/";
+  private static final String USER_PHOTO_URL = COURSE_UPLOAD_PREFIX + "0b6f2c1e-7a55-4a52-9d0c-3f1f6f2f9f10.jpg";
 
   private CourseImageRepository courseImageRepository;
   private PlaceRepository placeRepository;
   private PlacePhotoCacheRepository cacheRepository;
   private GooglePlacesClient googlePlacesClient;
   private UnsplashClient unsplashClient;
+  private UploadedImageUrlMatcher uploadedImageUrlMatcher;
   private SimpleMeterRegistry meterRegistry;
 
   @BeforeEach
@@ -60,6 +65,9 @@ class PlacePhotoServiceTest {
     cacheRepository = mock(PlacePhotoCacheRepository.class);
     googlePlacesClient = mock(GooglePlacesClient.class);
     unsplashClient = mock(UnsplashClient.class);
+    S3PresignedUrlManager s3PresignedUrlManager = mock(S3PresignedUrlManager.class);
+    given(s3PresignedUrlManager.buildPublicUrl("courses/")).willReturn(COURSE_UPLOAD_PREFIX);
+    uploadedImageUrlMatcher = new UploadedImageUrlMatcher(s3PresignedUrlManager);
     meterRegistry = new SimpleMeterRegistry();
 
     given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
@@ -76,6 +84,7 @@ class PlacePhotoServiceTest {
         cacheRepository,
         googlePlacesClient,
         unsplashClient,
+        uploadedImageUrlMatcher,
         new PlacePhotoProperties(DAILY_LIMIT, GOOGLE_TTL, FALLBACK_TTL, NOT_FOUND_TTL, Duration.ofMinutes(30)),
         new UnsplashProperties(unsplashEnabled ? "access-key" : "", "https://api.unsplash.com/search/photos", "buddys"),
         meterRegistry
@@ -100,7 +109,7 @@ class PlacePhotoServiceTest {
   @Test
   void getPhoto_googleAvailable_prefersGoogleOverUserPhoto() {
     given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
-        .willReturn(List.of("https://s3/user.jpg"));
+        .willReturn(List.of(USER_PHOTO_URL));
     givenGooglePhoto("https://google/new");
 
     PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
@@ -114,11 +123,11 @@ class PlacePhotoServiceTest {
   void getPhoto_quotaExceeded_returnsUserPhoto() {
     given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
     given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
-        .willReturn(List.of("https://s3/user.jpg"));
+        .willReturn(List.of(USER_PHOTO_URL));
 
     PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
 
-    assertThat(photo).isEqualTo(PlacePhoto.user("https://s3/user.jpg"));
+    assertThat(photo).isEqualTo(PlacePhoto.user(USER_PHOTO_URL));
     then(googlePlacesClient).shouldHaveNoInteractions();
     then(unsplashClient).shouldHaveNoInteractions();
   }
@@ -129,11 +138,11 @@ class PlacePhotoServiceTest {
     given(googlePlacesClient.getPlaceDetails(PLACE_ID))
         .willThrow(new BaseException(PlaceErrorCode.GOOGLE_PLACES_UNAVAILABLE));
     given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
-        .willReturn(List.of("https://s3/user.jpg"));
+        .willReturn(List.of(USER_PHOTO_URL));
 
     PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
 
-    assertThat(photo).isEqualTo(PlacePhoto.user("https://s3/user.jpg"));
+    assertThat(photo).isEqualTo(PlacePhoto.user(USER_PHOTO_URL));
     then(unsplashClient).shouldHaveNoInteractions();
   }
 
@@ -261,5 +270,32 @@ class PlacePhotoServiceTest {
     assertThatThrownBy(() -> service(false).getPhoto(PLACE_ID, WIDTH)).isInstanceOf(BaseException.class);
     assertThatThrownBy(() -> service(true).getPhoto(PLACE_ID, WIDTH)).isInstanceOf(BaseException.class);
     then(unsplashClient).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("업로드 경로가 아닌 사용자 사진 URL은 건너뛰고 다음 후보를 쓴다")
+  @Test
+  void getPhoto_userPhotoNotUploadedUrl_skipsToNextCandidate() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
+        .willReturn(List.of("https://evil.example.com/phishing.jpg", USER_PHOTO_URL));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
+
+    assertThat(photo).isEqualTo(PlacePhoto.user(USER_PHOTO_URL));
+  }
+
+  @DisplayName("업로드 경로가 아닌 사용자 사진만 있으면 Unsplash로 넘어간다")
+  @Test
+  void getPhoto_onlyExternalUserPhotos_fallsBackToUnsplash() {
+    given(cacheRepository.tryAcquireGoogleQuota(any(), eq(DAILY_LIMIT))).willReturn(false);
+    given(courseImageRepository.findImageUrlsOfSinglePlaceDays(eq(PLACE_ID), any(Pageable.class)))
+        .willReturn(List.of("https://example.com/a.jpg", COURSE_UPLOAD_PREFIX + "../profiles/x.jpg"));
+    givenUnsplashKeyword("Paris");
+    given(unsplashClient.searchFirstLandscape("Paris"))
+        .willReturn(Optional.of(new UnsplashImage(UNSPLASH_RAW, "Author", "https://unsplash.com/@author")));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, WIDTH);
+
+    assertThat(photo.source()).isEqualTo(PlacePhotoSource.UNSPLASH);
   }
 }

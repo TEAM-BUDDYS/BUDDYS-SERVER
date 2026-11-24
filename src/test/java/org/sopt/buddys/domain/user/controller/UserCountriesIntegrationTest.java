@@ -118,7 +118,7 @@ class UserCountriesIntegrationTest extends IntegrationTestSupport {
                     "cityIds": [%d],
                     "title": "코스 %d-%d",
                     "tagIds": [%d],
-                    "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                    "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                   }
                   """.formatted(countryId, cityId, countryId, i, tagId)))
           .andExpect(status().isCreated());

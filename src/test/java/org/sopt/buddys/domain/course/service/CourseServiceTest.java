@@ -14,6 +14,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.sopt.buddys.domain.course.code.CourseErrorCode;
 import org.sopt.buddys.domain.course.entity.Course;
 import org.sopt.buddys.domain.course.entity.CourseDay;
@@ -140,7 +144,7 @@ class CourseServiceTest {
         List.of(new CourseDayCommand(
             (short) 1,
             LocalDate.of(2026, 9, 1),
-            List.of("https://example.com/a.jpg", "https://example.com/b.jpg"),
+            List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg", "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/b.jpg"),
             "예약 필수",
             BigDecimal.valueOf(22000),
             List.of(new CoursePlaceCommand(
@@ -200,7 +204,7 @@ class CourseServiceTest {
         null, null,
         List.of(tagId), List.of(),
         List.of(new CourseDayCommand(
-            (short) 1, null, List.of("https://example.com/a.jpg"), null, null,
+            (short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"), null, null,
             List.of(),
             List.of(new CourseFlightCommand(
                 "에어프랑스", "AF264", "CDG", LocalTime.of(21, 0),
@@ -232,7 +236,7 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(new CourseDayCommand(
-            (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
+            (short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-shared", "루브르 박물관", "TOURISM",
                 BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376), (short) 0, null, null, null)), null))));
@@ -243,7 +247,7 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(new CourseDayCommand(
-            (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
+            (short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-shared", "가짜 이름", "RESTAURANT",
                 BigDecimal.valueOf(0), BigDecimal.valueOf(0), (short) 0, null, null, null)), null))));
@@ -277,7 +281,7 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(new CourseDayCommand(
-            (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
+            (short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-fill", "루브르 박물관", "TOURISM", null, null, (short) 0,
                 "Rue de Rivoli, 75001 Paris", "다른 국가", "파리")), null))));
@@ -305,11 +309,11 @@ class CourseServiceTest {
         List.of(tagId), null,
         List.of(
             new CourseDayCommand(
-                (short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
+                (short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null,
                 List.of(new CoursePlaceCommand(
                     "ChIJ-conflict", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null, null)), null),
             new CourseDayCommand(
-                (short) 2, null, List.of("https://example.com/day2.jpg"), null, null,
+                (short) 2, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day2.jpg"), null, null,
                 List.of(new CoursePlaceCommand(
                     "ChIJ-conflict", "루브르 카페", "CAFE", null, null, (short) 0, null, null, null)), null)
         ));
@@ -425,14 +429,41 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null),
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)
+            new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null),
+            new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)
         ));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(1L, command))
         .isInstanceOfSatisfying(BaseException.class, exception ->
             assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.DAY_NUMBER_DUPLICATED)
+        );
+  }
+
+  @DisplayName("코스 이미지가 업로드 경로의 URL이 아니면 예외가 발생한다")
+  @ParameterizedTest
+  @ValueSource(strings = {
+      "https://evil.example.com/phishing.jpg",
+      "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/profiles/day1.jpg",
+      "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/../profiles/day1.jpg",
+      "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg?redirect=https://evil.example.com"
+  })
+  void createCourse_notUploadedImageUrl_throwsException(String imageUrl) {
+    // given
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+
+    CreateCourseCommand command = new CreateCourseCommand(
+        List.of(countryId), List.of(cityId), "파리 코스", null,
+        LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
+        List.of(tagId), null,
+        List.of(new CourseDayCommand((short) 1, null, List.of(imageUrl), null, null, null, null)));
+
+    // when, then
+    assertThatThrownBy(() -> courseService.createCourse(1L, command))
+        .isInstanceOfSatisfying(BaseException.class, exception ->
+            assertThat(exception.getErrorCode()).isEqualTo(CourseErrorCode.INVALID_COURSE_IMAGE_URL)
         );
   }
 
@@ -449,7 +480,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(999_999L),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -471,7 +502,7 @@ class CourseServiceTest {
         List.of(countryId, 999_999L), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -493,7 +524,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId, 999_999L), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -515,7 +546,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(interestTagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -542,7 +573,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         activityTagIds, null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -564,7 +595,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(author.getId()),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
 
     // when, then
     assertThatThrownBy(() -> courseService.createCourse(author.getId(), command))
@@ -591,7 +622,7 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(activityTagId), List.of(companion.getId()),
         List.of(new CourseDayCommand(
-            (short) 1, LocalDate.of(2026, 9, 1), List.of("https://example.com/old-day.jpg"), null, null,
+            (short) 1, LocalDate.of(2026, 9, 1), List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/old-day.jpg"), null, null,
             List.of(new CoursePlaceCommand(
                 "ChIJ-old", "루브르 박물관", "TOURISM", null, null, (short) 0, null, null, null)),
             List.of(new CourseFlightCommand(
@@ -604,7 +635,7 @@ class CourseServiceTest {
         LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3),
         List.of(newActivityTagId), null,
         List.of(new CourseDayCommand(
-            (short) 1, LocalDate.of(2026, 10, 1), List.of("https://example.com/new-day.jpg"),
+            (short) 1, LocalDate.of(2026, 10, 1), List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/new-day.jpg"),
             "예약 필수", BigDecimal.valueOf(16000),
             List.of(new CoursePlaceCommand(
                 "ChIJ-new", "콜로세움", "TOURISM", null, null, (short) 0, null, null, null)),
@@ -638,7 +669,7 @@ class CourseServiceTest {
     assertThat(courseFlightRepository.findAllByCourseDayIdIn(updatedCourseDayIds))
         .extracting("airline").containsExactly("아시아나항공");
     assertThat(courseImageRepository.findAll())
-        .extracting("imageUrl").containsExactly("https://example.com/new-day.jpg");
+        .extracting("imageUrl").containsExactly("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/new-day.jpg");
     assertThat(coursePlaceRepository.findAllByCourseDayIdInWithPlace(updatedCourseDayIds))
         .extracting(cp -> cp.getPlace().getName()).containsExactly("콜로세움");
     assertThat(courseCompanionRepository.findAllByCourseIdWithUser(course.getId()))
@@ -907,8 +938,8 @@ class CourseServiceTest {
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
         List.of(
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null),
-            new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)
+            new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null),
+            new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)
         ));
 
     // when, then
@@ -960,7 +991,7 @@ class CourseServiceTest {
         List.of(new CourseDayCommand(
             (short) 1,
             LocalDate.of(2026, 9, 1),
-            List.of("https://example.com/a.jpg"),
+            List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"),
             "예약 필수",
             BigDecimal.valueOf(22000),
             List.of(new CoursePlaceCommand(
@@ -998,7 +1029,7 @@ class CourseServiceTest {
     assertThat(result.tags()).hasSize(1);
     assertThat(result.companions()).extracting("userId").containsExactly(companion.getId());
     assertThat(result.days()).hasSize(1);
-    assertThat(result.days().get(0).imageUrls()).containsExactly("https://example.com/a.jpg");
+    assertThat(result.days().get(0).imageUrls()).containsExactly("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg");
     assertThat(result.days().get(0).memo()).isEqualTo("예약 필수");
     assertThat(result.days().get(0).cost()).isEqualByComparingTo(BigDecimal.valueOf(22000));
     assertThat(result.days().get(0).places()).hasSize(1);
@@ -1054,7 +1085,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), List.of(companion.getId()),
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
     Course course = courseService.createCourse(author.getId(), command);
     jdbcTemplate.update("UPDATE `user` SET deleted_at = ? WHERE id = ?", LocalDateTime.now(), companion.getId());
 
@@ -1233,7 +1264,7 @@ class CourseServiceTest {
         List.of(franceId, germanyId), List.of(parisId, berlinId), "유럽 코스", "내용",
         LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 5),
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
     Course course = courseService.createCourse(author.getId(), command);
     courseService.bookmarkCourse(viewer.getId(), course.getId());
 
@@ -1247,7 +1278,7 @@ class CourseServiceTest {
     assertThat(summary.title()).isEqualTo("유럽 코스");
     assertThat(summary.content()).isEqualTo("내용");
     assertThat(summary.isBookmarked()).isTrue();
-    assertThat(summary.images()).containsExactly("https://example.com/day1.jpg");
+    assertThat(summary.images()).containsExactly("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg");
     assertThat(summary.countries()).isEqualTo("프랑스, 독일");
     assertThat(summary.cities()).isEqualTo("파리, 베를린");
   }
@@ -1337,7 +1368,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         startDate, endDate,
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
   }
 
   private UpdateCourseCommand createDefaultUpdateCommand(
@@ -1347,7 +1378,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         startDate, endDate,
         List.of(tagId), null,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
   }
 
   private Course createCourseWithCompanions(
@@ -1357,11 +1388,11 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         null, null,
         List.of(tagId), companionUserIds,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null))));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null))));
   }
 
   private CourseDayCommand dayWithNewPlace(String googlePlaceId) {
-    return new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null,
+    return new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null,
         List.of(new CoursePlaceCommand(
             googlePlaceId, "새 장소", "TOURISM",
             BigDecimal.valueOf(48.8606), BigDecimal.valueOf(2.3376),
@@ -1377,7 +1408,7 @@ class CourseServiceTest {
         List.of(countryId), List.of(cityId), "파리 코스", null,
         null, null,
         List.of(tagId), companionUserIds,
-        List.of(new CourseDayCommand((short) 1, null, List.of("https://example.com/day1.jpg"), null, null, null, null)));
+        List.of(new CourseDayCommand((short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"), null, null, null, null)));
   }
 
   private User createUser(String email, String providerId, String nickname) {

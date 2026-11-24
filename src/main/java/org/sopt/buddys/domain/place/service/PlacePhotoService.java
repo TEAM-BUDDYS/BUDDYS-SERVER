@@ -9,6 +9,8 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
+import org.sopt.buddys.domain.image.entity.ImageDomain;
+import org.sopt.buddys.domain.image.service.UploadedImageUrlMatcher;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
 import org.sopt.buddys.domain.place.client.UnsplashClient;
 import org.sopt.buddys.domain.place.client.dto.GooglePhoto;
@@ -49,12 +51,15 @@ public class PlacePhotoService {
   private static final String METRIC_GOOGLE_QUOTA_EXCEEDED = "place.photo.google.quota.exceeded";
   private static final String SOURCE_TAG = "source";
   private static final String SOURCE_NONE = "NONE";
+  // 업로드 경로가 아닌 예전 URL이 섞여 있을 수 있어 후보를 몇 개 더 가져와 거른다.
+  private static final int USER_PHOTO_CANDIDATES = 5;
 
   private final CourseImageRepository courseImageRepository;
   private final PlaceRepository placeRepository;
   private final PlacePhotoCacheRepository placePhotoCacheRepository;
   private final GooglePlacesClient googlePlacesClient;
   private final UnsplashClient unsplashClient;
+  private final UploadedImageUrlMatcher uploadedImageUrlMatcher;
   private final PlacePhotoProperties placePhotoProperties;
   private final UnsplashProperties unsplashProperties;
   private final MeterRegistry meterRegistry;
@@ -70,8 +75,10 @@ public class PlacePhotoService {
   }
 
   private Optional<PlacePhoto> findUserPhoto(String googlePlaceId) {
-    return courseImageRepository.findImageUrlsOfSinglePlaceDays(googlePlaceId, PageRequest.of(0, 1))
+    // 리다이렉트 대상이 되므로 우리 업로드 경로의 URL만 쓴다(오픈 리다이렉트 방지).
+    return courseImageRepository.findImageUrlsOfSinglePlaceDays(googlePlaceId, PageRequest.of(0, USER_PHOTO_CANDIDATES))
         .stream()
+        .filter(url -> uploadedImageUrlMatcher.matches(url, ImageDomain.COURSE))
         .findFirst()
         .map(PlacePhoto::user);
   }

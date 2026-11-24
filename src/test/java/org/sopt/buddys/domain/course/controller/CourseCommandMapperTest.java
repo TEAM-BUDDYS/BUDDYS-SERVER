@@ -35,7 +35,7 @@ class CourseCommandMapperTest {
         List.of(new CourseDayRequest(
             (short) 1,
             LocalDate.of(2026, 9, 1),
-            List.of("https://example.com/a.jpg"),
+            List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"),
             "예약 필수",
             BigDecimal.valueOf(22000),
             List.of(new CoursePlaceRequest(
@@ -100,7 +100,7 @@ class CourseCommandMapperTest {
         LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3),
         List.of(100L), List.of(7L, 8L),
         List.of(new CourseDayRequest(
-            (short) 1, null, List.of("https://example.com/a.jpg"),
+            (short) 1, null, List.of("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"),
             "메모", BigDecimal.valueOf(5000), null, null
         ))
     );

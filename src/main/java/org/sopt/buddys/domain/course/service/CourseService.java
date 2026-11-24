@@ -43,6 +43,8 @@ import org.sopt.buddys.domain.course.service.command.UpdateCourseCommand;
 import org.sopt.buddys.domain.course.service.result.CourseDetailResult;
 import org.sopt.buddys.domain.course.service.result.CourseListResult;
 import org.sopt.buddys.domain.course.service.result.CourseSearchResult;
+import org.sopt.buddys.domain.image.entity.ImageDomain;
+import org.sopt.buddys.domain.image.service.UploadedImageUrlMatcher;
 import org.sopt.buddys.domain.location.code.LocationErrorCode;
 import org.sopt.buddys.domain.location.entity.City;
 import org.sopt.buddys.domain.location.entity.Country;
@@ -96,6 +98,7 @@ public class CourseService {
   private final CityRepository cityRepository;
   private final TagRepository tagRepository;
   private final PlaceRepository placeRepository;
+  private final UploadedImageUrlMatcher uploadedImageUrlMatcher;
 
   @Transactional
   public Course createCourse(Long userId, CreateCourseCommand command) {
@@ -292,7 +295,17 @@ public class CourseService {
           || day.imageUrls() == null || day.imageUrls().isEmpty()) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
+      validateImageUrls(day.imageUrls());
       validateFlightFields(day.flights());
+    }
+  }
+
+  // 코스 이미지는 다른 사용자 화면과 장소 사진 리다이렉트에 쓰이므로, 우리 업로드 경로의 URL만 허용한다.
+  private void validateImageUrls(List<String> imageUrls) {
+    for (String imageUrl : imageUrls) {
+      if (imageUrl == null || !uploadedImageUrlMatcher.matches(imageUrl.trim(), ImageDomain.COURSE)) {
+        throw new BaseException(CourseErrorCode.INVALID_COURSE_IMAGE_URL);
+      }
     }
   }
 

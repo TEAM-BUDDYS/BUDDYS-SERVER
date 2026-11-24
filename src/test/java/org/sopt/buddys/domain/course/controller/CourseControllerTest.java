@@ -53,7 +53,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "cityIds": [%d],
                   "title": "%s",
                   "tagIds": [%d],
-                  "days": [{"dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"]}]
+                  "days": [{"dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"]}]
                 }
                 """.formatted(countryId, cityId, "가".repeat(121), tagId)))
         .andExpect(status().isBadRequest())
@@ -80,7 +80,7 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.courses.length()").value(1))
         .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
         .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
-            .value("https://example.com/day1.jpg"))
+            .value("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.size").value(18))
         .andExpect(jsonPath("$.data.hasNext").value(false));
@@ -106,7 +106,7 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.courses.length()").value(1))
         .andExpect(jsonPath("$.data.courses[0].courseId").value(courseId))
         .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
-            .value("https://example.com/day1.jpg"))
+            .value("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"))
         .andExpect(jsonPath("$.data.size").value(18));
   }
 
@@ -133,13 +133,13 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "days": [
                     {
                       "dayNumber": 2,
-                      "imageUrls": ["https://example.com/day2-first.jpg"]
+                      "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day2-first.jpg"]
                     },
                     {
                       "dayNumber": 1,
                       "imageUrls": [
-                        "https://example.com/day1-first.jpg",
-                        "https://example.com/day1-second.jpg"
+                        "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1-first.jpg",
+                        "https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1-second.jpg"
                       ]
                     }
                   ]
@@ -152,7 +152,7 @@ class CourseControllerTest extends IntegrationTestSupport {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.courses[0].thumbnailImageUrl")
-            .value("https://example.com/day1-first.jpg"));
+            .value("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1-first.jpg"));
   }
 
   @DisplayName("코스 목록을 국가로 필터링하여 조회한다")
@@ -180,7 +180,7 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.content[0].title").value("파리 코스"))
         .andExpect(jsonPath("$.data.content[0].countries").value("프랑스"))
         .andExpect(jsonPath("$.data.content[0].cities").value("파리"))
-        .andExpect(jsonPath("$.data.content[0].images[0]").value("https://example.com/day1.jpg"))
+        .andExpect(jsonPath("$.data.content[0].images[0]").value("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"))
         .andExpect(jsonPath("$.data.content[0].isBookmarked").value(false))
         .andExpect(jsonPath("$.data.page").value(0))
         .andExpect(jsonPath("$.data.hasNext").value(false));
@@ -295,7 +295,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                     {
                       "dayNumber": 1,
                       "date": "2026-09-01",
-                      "imageUrls": ["https://example.com/a.jpg"],
+                      "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"],
                       "memo": "예약 필수",
                       "cost": 22000,
                       "places": [
@@ -352,7 +352,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "days": [
                     {
                       "dayNumber": 1,
-                      "imageUrls": ["https://example.com/a.jpg"]
+                      "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"]
                     }
                   ]
                 }
@@ -397,7 +397,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "days": [
                     {
                       "dayNumber": 1,
-                      "imageUrls": ["https://example.com/a.jpg"]
+                      "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"]
                     }
                   ]
                 }
@@ -466,7 +466,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "days": [
                     {
                       "dayNumber": 1,
-                      "imageUrls": ["https://example.com/a.jpg"],
+                      "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/a.jpg"],
                       "cost": 12345678901,
                       "places": []
                     }
@@ -500,8 +500,8 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
                   "days": [
-                    { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] },
-                    { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] }
+                    { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] },
+                    { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] }
                   ]
                 }
                 """.formatted(countryId, cityId, tagId)))
@@ -592,7 +592,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "days": [
                     {
                       "dayNumber": 1,
-                      "imageUrls": ["https://example.com/day1.jpg"],
+                      "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"],
                       "flights": [ null ]
                     }
                   ]
@@ -624,7 +624,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"], "places": [ null ] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"], "places": [ null ] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isBadRequest())
@@ -652,7 +652,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -672,7 +672,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-10-01",
                   "endDate": "2026-10-03",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/updated-day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/updated-day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isOk())
@@ -707,7 +707,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -724,7 +724,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "cityIds": [%d],
                   "title": "날짜 미정으로 수정",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/updated-day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/updated-day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isOk())
@@ -761,7 +761,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -779,7 +779,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "title": "날짜 일부만 입력한 코스",
                   "startDate": "2026-10-01",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/updated-day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/updated-day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isBadRequest())
@@ -808,7 +808,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -827,7 +827,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-10-01",
                   "endDate": "2026-10-03",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/updated-day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/updated-day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isForbidden())
@@ -855,7 +855,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-10-01",
                   "endDate": "2026-10-03",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/updated-day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/updated-day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isNotFound())
@@ -884,7 +884,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
                   "days": [
-                    { "dayNumber": 1, "date": "2026-09-01", "imageUrls": ["https://example.com/day1.jpg"] }
+                    { "dayNumber": 1, "date": "2026-09-01", "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] }
                   ]
                 }
                 """.formatted(countryId, cityId, tagId)))
@@ -907,7 +907,7 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.countries[0].countryId").value(countryId))
         .andExpect(jsonPath("$.data.cities[0].cityId").value(cityId))
         .andExpect(jsonPath("$.data.days[0].dayNumber").value(1))
-        .andExpect(jsonPath("$.data.days[0].imageUrls[0]").value("https://example.com/day1.jpg"));
+        .andExpect(jsonPath("$.data.days[0].imageUrls[0]").value("https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"));
   }
 
   @DisplayName("존재하지 않는 코스를 조회하면 실패한다")
@@ -944,7 +944,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -985,7 +985,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -1033,7 +1033,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, tagId)))
         .andExpect(status().isCreated());
@@ -1094,7 +1094,7 @@ class CourseControllerTest extends IntegrationTestSupport {
                   "startDate": "2026-09-01",
                   "endDate": "2026-09-05",
                   "tagIds": [%d],
-                  "days": [ { "dayNumber": 1, "imageUrls": ["https://example.com/day1.jpg"] } ]
+                  "days": [ { "dayNumber": 1, "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"] } ]
                 }
                 """.formatted(countryId, cityId, title, tagId)))
         .andExpect(status().isCreated());
