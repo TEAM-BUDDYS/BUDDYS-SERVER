@@ -344,7 +344,7 @@ public class PlaceController {
       @PathVariable
       @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "placeId 형식이 올바르지 않습니다.")
       String placeId,
-      @Parameter(description = "최대 가로 픽셀. 1 이상 4800 이하입니다.", example = "400")
+      @Parameter(description = "최대 가로 픽셀. 1 이상 4800 이하이며, 400/800/1600/4800 중 요청 이상인 가장 작은 값으로 올려 조회합니다.", example = "400")
       @RequestParam(defaultValue = "400") @Min(1) @Max(4800) int maxWidth
   ) {
     PlacePhoto photo = placePhotoService.getPhoto(placeId, maxWidth);

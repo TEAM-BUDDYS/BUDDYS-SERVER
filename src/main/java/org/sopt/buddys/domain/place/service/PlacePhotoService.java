@@ -55,6 +55,8 @@ public class PlacePhotoService {
   // 구글 호출 2번(GetPlace + GetPhotoMedia)의 최대 소요 시간(연결 3초 + 응답 5초씩)보다 길게 잡는다.
   private static final Duration GOOGLE_FETCH_LOCK_TTL = Duration.ofSeconds(20);
   private static final String SOURCE_TAG = "source";
+  // 너비를 몇 단계로만 나눠 캐시 키를 줄인다. 너비를 바꿔가며 캐시를 우회해 구글 한도를 쓰는 것을 막는다.
+  private static final int[] WIDTH_BUCKETS = {400, 800, 1600, 4800};
   private static final String SOURCE_NONE = "NONE";
   // 업로드 경로가 아닌 예전 URL이 섞여 있을 수 있어 후보를 몇 개 더 가져와 거른다.
   private static final int USER_PHOTO_CANDIDATES = 5;
@@ -69,7 +71,8 @@ public class PlacePhotoService {
   private final UnsplashProperties unsplashProperties;
   private final MeterRegistry meterRegistry;
 
-  public PlacePhoto getPhoto(String googlePlaceId, int maxWidth) {
+  public PlacePhoto getPhoto(String googlePlaceId, int requestedMaxWidth) {
+    int maxWidth = normalizeWidth(requestedMaxWidth);
     // 리다이렉트 Location으로 쓸 수 없는 URL은 건너뛰고 다음 소스로 넘어간다(컨트롤러의 URI 변환 실패로 500이 나지 않게).
     Optional<PlacePhoto> photo = findGooglePhoto(googlePlaceId, maxWidth)
         .filter(p -> isRedirectable(p.url()))
@@ -79,6 +82,16 @@ public class PlacePhotoService {
     meterRegistry.counter(METRIC_RESOLVED, SOURCE_TAG, photo.map(p -> p.source().name()).orElse(SOURCE_NONE))
         .increment();
     return photo.orElseThrow(() -> new BaseException(PlaceErrorCode.PLACE_PHOTO_NOT_FOUND));
+  }
+
+  // 요청 너비 이상인 가장 작은 단계로 올린다. 화면보다 작은 사진을 주지 않기 위해 내림이 아닌 올림이다.
+  static int normalizeWidth(int requestedMaxWidth) {
+    for (int bucket : WIDTH_BUCKETS) {
+      if (requestedMaxWidth <= bucket) {
+        return bucket;
+      }
+    }
+    return WIDTH_BUCKETS[WIDTH_BUCKETS.length - 1];
   }
 
   private Optional<PlacePhoto> findUserPhoto(String googlePlaceId) {

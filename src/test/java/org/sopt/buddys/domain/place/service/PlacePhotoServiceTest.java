@@ -18,6 +18,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.sopt.buddys.domain.course.repository.CourseImageRepository;
 import org.sopt.buddys.domain.image.service.UploadedImageUrlMatcher;
 import org.sopt.buddys.domain.place.client.GooglePlacesClient;
@@ -379,5 +381,37 @@ class PlacePhotoServiceTest {
         .willReturn(List.of(USER_PHOTO_URL));
     service().getPhoto(PLACE_ID, WIDTH);
     then(cacheRepository).should(org.mockito.Mockito.times(2)).releaseGoogleFetchLock(PLACE_ID, WIDTH, LOCK_TOKEN);
+  }
+
+  @DisplayName("요청 너비는 400/800/1600/4800 중 요청 이상인 가장 작은 단계로 올린다")
+  @ParameterizedTest
+  @CsvSource({"1,400", "400,400", "401,800", "800,800", "1200,1600", "1601,4800", "4800,4800"})
+  void normalizeWidth_roundsUpToBucket(int requested, int expected) {
+    assertThat(PlacePhotoService.normalizeWidth(requested)).isEqualTo(expected);
+  }
+
+  @DisplayName("너비가 달라도 같은 단계면 같은 캐시를 써서 구글을 다시 호출하지 않는다")
+  @Test
+  void getPhoto_widthInSameBucket_usesSameCacheKey() {
+    given(cacheRepository.findGooglePhoto(PLACE_ID, 800))
+        .willReturn(Optional.of(CachedPhoto.of("https://google/800")));
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, 650);
+
+    assertThat(photo).isEqualTo(PlacePhoto.google("https://google/800"));
+    then(googlePlacesClient).shouldHaveNoInteractions();
+  }
+
+  @DisplayName("구글 사진은 단계로 올린 너비로 조회한다")
+  @Test
+  void getPhoto_googleFetch_usesBucketedWidth() {
+    given(googlePlacesClient.getPlaceDetails(PLACE_ID))
+        .willReturn(new GooglePlaceDetailsResponse(List.of(new GooglePhoto("places/place-1/photos/p1"))));
+    given(googlePlacesClient.getPhotoMediaUri("places/place-1/photos/p1", 1600)).willReturn("https://google/1600");
+
+    PlacePhoto photo = service().getPhoto(PLACE_ID, 1000);
+
+    assertThat(photo).isEqualTo(PlacePhoto.google("https://google/1600"));
+    then(cacheRepository).should().saveGooglePhoto(eq(PLACE_ID), eq(1600), any(), any());
   }
 }
