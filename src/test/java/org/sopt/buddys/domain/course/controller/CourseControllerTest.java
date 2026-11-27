@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.sql.Statement;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.entity.Course;
@@ -267,6 +268,66 @@ class CourseControllerTest extends IntegrationTestSupport {
         .andExpect(jsonPath("$.data.content.length()").value(1))
         .andExpect(jsonPath("$.data.content[0].courseId").value(bookmarkedCourseId))
         .andExpect(jsonPath("$.data.content[0].isBookmarked").value(true));
+  }
+
+  @DisplayName("코스 생성과 수정은 본문 300자까지 저장하고 301자를 거부한다")
+  @Test
+  void writeCourse_contentLengthBoundary() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("도보여행", "ACTIVITY");
+    String body = """
+        {
+          "countryIds": [%d],
+          "cityIds": [%d],
+          "title": "파리 코스",
+          "content": "%s",
+          "tagIds": [%d],
+          "days": [{
+            "dayNumber": 1,
+            "imageUrls": ["https://buddys-test-bucket.s3.ap-northeast-2.amazonaws.com/courses/day1.jpg"]
+          }]
+        }
+        """;
+
+    for (int length : List.of(0, 299, 300, 301)) {
+      var result = mockMvc.perform(post("/api/v1/courses")
+          .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(body.formatted(countryId, cityId, "가".repeat(length), tagId)));
+
+      if (length == 301) {
+        result.andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("GLB-E001"))
+            .andExpect(jsonPath("$.data.content").value("본문은 300자 이하로 입력해 주세요."));
+      } else {
+        result.andExpect(status().isCreated());
+      }
+    }
+
+    var courses = courseRepository.findAll();
+    assertThat(courses).extracting(Course::getContent)
+        .containsExactlyInAnyOrder("", "가".repeat(299), "가".repeat(300));
+    Long courseId = courses.get(0).getId();
+
+    for (int length : List.of(0, 299, 300, 301)) {
+      String content = "나".repeat(length);
+      var result = mockMvc.perform(put("/api/v1/courses/{courseId}", courseId)
+          .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(body.formatted(countryId, cityId, content, tagId)));
+
+      if (length == 301) {
+        result.andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("GLB-E001"))
+            .andExpect(jsonPath("$.data.content").value("본문은 300자 이하로 입력해 주세요."));
+      } else {
+        result.andExpect(status().isOk());
+        assertThat(courseRepository.findById(courseId).orElseThrow().getContent()).isEqualTo(content);
+      }
+    }
+    assertThat(courseRepository.findById(courseId).orElseThrow().getContent()).isEqualTo("나".repeat(300));
   }
 
   @DisplayName("코스 게시글을 작성한다")

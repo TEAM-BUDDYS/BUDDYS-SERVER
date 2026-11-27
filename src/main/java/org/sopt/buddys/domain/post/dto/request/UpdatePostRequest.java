@@ -2,6 +2,7 @@ package org.sopt.buddys.domain.post.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
@@ -29,7 +30,8 @@ public class UpdatePostRequest {
   private LocalDate endDate;
   @Schema(description = "전달하면 제목을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가, 최대 40자", example = "주말에 파리 근교 함께 가실 분!")
   private String title;
-  @Schema(description = "전달하면 본문을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가", example = "파리 근교 여행 동행을 구합니다.")
+  @Schema(description = "전달하면 본문을 수정하고, 미전달 시 기존 값을 유지합니다. null 불가, 최대 300자", maxLength = 300, example = "파리 근교 여행 동행을 구합니다.")
+  @Size(max = 300, message = "본문은 300자 이하로 입력해 주세요.")
   private String content;
   @Schema(description = "전달 시 나이 조건 전체를 교체하고, 미전달 시 유지합니다. null 및 빈 배열 불가")
   private List<AgeCondition> ageConditions;

@@ -37,8 +37,9 @@ public record CreatePostRequest(
     @Size(max = 40)
     String title,
 
-    @Schema(description = "게시글 본문", example = "안녕하세요. 파리 근교 여행 동행을 구합니다.")
+    @Schema(description = "게시글 본문. 최대 300자", maxLength = 300, example = "안녕하세요. 파리 근교 여행 동행을 구합니다.")
     @NotBlank
+    @Size(max = 300, message = "본문은 300자 이하로 입력해 주세요.")
     String content,
 
     @Schema(
