@@ -35,8 +35,9 @@ public class UpdatePostRequest {
   private List<AgeCondition> ageConditions;
   @Schema(description = "전달 시 성별 조건 전체를 교체하고, 미전달 시 유지합니다. null 및 빈 배열 불가")
   private List<GenderCondition> genderConditions;
-  @Schema(description = "전달하면 동행 유형을 수정하고, 미전달 시 유지합니다. null 불가", example = "FULL_TRIP")
-  private CompanionType companionType;
+  @Schema(description = "전달 시 동행 유형 전체를 교체하고, 미전달 시 유지합니다. null, 빈 배열 및 중복 불가",
+      example = "[\"FULL_TRIP\", \"MEAL\"]")
+  private List<CompanionType> companionTypes;
   @Schema(description = "전달하면 모집 인원을 수정하고, 미전달 시 유지합니다. null 불가", example = "TWO")
   private RecruitmentCountType recruitmentCountType;
   @Schema(description = "전달 시 태그 전체를 교체하고, 미전달 시 유지합니다. null 및 빈 배열 불가", example = "[1, 2, 3]")
@@ -52,7 +53,7 @@ public class UpdatePostRequest {
   public void setContent(String value) { content = mark(Field.CONTENT, value); }
   public void setAgeConditions(List<AgeCondition> value) { ageConditions = mark(Field.AGE_CONDITIONS, value); }
   public void setGenderConditions(List<GenderCondition> value) { genderConditions = mark(Field.GENDER_CONDITIONS, value); }
-  public void setCompanionType(CompanionType value) { companionType = mark(Field.COMPANION_TYPE, value); }
+  public void setCompanionTypes(List<CompanionType> value) { companionTypes = mark(Field.COMPANION_TYPES, value); }
   public void setRecruitmentCountType(RecruitmentCountType value) { recruitmentCountType = mark(Field.RECRUITMENT_COUNT_TYPE, value); }
   public void setTagIds(List<Long> value) { tagIds = mark(Field.TAG_IDS, value); }
   public void setImageUrls(List<String> value) { imageUrls = mark(Field.IMAGE_URLS, value); }
@@ -60,7 +61,7 @@ public class UpdatePostRequest {
   public UpdatePostCommand toCommand() {
     return new UpdatePostCommand(
         countryId, cityId, startDate, endDate, title, content, ageConditions,
-        genderConditions, companionType, recruitmentCountType, tagIds, imageUrls,
+        genderConditions, companionTypes, recruitmentCountType, tagIds, imageUrls,
         EnumSet.copyOf(providedFields)
     );
   }
@@ -72,6 +73,6 @@ public class UpdatePostRequest {
 
   public enum Field {
     COUNTRY_ID, CITY_ID, START_DATE, END_DATE, TITLE, CONTENT, AGE_CONDITIONS,
-    GENDER_CONDITIONS, COMPANION_TYPE, RECRUITMENT_COUNT_TYPE, TAG_IDS, IMAGE_URLS
+    GENDER_CONDITIONS, COMPANION_TYPES, RECRUITMENT_COUNT_TYPE, TAG_IDS, IMAGE_URLS
   }
 }

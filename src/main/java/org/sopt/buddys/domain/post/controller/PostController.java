@@ -309,7 +309,7 @@ public class PostController {
         request.content(),
         request.ageConditions(),
         request.genderConditions(),
-        request.companionType(),
+        request.companionTypes(),
         request.recruitmentCountType(),
         request.tagIds(),
         request.imageUrls()

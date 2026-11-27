@@ -115,7 +115,7 @@ class PostServiceTest {
         " 안녕하세요. 같이 여행하실 분을 구합니다. ",
         List.of(AgeCondition.EARLY_20S, AgeCondition.MID_20S),
         List.of(GenderCondition.MALE, GenderCondition.FEMALE),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO,
         List.of(tagId),
         List.of("https://example.com/first.png", "https://example.com/second.png")
@@ -129,7 +129,7 @@ class PostServiceTest {
     assertThat(savedPost.getTitle()).isEqualTo("주말에 파리 근교 함께 가실 분!");
     assertThat(savedPost.getContent()).isEqualTo("안녕하세요. 같이 여행하실 분을 구합니다.");
     assertThat(savedPost.getStatus()).isEqualTo(PostStatus.RECRUITING);
-    assertThat(savedPost.getCompanionType()).isEqualTo(CompanionType.FULL_TRIP);
+    assertThat(findStoredCompanionTypes(post.getId())).containsExactly(CompanionType.FULL_TRIP.name());
     assertThat(savedPost.getRecruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(postAgeConditionRepository.findAll()).hasSize(2);
     assertThat(postGenderConditionRepository.findAll()).hasSize(2);
@@ -196,7 +196,7 @@ class PostServiceTest {
         "본문",
         List.of(AgeCondition.EARLY_20S),
         List.of(GenderCondition.MALE, GenderCondition.FEMALE),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO,
         List.of(interestTagId),
         List.of()
@@ -302,7 +302,7 @@ class PostServiceTest {
         "같이 맛집이랑 관광지 다니실 분 구해요.",
         List.of(AgeCondition.LATE_20S, AgeCondition.EARLY_20S, AgeCondition.MID_20S),
         List.of(GenderCondition.MALE, GenderCondition.FEMALE),
-        CompanionType.MEAL,
+        List.of(CompanionType.MEAL),
         RecruitmentCountType.TWO,
         List.of(foodTagId, photoTagId, planTagId),
         List.of("https://example.com/image1.jpg", "https://example.com/image2.jpg")
@@ -337,7 +337,7 @@ class PostServiceTest {
         .containsExactly(AgeCondition.EARLY_20S, AgeCondition.MID_20S, AgeCondition.LATE_20S);
     assertThat(response.conditions().genderConditions())
         .containsExactly(GenderCondition.MALE, GenderCondition.FEMALE);
-    assertThat(response.conditions().travelType()).isEqualTo(CompanionType.MEAL);
+    assertThat(response.conditions().travelTypes()).containsExactly(CompanionType.MEAL);
     assertThat(response.conditions().activityTags())
         .extracting(PostDetailResponse.PostTagResponse::name)
         .containsExactly("맛집");
@@ -583,7 +583,7 @@ class PostServiceTest {
         "본문",
         List.of(AgeCondition.EARLY_20S),
         List.of(GenderCondition.MALE, GenderCondition.FEMALE),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO,
         tagIds,
         List.of()
@@ -667,6 +667,12 @@ class PostServiceTest {
         keyHolder
     );
     return keyHolder.getKey().longValue();
+  }
+
+  private List<String> findStoredCompanionTypes(Long postId) {
+    return jdbcTemplate.queryForList(
+        "SELECT companion_type FROM post_companion_type WHERE post_id = ?", String.class, postId
+    );
   }
 
   private void cleanUp() {

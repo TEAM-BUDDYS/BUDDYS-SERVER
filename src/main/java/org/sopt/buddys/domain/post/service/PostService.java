@@ -3,9 +3,11 @@ package org.sopt.buddys.domain.post.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -18,6 +20,7 @@ import org.sopt.buddys.domain.location.repository.CountryRepository;
 import org.sopt.buddys.domain.post.code.PostErrorCode;
 import org.sopt.buddys.domain.post.dto.request.UpdatePostRequest.Field;
 import org.sopt.buddys.domain.post.entity.AgeCondition;
+import org.sopt.buddys.domain.post.entity.CompanionType;
 import org.sopt.buddys.domain.post.entity.GenderCondition;
 import org.sopt.buddys.domain.post.entity.Post;
 import org.sopt.buddys.domain.post.entity.PostAgeCondition;
@@ -97,7 +100,7 @@ public class PostService {
         command.content().trim(),
         command.startDate(),
         command.endDate(),
-        command.companionType(),
+        command.companionTypes(),
         command.recruitmentCountType()
     ));
 
@@ -178,7 +181,6 @@ public class PostService {
         country, city, startDate, endDate,
         command.isProvided(Field.TITLE) ? command.title().trim() : post.getTitle(),
         command.isProvided(Field.CONTENT) ? command.content().trim() : post.getContent(),
-        command.isProvided(Field.COMPANION_TYPE) ? command.companionType() : post.getCompanionType(),
         command.isProvided(Field.RECRUITMENT_COUNT_TYPE)
             ? command.recruitmentCountType() : post.getRecruitmentCountType()
     );
@@ -190,6 +192,9 @@ public class PostService {
     if (command.isProvided(Field.GENDER_CONDITIONS)) {
       postGenderConditionRepository.deleteAllByPostId(postId);
       savePostGenderConditions(post, command.genderConditions());
+    }
+    if (command.isProvided(Field.COMPANION_TYPES)) {
+      post.replaceCompanionTypes(command.companionTypes());
     }
     if (command.isProvided(Field.TAG_IDS)) {
       updatePostTags(post, command.tagIds());
@@ -325,7 +330,7 @@ public class PostService {
         post.getContent(),
         getAgeConditions(post.getId()),
         getGenderConditions(post.getId()),
-        post.getCompanionType(),
+        post.getCompanionTypes().stream().sorted().toList(),
         getTagResults(post.getId()),
         post.getViewCount(),
         post.getCommentCount(),
@@ -415,12 +420,17 @@ public class PostService {
         || command.ageConditions().isEmpty()
         || command.genderConditions() == null
         || command.genderConditions().isEmpty()
-        || command.companionType() == null
+        || hasInvalidCompanionTypes(command.companionTypes())
         || command.recruitmentCountType() == null
         || command.tagIds() == null
         || command.tagIds().isEmpty()) {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
+  }
+
+  private boolean hasInvalidCompanionTypes(List<CompanionType> types) {
+    return types == null || types.isEmpty() || types.stream().anyMatch(Objects::isNull)
+        || new HashSet<>(types).size() != types.size();
   }
 
   private void savePostAgeConditions(Post post, List<AgeCondition> ageConditions) {
@@ -517,6 +527,7 @@ public class PostService {
             || command.ageConditions().stream().anyMatch(java.util.Objects::isNull)))
         || (command.isProvided(Field.GENDER_CONDITIONS) && (command.genderConditions().isEmpty()
             || command.genderConditions().stream().anyMatch(java.util.Objects::isNull)))
+        || (command.isProvided(Field.COMPANION_TYPES) && hasInvalidCompanionTypes(command.companionTypes()))
         || (command.isProvided(Field.TAG_IDS) && (command.tagIds().isEmpty()
             || command.tagIds().stream().anyMatch(java.util.Objects::isNull)))
         || (command.isProvided(Field.IMAGE_URLS) && (command.imageUrls().size() > 10
@@ -535,7 +546,7 @@ public class PostService {
       case CONTENT -> command.content();
       case AGE_CONDITIONS -> command.ageConditions();
       case GENDER_CONDITIONS -> command.genderConditions();
-      case COMPANION_TYPE -> command.companionType();
+      case COMPANION_TYPES -> command.companionTypes();
       case RECRUITMENT_COUNT_TYPE -> command.recruitmentCountType();
       case TAG_IDS -> command.tagIds();
       case IMAGE_URLS -> command.imageUrls();

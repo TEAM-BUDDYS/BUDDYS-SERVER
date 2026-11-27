@@ -16,7 +16,7 @@ public record CreatePostCommand(
     String content,
     List<AgeCondition> ageConditions,
     List<GenderCondition> genderConditions,
-    CompanionType companionType,
+    List<CompanionType> companionTypes,
     RecruitmentCountType recruitmentCountType,
     List<Long> tagIds,
     List<String> imageUrls

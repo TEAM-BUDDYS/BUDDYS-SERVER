@@ -54,13 +54,14 @@ public record CreatePostRequest(
     List<@NotNull GenderCondition> genderConditions,
 
     @Schema(
-        description = "동행 유형. FULL_TRIP(여행 전체 동행), PARTIAL_TRIP(여행 부분 동행), "
+        description = "동행 유형 목록. 한 개 이상 선택하며 같은 유형을 중복으로 보낼 수 없습니다. "
+            + "FULL_TRIP(여행 전체 동행), PARTIAL_TRIP(여행 부분 동행), "
             + "ACCOMMODATION_SHARE(숙박 공유), TOUR(투어 동행), MEAL(식사 동행), "
             + "DAILY_LIFE(생활 동행), GROUP_PURCHASE(공동 구매)",
-        example = "FULL_TRIP"
+        example = "[\"FULL_TRIP\", \"MEAL\"]"
     )
-    @NotNull
-    CompanionType companionType,
+    @NotEmpty
+    List<@NotNull CompanionType> companionTypes,
 
     @Schema(
         description = "모집 인원. UNDECIDED(미정), ONE(1인), TWO(2인), THREE(3인), FOUR_OR_MORE(4인 이상)",

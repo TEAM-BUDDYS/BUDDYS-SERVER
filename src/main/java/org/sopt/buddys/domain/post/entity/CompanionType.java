@@ -1,5 +1,7 @@
 package org.sopt.buddys.domain.post.entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public enum CompanionType {
   FULL_TRIP,
   PARTIAL_TRIP,
@@ -7,5 +9,10 @@ public enum CompanionType {
   TOUR,
   MEAL,
   DAILY_LIFE,
-  GROUP_PURCHASE
+  GROUP_PURCHASE;
+
+  @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+  public static CompanionType fromJson(String name) {
+    return valueOf(name);
+  }
 }

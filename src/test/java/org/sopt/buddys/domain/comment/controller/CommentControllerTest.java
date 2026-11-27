@@ -445,7 +445,7 @@ class CommentControllerTest {
         "함께 여행하실 분을 구합니다.",
         LocalDate.now().plusDays(10),
         LocalDate.now().plusDays(13),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO
     ));
   }

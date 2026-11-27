@@ -34,7 +34,7 @@ public record PostListRequest(
   @Schema(description = "성별 조건 목록")
   List<GenderCondition> genderConditions,
 
-  @Schema(description = "동행 유형 목록")
+  @Schema(description = "동행 유형 목록. 선택한 유형 중 하나라도 일치하는 게시글을 조회합니다.")
   List<CompanionType> companionTypes,
 
   @Schema(description = "태그 ID", example = "1")

@@ -1,6 +1,8 @@
 package org.sopt.buddys.domain.post.entity;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -13,6 +15,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,9 +60,12 @@ public class Post extends BaseEntity {
   @Column(name = "end_date", nullable = false)
   private LocalDate endDate;
 
+  @Getter(AccessLevel.NONE)
+  @ElementCollection
+  @CollectionTable(name = "post_companion_type", joinColumns = @JoinColumn(name = "post_id"))
   @Enumerated(EnumType.STRING)
   @Column(name = "companion_type", nullable = false, length = 30)
-  private CompanionType companionType;
+  private Set<CompanionType> companionTypes = new HashSet<>();
 
   @Enumerated(EnumType.STRING)
   @Column(name = "recruitment_count_type", nullable = false, length = 20)
@@ -84,7 +92,7 @@ public class Post extends BaseEntity {
       String content,
       LocalDate startDate,
       LocalDate endDate,
-      CompanionType companionType,
+      List<CompanionType> companionTypes,
       RecruitmentCountType recruitmentCountType
   ) {
     this.author = author;
@@ -94,7 +102,7 @@ public class Post extends BaseEntity {
     this.content = content;
     this.startDate = startDate;
     this.endDate = endDate;
-    this.companionType = companionType;
+    this.companionTypes.addAll(companionTypes);
     this.recruitmentCountType = recruitmentCountType;
     this.status = PostStatus.RECRUITING;
     this.viewCount = 0L;
@@ -107,8 +115,7 @@ public class Post extends BaseEntity {
 
   public void update(
       Country country, City city, LocalDate startDate, LocalDate endDate,
-      String title, String content, CompanionType companionType,
-      RecruitmentCountType recruitmentCountType
+      String title, String content, RecruitmentCountType recruitmentCountType
   ) {
     this.country = country;
     this.city = city;
@@ -116,8 +123,16 @@ public class Post extends BaseEntity {
     this.endDate = endDate;
     this.title = title;
     this.content = content;
-    this.companionType = companionType;
     this.recruitmentCountType = recruitmentCountType;
+  }
+
+  public Set<CompanionType> getCompanionTypes() {
+    return Set.copyOf(companionTypes);
+  }
+
+  public void replaceCompanionTypes(List<CompanionType> types) {
+    companionTypes.retainAll(types);
+    companionTypes.addAll(types);
   }
 
   public boolean isDeleted() {
