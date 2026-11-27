@@ -9,3 +9,5 @@ CREATE TABLE post_companion_type
 INSERT INTO post_companion_type (post_id, companion_type)
 SELECT id, companion_type
 FROM post;
+
+ALTER TABLE post DROP COLUMN companion_type;

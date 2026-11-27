@@ -100,7 +100,7 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
         .and(endDateLoe(condition))
         .and(ageConditionIn(condition))
         .and(genderConditionIn(condition))
-        .and(companionTypeIn(condition))
+        .and(companionTypesOverlap(condition))
         .and(tagEquals(condition.tagId()));
 
     if (condition.authorVerifications() != null) {
@@ -168,11 +168,11 @@ public class PostRepositoryImpl implements PostRepositoryCustom {
     );
   }
 
-  private BooleanExpression companionTypeIn(PostSearchCondition condition) {
+  private BooleanExpression companionTypesOverlap(PostSearchCondition condition) {
     if (condition.companionTypes() == null || condition.companionTypes().isEmpty()) {
       return null;
     }
-    return post.companionType.in(condition.companionTypes());
+    return post.companionTypes.any().in(condition.companionTypes());
   }
 
   private BooleanExpression tagEquals(Long tagId) {

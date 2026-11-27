@@ -184,7 +184,7 @@ class PostControllerTest {
         "최근 게시글 내용",
         LocalDate.now().plusDays(20),
         LocalDate.now().plusDays(22),
-        CompanionType.PARTIAL_TRIP,
+        List.of(CompanionType.PARTIAL_TRIP),
         RecruitmentCountType.THREE
     ));
     Post deleted = postRepository.save(new Post(
@@ -195,7 +195,7 @@ class PostControllerTest {
         "목록에서 제외되어야 합니다.",
         LocalDate.now().plusDays(30),
         LocalDate.now().plusDays(31),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO
     ));
     deleted.softDelete(LocalDateTime.now());
@@ -562,6 +562,66 @@ class PostControllerTest {
         .containsExactlyInAnyOrder("가".repeat(40), "나".repeat(38));
   }
 
+  @DisplayName("복수 동행 유형으로 작성한 글은 상세에 모든 유형을 표시하고 목록에서 한 번만 조회된다")
+  @Test
+  void createPost_multipleCompanionTypes_returnsAllTypesAndMatchesAnyFilter() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+    String requestBody = createPostBody(countryId, cityId, tagId, "복수 유형 동행")
+        .replace("[\"FULL_TRIP\"]", "[\"FULL_TRIP\",\"MEAL\"]");
+
+    mockMvc.perform(post("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(requestBody))
+        .andExpect(status().isCreated());
+    Post created = postRepository.findAll().get(0);
+
+    mockMvc.perform(get("/api/v1/posts/{postId}", created.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.conditions.travelTypes")
+            .value(org.hamcrest.Matchers.containsInAnyOrder("FULL_TRIP", "MEAL")));
+
+    for (String filter : List.of("MEAL,TOUR", "FULL_TRIP,MEAL")) {
+      mockMvc.perform(get("/api/v1/posts")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+              .param("companionTypes", filter))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.data.content.length()").value(1))
+          .andExpect(jsonPath("$.data.content[0].postId").value(created.getId()))
+          .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    mockMvc.perform(get("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .param("companionTypes", "TOUR"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.content").isEmpty());
+  }
+
+  @DisplayName("동행 글 작성은 빈 배열, null, 중복 및 정의되지 않은 동행 유형을 거부한다")
+  @Test
+  void createPost_invalidCompanionTypes_returnsBadRequest() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+    String requestBody = createPostBody(countryId, cityId, tagId, "동행 글");
+
+    for (String types : List.of("[]", "null", "[null]", "[\"MEAL\",\"MEAL\"]", "[\"UNKNOWN\"]", "[0]")) {
+      mockMvc.perform(post("/api/v1/posts")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(requestBody.replace("[\"FULL_TRIP\"]", types)))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.code").value("GLB-E001"));
+    }
+    assertThat(postRepository.count()).isZero();
+  }
+
   @DisplayName("동행 생성은 trim 전 41자 제목과 빈 제목을 400으로 거부하고 저장하지 않는다")
   @Test
   void createPost_invalidTitle_returnsBadRequestWithoutSaving() throws Exception {
@@ -646,6 +706,11 @@ class PostControllerTest {
     assertThat(updated.getStartDate()).isEqualTo(post.getStartDate());
     assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
     assertThat(updated.getCity().getId()).isEqualTo(post.getCity().getId());
+
+    mockMvc.perform(get("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.conditions.travelTypes[0]").value("FULL_TRIP"));
   }
 
   @DisplayName("모집 완료 게시글의 본문도 수정할 수 있다")
@@ -838,7 +903,7 @@ class PostControllerTest {
     assertThat(findPostTagIds(post.getId())).containsExactly(tag2, tag3);
   }
 
-  @DisplayName("나이와 성별 조건을 전체 교체하고 미전달 이미지는 유지한다")
+  @DisplayName("나이, 성별, 동행 유형을 전체 교체하고 미전달 이미지는 유지한다")
   @Test
   void updatePost_conditions_replaceAllAndKeepOmittedImages() throws Exception {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
@@ -850,7 +915,13 @@ class PostControllerTest {
     mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"ageConditions\":[\"MID_20S\",\"LATE_20S\"],\"genderConditions\":[\"FEMALE\"]}"))
+            .content("""
+                {
+                  "ageConditions": ["MID_20S", "LATE_20S"],
+                  "genderConditions": ["FEMALE"],
+                  "companionTypes": ["MEAL", "TOUR"]
+                }
+                """))
         .andExpect(status().isOk());
 
     assertThat(jdbcTemplate.queryForList(
@@ -861,6 +932,12 @@ class PostControllerTest {
         .containsExactly("FEMALE");
     assertThat(postImageRepository.findImageUrlsByPostId(post.getId()))
         .containsExactly("https://example.com/keep.png");
+
+    mockMvc.perform(get("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.conditions.travelTypes")
+            .value(org.hamcrest.Matchers.containsInAnyOrder("MEAL", "TOUR")));
   }
 
   @DisplayName("존재하지 않는 국가, 도시, 태그는 각각 정해진 오류를 반환한다")
@@ -894,6 +971,9 @@ class PostControllerTest {
     assertUpdateError(author, post, "{\"endDate\":\"%s\"}".formatted(LocalDate.now().plusDays(1)), "GLB-E001", 400);
     assertUpdateError(author, post, "{\"ageConditions\":[]}", "GLB-E001", 400);
     assertUpdateError(author, post, "{\"genderConditions\":[]}", "GLB-E001", 400);
+    for (String types : List.of("[]", "null", "[null]", "[\"TOUR\",\"TOUR\"]", "[\"UNKNOWN\"]", "[0]")) {
+      assertUpdateError(author, post, "{\"companionTypes\":%s}".formatted(types), "GLB-E001", 400);
+    }
     assertUpdateError(author, post, "{\"tagIds\":[]}", "GLB-E001", 400);
     assertUpdateError(author, post, "{\"tagIds\":[%d]}".formatted(interestTag), "POST-E004", 400);
     assertUpdateError(author, post, "{\"tagIds\":%s}".formatted(activities), "POST-E005", 400);
@@ -933,6 +1013,9 @@ class PostControllerTest {
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.title.description")
             .value(org.hamcrest.Matchers.containsString("최대 40자")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.required").doesNotExist())
+        .andExpect(jsonPath("$.components.schemas.CreatePostRequest.properties.companionTypes.type").value("array"))
+        .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.companionTypes.type").value("array"))
+        .andExpect(jsonPath("$.components.schemas.ConditionsResponse.properties.travelTypes.type").value("array"))
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.countryId.description")
             .value(org.hamcrest.Matchers.containsString("cityId도 함께 전달")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.cityId.description")
@@ -1447,7 +1530,7 @@ class PostControllerTest {
           "content": "본문",
           "ageConditions": ["EARLY_20S"],
           "genderConditions": ["MALE", "FEMALE"],
-          "companionType": "FULL_TRIP",
+          "companionTypes": ["FULL_TRIP"],
           "recruitmentCountType": "TWO",
           "tagIds": [%d]
         }
@@ -1469,7 +1552,7 @@ class PostControllerTest {
         "함께 여행하실 분을 구합니다.",
         LocalDate.now().plusDays(10),
         LocalDate.now().plusDays(13),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO
     ));
   }
@@ -1491,7 +1574,7 @@ class PostControllerTest {
         content,
         startDate,
         endDate,
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO
     ));
   }

@@ -695,7 +695,7 @@ class SearchControllerTest extends IntegrationTestSupport {
         content,
         LocalDate.now().plusDays(1),
         LocalDate.now().plusDays(2),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO
     ));
   }

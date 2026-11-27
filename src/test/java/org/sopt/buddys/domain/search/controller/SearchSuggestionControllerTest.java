@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.entity.Course;
@@ -331,7 +332,7 @@ class SearchSuggestionControllerTest extends IntegrationTestSupport {
         content,
         LocalDate.now().plusDays(1),
         LocalDate.now().plusDays(2),
-        CompanionType.FULL_TRIP,
+        List.of(CompanionType.FULL_TRIP),
         RecruitmentCountType.TWO
     ));
   }

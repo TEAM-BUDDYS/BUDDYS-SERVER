@@ -518,7 +518,7 @@ class PostListServiceTest {
             content,
             ageConditions,
             genderConditions,
-            companionType,
+            List.of(companionType),
             RecruitmentCountType.TWO,
             tagIds,
             imageUrls

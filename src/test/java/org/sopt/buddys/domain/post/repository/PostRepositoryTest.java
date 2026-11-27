@@ -93,7 +93,7 @@ class PostRepositoryTest {
         "SELECT id FROM country WHERE iso_code = 'ZY'", Long.class));
     Post otherCountryPost = savePost(author, today);
     otherCountryPost.update(otherCountry, city, today, today, "동행", "본문",
-        CompanionType.FULL_TRIP, RecruitmentCountType.TWO);
+        RecruitmentCountType.TWO);
     for (Post post : List.of(withImage, withdrawnPost, ownPost, completed, deleted, otherCountryPost)) {
       entityManager.persist(new PostImage(post, "https://example.com/image.jpg", (short) 0));
     }
@@ -190,7 +190,7 @@ class PostRepositoryTest {
 
   private Post savePost(User user, LocalDate startDate) {
     return postRepository.save(new Post(user, country, city, "동행", "본문", startDate,
-        startDate.plusDays(1), CompanionType.FULL_TRIP, RecruitmentCountType.TWO));
+        startDate.plusDays(1), List.of(CompanionType.FULL_TRIP), RecruitmentCountType.TWO));
   }
 
   private void setCreatedAt(Post post, int dayOffset) {

@@ -12,7 +12,7 @@ import org.sopt.buddys.domain.post.entity.RecruitmentCountType;
 public record UpdatePostCommand(
     Long countryId, Long cityId, LocalDate startDate, LocalDate endDate,
     String title, String content, List<AgeCondition> ageConditions,
-    List<GenderCondition> genderConditions, CompanionType companionType,
+    List<GenderCondition> genderConditions, List<CompanionType> companionTypes,
     RecruitmentCountType recruitmentCountType, List<Long> tagIds,
     List<String> imageUrls, Set<Field> providedFields
 ) {

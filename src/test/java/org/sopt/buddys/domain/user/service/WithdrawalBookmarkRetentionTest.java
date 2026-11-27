@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sopt.buddys.domain.course.entity.Course;
@@ -65,7 +66,7 @@ class WithdrawalBookmarkRetentionTest {
     entityManager.persist(city);
     LocalDate date = LocalDate.of(2026, 9, 1);
     Post post = new Post(withdrawing, country, city, "제목", "내용", date, date,
-        CompanionType.FULL_TRIP, RecruitmentCountType.ONE);
+        List.of(CompanionType.FULL_TRIP), RecruitmentCountType.ONE);
     Course course = new Course(withdrawing, "코스", "내용", date, date);
     Magazine magazine = new Magazine("매거진", "요약", "https://example.com/image",
         "https://example.com", date, MagazineCategory.SUPPORT);
