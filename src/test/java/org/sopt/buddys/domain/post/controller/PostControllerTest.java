@@ -541,6 +541,69 @@ class PostControllerTest {
         .andExpect(jsonPath("$.code").value("GLB-E001"));
   }
 
+  @DisplayName("동행 생성과 수정은 본문 300자까지 저장하고 301자를 거부한다")
+  @Test
+  void writePost_contentLengthBoundary() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long cityId = insertCity(countryId, "Paris", "파리", 2_000_000L);
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+    String createBody = createPostBody(countryId, cityId, tagId, "동행 제목");
+
+    for (int length : List.of(299, 300, 301)) {
+      String content = "가".repeat(length);
+      var result = mockMvc.perform(post("/api/v1/posts")
+          .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+          .contentType(MediaType.APPLICATION_JSON)
+          .content(createBody.replace("본문", content)));
+
+      if (length == 301) {
+        result.andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("GLB-E001"))
+            .andExpect(jsonPath("$.data.content").value("본문은 300자 이하로 입력해 주세요."));
+      } else {
+        result.andExpect(status().isCreated());
+      }
+    }
+
+    List<Post> posts = postRepository.findAll();
+    assertThat(posts).extracting(Post::getContent)
+        .containsExactlyInAnyOrder("가".repeat(299), "가".repeat(300));
+    Long postId = posts.get(0).getId();
+
+    for (int length : List.of(299, 300, 301)) {
+      String content = "나".repeat(length);
+      var result = mockMvc.perform(patch("/api/v1/posts/{postId}", postId)
+          .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+          .contentType(MediaType.APPLICATION_JSON)
+          .content("""
+              {"content": "%s"}
+              """.formatted(content)));
+
+      if (length == 301) {
+        result.andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("GLB-E001"))
+            .andExpect(jsonPath("$.data.content").value("본문은 300자 이하로 입력해 주세요."));
+      } else {
+        result.andExpect(status().isOk());
+        assertThat(postRepository.findById(postId).orElseThrow().getContent()).isEqualTo(content);
+      }
+    }
+    assertThat(postRepository.findById(postId).orElseThrow().getContent()).isEqualTo("나".repeat(300));
+
+    for (String body : List.of(createBody.replace("\"content\": \"본문\",", ""),
+        createBody.replace("본문", " "), createBody.replace("\"본문\"", "null"))) {
+      mockMvc.perform(post("/api/v1/posts")
+              .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+              .contentType(MediaType.APPLICATION_JSON)
+              .content(body))
+          .andExpect(status().isBadRequest());
+    }
+    Post post = postRepository.findById(postId).orElseThrow();
+    assertUpdateError(author, post, "{\"content\": null}", "GLB-E001", 400);
+    assertUpdateError(author, post, "{\"content\": \" \"}", "GLB-E001", 400);
+  }
+
   @DisplayName("동행 제목은 한글 40자까지 생성되고 기존처럼 앞뒤 공백을 제거해 저장한다")
   @Test
   void createPost_titleWithinLimit_savesTrimmedTitle() throws Exception {
