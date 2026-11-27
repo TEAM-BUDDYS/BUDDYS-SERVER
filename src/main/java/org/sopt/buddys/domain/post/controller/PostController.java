@@ -218,7 +218,7 @@ public class PostController {
           required = true,
           description = "게시글 부분 수정 요청. 하나 이상의 필드를 전달해야 합니다."
       )
-      @RequestBody UpdatePostRequest request
+      @RequestBody @Valid UpdatePostRequest request
   ) {
     return BaseResponse.success(
         PostSuccessCode.POST_UPDATED,

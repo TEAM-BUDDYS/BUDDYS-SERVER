@@ -25,7 +25,8 @@ public record UpdateCourseRequest(
     @Size(max = 120)
     String title,
 
-    @Schema(description = "코스 소개", example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.")
+    @Schema(description = "코스 소개. 최대 300자", maxLength = 300, example = "2박 3일 코스로 다녀왔다. 버디즈로 구한 동행 친구와 함께했다.")
+    @Size(max = 300, message = "본문은 300자 이하로 입력해 주세요.")
     String content,
 
     @Schema(description = "출발일. 미입력 시 날짜 없이 수정됩니다.", example = "2026-09-01", nullable = true)
