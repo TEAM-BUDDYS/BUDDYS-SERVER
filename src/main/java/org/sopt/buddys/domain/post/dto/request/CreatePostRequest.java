@@ -18,8 +18,7 @@ public record CreatePostRequest(
     @NotNull
     Long countryId,
 
-    @Schema(description = "도시 ID", example = "10")
-    @NotNull
+    @Schema(description = "도시 ID. 선택사항이며, 미전달 시 도시 미정", example = "10")
     Long cityId,
 
     @Schema(description = "동행 시작일", example = "2026-09-06")

@@ -38,7 +38,7 @@ public record PostDetailResponse(
     @Schema(description = "동행 모집 국가")
     PostDetailCountryResponse country,
 
-    @Schema(description = "동행 모집 도시")
+    @Schema(description = "동행 모집 도시. 도시 미정이면 null", nullable = true)
     PostDetailCityResponse city,
 
     @Schema(description = "동행 일정 시작일", example = "2026-07-20")
@@ -140,6 +140,9 @@ public record PostDetailResponse(
   ) {
 
     private static PostDetailCityResponse from(PostDetailResult.CityResult city) {
+      if (city == null) {
+        return null;
+      }
       return new PostDetailCityResponse(city.cityId(), city.name(), city.koreanName());
     }
   }
