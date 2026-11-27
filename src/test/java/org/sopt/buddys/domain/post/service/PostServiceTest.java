@@ -130,6 +130,7 @@ class PostServiceTest {
     assertThat(savedPost.getContent()).isEqualTo("안녕하세요. 같이 여행하실 분을 구합니다.");
     assertThat(savedPost.getStatus()).isEqualTo(PostStatus.RECRUITING);
     assertThat(savedPost.getCompanionType()).isEqualTo(CompanionType.FULL_TRIP);
+    assertThat(findStoredCompanionTypes(post.getId())).containsExactly(CompanionType.FULL_TRIP.name());
     assertThat(savedPost.getRecruitmentCountType()).isEqualTo(RecruitmentCountType.TWO);
     assertThat(postAgeConditionRepository.findAll()).hasSize(2);
     assertThat(postGenderConditionRepository.findAll()).hasSize(2);
@@ -667,6 +668,12 @@ class PostServiceTest {
         keyHolder
     );
     return keyHolder.getKey().longValue();
+  }
+
+  private List<String> findStoredCompanionTypes(Long postId) {
+    return jdbcTemplate.queryForList(
+        "SELECT companion_type FROM post_companion_type WHERE post_id = ?", String.class, postId
+    );
   }
 
   private void cleanUp() {
