@@ -684,9 +684,9 @@ class PostControllerTest {
     assertThat(updated.getCity().getId()).isEqualTo(parisId);
   }
 
-  @DisplayName("국가만 전달하면 잘못된 요청으로 거부한다")
+  @DisplayName("국가만 전달하면 국가를 수정하고 기존 도시는 해제한다")
   @Test
-  void updatePost_countryOnly_returnsInvalidRequest() throws Exception {
+  void updatePost_countryOnly_updatesCountryAndClearsCity() throws Exception {
     User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
     Post post = createPost(author);
     Long franceId = insertCountry("프랑스", "FR");
@@ -695,8 +695,75 @@ class PostControllerTest {
             .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"countryId\":%d}".formatted(franceId)))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("GLB-E001"));
+        .andExpect(status().isOk());
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getCountry().getId()).isEqualTo(franceId);
+    assertThat(updated.getCity()).isNull();
+  }
+
+  @DisplayName("기존과 같은 국가만 전달하면 도시를 유지한다")
+  @Test
+  void updatePost_sameCountryOnly_keepsCity() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"countryId\":%d}".formatted(post.getCountry().getId())))
+        .andExpect(status().isOk());
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
+    assertThat(updated.getCity().getId()).isEqualTo(post.getCity().getId());
+  }
+
+  @DisplayName("cityId에 null을 전달하면 국가는 유지하고 도시를 해제한다")
+  @Test
+  void updatePost_nullCity_clearsCity() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"cityId\":null}"))
+        .andExpect(status().isOk());
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
+    assertThat(updated.getCity()).isNull();
+
+    mockMvc.perform(get("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.city").value(org.hamcrest.Matchers.nullValue()));
+  }
+
+  @DisplayName("도시 없이 동행 게시글을 생성하고 상세 조회하면 도시가 null이다")
+  @Test
+  void createPost_withoutCity_savesAndReturnsNullCity() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Long countryId = insertCountry("프랑스", "FR");
+    Long tagId = insertTag("산책", TagType.ACTIVITY);
+
+    mockMvc.perform(post("/api/v1/posts")
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(createPostBody(countryId, null, tagId, "도시 미정 동행")))
+        .andExpect(status().isCreated());
+
+    Post saved = postRepository.findAll().get(0);
+    assertThat(saved.getCountry().getId()).isEqualTo(countryId);
+    assertThat(saved.getCity()).isNull();
+
+    entityManager.clear();
+    mockMvc.perform(get("/api/v1/posts/{postId}", saved.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.country.countryId").value(countryId))
+        .andExpect(jsonPath("$.data.city").value(org.hamcrest.Matchers.nullValue()));
   }
 
   @DisplayName("도시만 전달하면 기존 국가에 속한 도시로 수정한다")
@@ -756,7 +823,7 @@ class PostControllerTest {
 
     for (String content : List.of(
         "{}", "{\"title\":null}", "{\"imageUrls\":null}",
-        "{\"countryId\":null}", "{\"cityId\":null}")) {
+        "{\"countryId\":null}")) {
       mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
               .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
               .contentType(MediaType.APPLICATION_JSON)
@@ -934,7 +1001,7 @@ class PostControllerTest {
             .value(org.hamcrest.Matchers.containsString("최대 40자")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.required").doesNotExist())
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.countryId.description")
-            .value(org.hamcrest.Matchers.containsString("cityId도 함께 전달")))
+            .value(org.hamcrest.Matchers.containsString("기존 도시는 해제")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostRequest.properties.cityId.description")
             .value(org.hamcrest.Matchers.containsString("기존 국가")))
         .andExpect(jsonPath("$.components.schemas.UpdatePostSuccessResponse.required").isArray())
@@ -1440,7 +1507,7 @@ class PostControllerTest {
     return """
         {
           "countryId": %d,
-          "cityId": %d,
+          "cityId": %s,
           "startDate": "%s",
           "endDate": "%s",
           "title": "%s",

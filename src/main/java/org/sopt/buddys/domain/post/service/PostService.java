@@ -87,7 +87,7 @@ public class PostService {
         .orElseThrow(() -> new BaseException(UserErrorCode.USER_NOT_FOUND));
     Country country = countryRepository.findById(command.countryId())
         .orElseThrow(() -> new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND));
-    City city = getCity(command.countryId(), command.cityId());
+    City city = command.cityId() == null ? null : getCity(command.countryId(), command.cityId());
 
     Post post = postRepository.save(new Post(
         author,
@@ -163,12 +163,7 @@ public class PostService {
         ? countryRepository.findById(command.countryId())
             .orElseThrow(() -> new BaseException(LocationErrorCode.COUNTRY_NOT_FOUND))
         : post.getCountry();
-    City city = command.isProvided(Field.COUNTRY_ID) || command.isProvided(Field.CITY_ID)
-        ? getCity(
-            country.getId(),
-            command.isProvided(Field.CITY_ID) ? command.cityId() : post.getCity().getId()
-        )
-        : post.getCity();
+    City city = resolveUpdatedCity(command, country, post);
 
     LocalDate startDate = command.isProvided(Field.START_DATE) ? command.startDate() : post.getStartDate();
     LocalDate endDate = command.isProvided(Field.END_DATE) ? command.endDate() : post.getEndDate();
@@ -347,6 +342,9 @@ public class PostService {
   }
 
   private PostDetailResult.CityResult toCityResult(City city) {
+    if (city == null) {
+      return null;
+    }
     return new PostDetailResult.CityResult(
         city.getId(),
         city.getName(),
@@ -402,9 +400,19 @@ public class PostService {
     return city;
   }
 
+  private City resolveUpdatedCity(UpdatePostCommand command, Country country, Post post) {
+    if (command.isProvided(Field.CITY_ID)) {
+      return command.cityId() == null ? null : getCity(country.getId(), command.cityId());
+    }
+    if (command.isProvided(Field.COUNTRY_ID)
+        && !country.getId().equals(post.getCountry().getId())) {
+      return null;
+    }
+    return post.getCity();
+  }
+
   private void validateRequiredConditions(CreatePostCommand command) {
     if (command.countryId() == null
-        || command.cityId() == null
         || command.startDate() == null
         || command.endDate() == null
         || command.title() == null
@@ -503,12 +511,9 @@ public class PostService {
       throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     for (Field field : command.providedFields()) {
-      if (valueOf(command, field) == null) {
+      if (field != Field.CITY_ID && valueOf(command, field) == null) {
         throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
       }
-    }
-    if (command.isProvided(Field.COUNTRY_ID) && !command.isProvided(Field.CITY_ID)) {
-      throw new BaseException(GlobalErrorCode.INVALID_REQUEST);
     }
     if ((command.isProvided(Field.TITLE)
             && (command.title().isBlank() || command.title().length() > 40))

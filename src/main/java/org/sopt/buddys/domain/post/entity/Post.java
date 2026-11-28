@@ -39,8 +39,8 @@ public class Post extends BaseEntity {
   @JoinColumn(name = "country_id", nullable = false)
   private Country country;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "city_id", nullable = false)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "city_id")
   private City city;
 
   @Column(nullable = false, length = 120)

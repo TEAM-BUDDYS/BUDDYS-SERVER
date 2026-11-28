@@ -74,7 +74,7 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostRepositor
       join fetch p.author author
       left join fetch author.exchangeCountry
       join fetch p.country
-      join fetch p.city
+      left join fetch p.city
       where p.id = :postId
         and p.deletedAt is null
       """)

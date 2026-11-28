@@ -1,0 +1,1 @@
+ALTER TABLE post MODIFY city_id BIGINT NULL;
