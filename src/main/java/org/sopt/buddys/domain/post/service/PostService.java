@@ -404,7 +404,8 @@ public class PostService {
     if (command.isProvided(Field.CITY_ID)) {
       return command.cityId() == null ? null : getCity(country.getId(), command.cityId());
     }
-    if (command.isProvided(Field.COUNTRY_ID)) {
+    if (command.isProvided(Field.COUNTRY_ID)
+        && !country.getId().equals(post.getCountry().getId())) {
       return null;
     }
     return post.getCity();

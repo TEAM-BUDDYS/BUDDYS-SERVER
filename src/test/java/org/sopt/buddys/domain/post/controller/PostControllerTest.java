@@ -702,6 +702,23 @@ class PostControllerTest {
     assertThat(updated.getCity()).isNull();
   }
 
+  @DisplayName("기존과 같은 국가만 전달하면 도시를 유지한다")
+  @Test
+  void updatePost_sameCountryOnly_keepsCity() throws Exception {
+    User author = userRepository.save(createUser("author@test.com", "provider-author", "작성자"));
+    Post post = createPost(author);
+
+    mockMvc.perform(patch("/api/v1/posts/{postId}", post.getId())
+            .header(HttpHeaders.AUTHORIZATION, bearerToken(author.getId()))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"countryId\":%d}".formatted(post.getCountry().getId())))
+        .andExpect(status().isOk());
+
+    Post updated = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(updated.getCountry().getId()).isEqualTo(post.getCountry().getId());
+    assertThat(updated.getCity().getId()).isEqualTo(post.getCity().getId());
+  }
+
   @DisplayName("cityId에 null을 전달하면 국가는 유지하고 도시를 해제한다")
   @Test
   void updatePost_nullCity_clearsCity() throws Exception {
